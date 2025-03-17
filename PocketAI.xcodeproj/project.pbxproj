@@ -1,0 +1,698 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		E94CC7E32D86726D00B4AB0B /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = E94CC7E22D86726D00B4AB0B /* GRDB */; };
+		E97F95802D80C2D1007C292A /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97F957F2D80C2D1007C292A /* SwiftLLMSDK */; };
+		E9DB2F5A2D825A67009AEF2B /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F592D825A67009AEF2B /* MarkdownUI */; };
+		E9DB2F632D826261009AEF2B /* Splash in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F622D826261009AEF2B /* Splash */; };
+		E9DB2F652D826261009AEF2B /* SplashHTMLGen in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F642D826261009AEF2B /* SplashHTMLGen */; };
+		E9DB2F672D826261009AEF2B /* SplashImageGen in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F662D826261009AEF2B /* SplashImageGen */; };
+		E9DB2F692D826261009AEF2B /* SplashMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F682D826261009AEF2B /* SplashMarkdown */; };
+		E9DB2F6B2D826261009AEF2B /* SplashTokenizer in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F6A2D826261009AEF2B /* SplashTokenizer */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E9E949CB2D808E9E0008861E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E9E949B22D808E9C0008861E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E9E949B92D808E9C0008861E;
+			remoteInfo = PocketAI;
+		};
+		E9E949D52D808E9E0008861E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E9E949B22D808E9C0008861E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E9E949B92D808E9C0008861E;
+			remoteInfo = PocketAI;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		E9E949BA2D808E9C0008861E /* PocketAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PocketAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E9E949CA2D808E9E0008861E /* PocketAITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PocketAITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E9E949D42D808E9E0008861E /* PocketAIUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PocketAIUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E9E949E92D8096AA0008861E /* Exceptions for "PocketAI" folder in "PocketAI" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				SwiftLLMSDK,
+			);
+			target = E9E949B92D808E9C0008861E /* PocketAI */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		E9E949BC2D808E9C0008861E /* PocketAI */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E9E949E92D8096AA0008861E /* Exceptions for "PocketAI" folder in "PocketAI" target */,
+			);
+			path = PocketAI;
+			sourceTree = "<group>";
+		};
+		E9E949CD2D808E9E0008861E /* PocketAITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PocketAITests;
+			sourceTree = "<group>";
+		};
+		E9E949D72D808E9E0008861E /* PocketAIUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PocketAIUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		E9E949B72D808E9C0008861E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E9DB2F6B2D826261009AEF2B /* SplashTokenizer in Frameworks */,
+				E97F95802D80C2D1007C292A /* SwiftLLMSDK in Frameworks */,
+				E9DB2F5A2D825A67009AEF2B /* MarkdownUI in Frameworks */,
+				E94CC7E32D86726D00B4AB0B /* GRDB in Frameworks */,
+				E9DB2F632D826261009AEF2B /* Splash in Frameworks */,
+				E9DB2F652D826261009AEF2B /* SplashHTMLGen in Frameworks */,
+				E9DB2F692D826261009AEF2B /* SplashMarkdown in Frameworks */,
+				E9DB2F672D826261009AEF2B /* SplashImageGen in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9E949C72D808E9E0008861E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9E949D12D808E9E0008861E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		E97F957E2D80C2D1007C292A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		E9E949B12D808E9C0008861E = {
+			isa = PBXGroup;
+			children = (
+				E9E949BC2D808E9C0008861E /* PocketAI */,
+				E9E949CD2D808E9E0008861E /* PocketAITests */,
+				E9E949D72D808E9E0008861E /* PocketAIUITests */,
+				E97F957E2D80C2D1007C292A /* Frameworks */,
+				E9E949BB2D808E9C0008861E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E9E949BB2D808E9C0008861E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E9E949BA2D808E9C0008861E /* PocketAI.app */,
+				E9E949CA2D808E9E0008861E /* PocketAITests.xctest */,
+				E9E949D42D808E9E0008861E /* PocketAIUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		E9E949B92D808E9C0008861E /* PocketAI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E9E949DE2D808E9E0008861E /* Build configuration list for PBXNativeTarget "PocketAI" */;
+			buildPhases = (
+				E9E949B62D808E9C0008861E /* Sources */,
+				E9E949B72D808E9C0008861E /* Frameworks */,
+				E9E949B82D808E9C0008861E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E9E949BC2D808E9C0008861E /* PocketAI */,
+			);
+			name = PocketAI;
+			packageProductDependencies = (
+				E97F957F2D80C2D1007C292A /* SwiftLLMSDK */,
+				E9DB2F592D825A67009AEF2B /* MarkdownUI */,
+				E9DB2F622D826261009AEF2B /* Splash */,
+				E9DB2F642D826261009AEF2B /* SplashHTMLGen */,
+				E9DB2F662D826261009AEF2B /* SplashImageGen */,
+				E9DB2F682D826261009AEF2B /* SplashMarkdown */,
+				E9DB2F6A2D826261009AEF2B /* SplashTokenizer */,
+				E94CC7E22D86726D00B4AB0B /* GRDB */,
+			);
+			productName = PocketAI;
+			productReference = E9E949BA2D808E9C0008861E /* PocketAI.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E9E949C92D808E9E0008861E /* PocketAITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E9E949E12D808E9E0008861E /* Build configuration list for PBXNativeTarget "PocketAITests" */;
+			buildPhases = (
+				E9E949C62D808E9E0008861E /* Sources */,
+				E9E949C72D808E9E0008861E /* Frameworks */,
+				E9E949C82D808E9E0008861E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E9E949CC2D808E9E0008861E /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				E9E949CD2D808E9E0008861E /* PocketAITests */,
+			);
+			name = PocketAITests;
+			packageProductDependencies = (
+			);
+			productName = PocketAITests;
+			productReference = E9E949CA2D808E9E0008861E /* PocketAITests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		E9E949D32D808E9E0008861E /* PocketAIUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E9E949E42D808E9E0008861E /* Build configuration list for PBXNativeTarget "PocketAIUITests" */;
+			buildPhases = (
+				E9E949D02D808E9E0008861E /* Sources */,
+				E9E949D12D808E9E0008861E /* Frameworks */,
+				E9E949D22D808E9E0008861E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E9E949D62D808E9E0008861E /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				E9E949D72D808E9E0008861E /* PocketAIUITests */,
+			);
+			name = PocketAIUITests;
+			packageProductDependencies = (
+			);
+			productName = PocketAIUITests;
+			productReference = E9E949D42D808E9E0008861E /* PocketAIUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E9E949B22D808E9C0008861E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					E9E949B92D808E9C0008861E = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					E9E949C92D808E9E0008861E = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = E9E949B92D808E9C0008861E;
+					};
+					E9E949D32D808E9E0008861E = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = E9E949B92D808E9C0008861E;
+					};
+				};
+			};
+			buildConfigurationList = E9E949B52D808E9C0008861E /* Build configuration list for PBXProject "PocketAI" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = E9E949B12D808E9C0008861E;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E9DB2F582D825A67009AEF2B /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+				E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */,
+				E94CC7E12D86726D00B4AB0B /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = E9E949BB2D808E9C0008861E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				E9E949B92D808E9C0008861E /* PocketAI */,
+				E9E949C92D808E9E0008861E /* PocketAITests */,
+				E9E949D32D808E9E0008861E /* PocketAIUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E9E949B82D808E9C0008861E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9E949C82D808E9E0008861E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9E949D22D808E9E0008861E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E9E949B62D808E9C0008861E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9E949C62D808E9E0008861E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9E949D02D808E9E0008861E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E9E949CC2D808E9E0008861E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E9E949B92D808E9C0008861E /* PocketAI */;
+			targetProxy = E9E949CB2D808E9E0008861E /* PBXContainerItemProxy */;
+		};
+		E9E949D62D808E9E0008861E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E9E949B92D808E9C0008861E /* PocketAI */;
+			targetProxy = E9E949D52D808E9E0008861E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		E9E949DC2D808E9E0008861E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		E9E949DD2D808E9E0008861E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		E9E949DF2D808E9E0008861E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"PocketAI/Preview Content\"";
+				DEVELOPMENT_TEAM = S5X4E78NMS;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PocketAI/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Pocket AI";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = devonjerothe.PocketAI;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		E9E949E02D808E9E0008861E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"PocketAI/Preview Content\"";
+				DEVELOPMENT_TEAM = S5X4E78NMS;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PocketAI/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Pocket AI";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = devonjerothe.PocketAI;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		E9E949E22D808E9E0008861E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = S5X4E78NMS;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = devonjerothe.PocketAITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PocketAI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PocketAI";
+			};
+			name = Debug;
+		};
+		E9E949E32D808E9E0008861E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = S5X4E78NMS;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = devonjerothe.PocketAITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PocketAI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PocketAI";
+			};
+			name = Release;
+		};
+		E9E949E52D808E9E0008861E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = S5X4E78NMS;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = devonjerothe.PocketAIUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = PocketAI;
+			};
+			name = Debug;
+		};
+		E9E949E62D808E9E0008861E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = S5X4E78NMS;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = devonjerothe.PocketAIUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = PocketAI;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		E9E949B52D808E9C0008861E /* Build configuration list for PBXProject "PocketAI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E9E949DC2D808E9E0008861E /* Debug */,
+				E9E949DD2D808E9E0008861E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E9E949DE2D808E9E0008861E /* Build configuration list for PBXNativeTarget "PocketAI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E9E949DF2D808E9E0008861E /* Debug */,
+				E9E949E02D808E9E0008861E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E9E949E12D808E9E0008861E /* Build configuration list for PBXNativeTarget "PocketAITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E9E949E22D808E9E0008861E /* Debug */,
+				E9E949E32D808E9E0008861E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E9E949E42D808E9E0008861E /* Build configuration list for PBXNativeTarget "PocketAIUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E9E949E52D808E9E0008861E /* Debug */,
+				E9E949E62D808E9E0008861E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E94CC7E12D86726D00B4AB0B /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+		E9DB2F582D825A67009AEF2B /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.1;
+			};
+		};
+		E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/JohnSundell/Splash";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.16.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E94CC7E22D86726D00B4AB0B /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E94CC7E12D86726D00B4AB0B /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+		E97F957F2D80C2D1007C292A /* SwiftLLMSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SwiftLLMSDK;
+		};
+		E9DB2F592D825A67009AEF2B /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E9DB2F582D825A67009AEF2B /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+		E9DB2F622D826261009AEF2B /* Splash */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */;
+			productName = Splash;
+		};
+		E9DB2F642D826261009AEF2B /* SplashHTMLGen */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */;
+			productName = SplashHTMLGen;
+		};
+		E9DB2F662D826261009AEF2B /* SplashImageGen */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */;
+			productName = SplashImageGen;
+		};
+		E9DB2F682D826261009AEF2B /* SplashMarkdown */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */;
+			productName = SplashMarkdown;
+		};
+		E9DB2F6A2D826261009AEF2B /* SplashTokenizer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */;
+			productName = SplashTokenizer;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = E9E949B22D808E9C0008861E /* Project object */;
+}
