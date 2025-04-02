@@ -35,20 +35,16 @@ struct ChatModel {
     mutating func resetChat() {
         self.messages.removeAll()
         self.addMessage(firstMessage, forActor: .bot)
-        try! self.save()
     }
 
     mutating func addMessage(_ message: String = "", forActor: MessageActor, isLoading: Bool = false) {
-        var messageModel: MessageModel?
-        switch forActor {
-        case .user:
-            messageModel = MessageModel(chatId: self.id.uuidString, actor: .user, text: message)
-            try! messageModel?.save()
-            messages.append(messageModel!)
-        case .bot:
-            messageModel = MessageModel(chatId: self.id.uuidString, actor: .bot, text: message, loading: isLoading)
-            messages.append(messageModel!)
-        }
+        let messageModel = MessageModel(
+            chatId: self.id.uuidString,
+            actor: forActor,
+            text: message,
+            loading: isLoading
+        )
+        messages.append(messageModel)
     }
 
     func getFullPrompt(continueResponse: Bool = false) -> String {
@@ -91,47 +87,12 @@ extension ChatModel: TableRecord, FetchableRecord, PersistableRecord {
 }
 
 extension ChatModel {
-
-    func save() throws {
-        print("Attempting to save chat: \(id.uuidString), title: \(chatTitle)")
-        try DBManager.shared.write { db in 
-            print("Saving chat to database...")
-            try self.save(db)
-            print("Chat saved successfully")
-
-            print("Deleting existing messages...")
-            try MessageModel.filter(Column("chatId") == id.uuidString).deleteAll(db)
-            print("Existing messages deleted")
-            
-            print("Saving \(messages.count) messages...")
-            for (index, var message) in messages.enumerated() {
-                message.chatId = id.uuidString
-                print("Saving message \(index+1)/\(messages.count): \(message.id.uuidString)")
-                try message.save(db)
-            }
-            print("All messages saved successfully")
-        }
-        print("Chat and messages saved successfully")
-    }
-
-    func delete() throws {
-        try DBManager.shared.write { db in
-            try self.delete(db)
+    static public func migrateTable(_ db: Database) throws {
+        try db.create(table: "chats", ifNotExists: true) { t in
+            t.column("id", .text).primaryKey().notNull()
+            t.column("chatTitle", .text).notNull()
+            t.column("memory", .text).notNull()
+            t.column("firstMessage", .text).notNull()
         }
     }
-
-    static func loadAllChats() throws -> [ChatModel] {
-        try DBManager.shared.read { db in 
-            var chats = try ChatModel.fetchAll(db)
-
-            for i in 0..<chats.count {
-                let chatId = chats[i].id.uuidString
-                let messages = try MessageModel.filter(Column("chatId") == chatId).order(Column("createdAt").asc).fetchAll(db)
-
-                chats[i].messages = messages
-            }
-
-            return chats
-        }
-    }    
 }

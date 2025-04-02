@@ -105,7 +105,6 @@ struct ChatBubbleView: View {
             HStack {
                 Spacer()
                 VStack(alignment: .trailing) {
-//                    Text(message.getRolePlayText())
                     Markdown(message.getRolePlayText())
                         .foregroundStyle(.black)
                         .markdownTheme(.userRolePlay)
@@ -118,6 +117,5 @@ struct ChatBubbleView: View {
                 }
             }
         }
-
     }
 }

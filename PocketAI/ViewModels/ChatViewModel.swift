@@ -11,25 +11,46 @@ import SwiftLLMSDK
 
 @Observable
 class ChatViewModel {
-    var llm: KoboldAPI?
+    private var languageModelService: LanguageModelService? 
+    private let messageRepository: MessageRepository
+    private let chatRepository: ChatRepository
 
     var model: ChatModel
+
     var updateScrollView: Bool = false
     var showSettings: Bool = false
-
     var selectionModeActive: Bool = false
     var selectedMessages: Set<MessageModel> = []
 
     init(
         chatModel: ChatModel,
-        llm: KoboldAPI?
+        languageModelService: LanguageModelService? = ServiceContainer.shared.getLanguageModelService(),
+        messageRepository: MessageRepository = ServiceContainer.shared.getMessageRepository(),
+        chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository()
     ) {
-        self.llm = llm
         self.model = chatModel
+        self.languageModelService = languageModelService
+        self.messageRepository = messageRepository
+        self.chatRepository = chatRepository
+    }
+
+    static func create(
+        chatModel: ChatModel
+    ) -> ChatViewModel {
+        return ChatViewModel(
+            chatModel: chatModel,
+            languageModelService: ServiceContainer.shared.getLanguageModelService()
+        )
+    }
+
+    func checkConnection() {
+        if languageModelService == nil {
+            self.languageModelService = ServiceContainer.shared.getLanguageModelService()
+        }
     }
 
     func fetchModel() async {
-        let name = await llm?.getModel()
+        let name = await languageModelService?.getModel()
         switch name {
             case .success(let name):
                 self.model.modelName = name
@@ -41,7 +62,7 @@ class ChatViewModel {
     }
 
     func fetchMaxContextLength() async {
-        let maxContext = await llm?.getMaxContextLength()
+        let maxContext = await languageModelService?.getMaxContextLength()
         switch maxContext {
             case .success(let maxContext):
                 self.model.maxContextLength = maxContext
@@ -56,6 +77,7 @@ class ChatViewModel {
         await MainActor.run {
             if !prompt.isEmpty {
                 self.model.addMessage(prompt, forActor: .user)
+                try! messageRepository.save(self.model.messages.last!)
             }
             self.model.addMessage(forActor: .bot, isLoading: true)
             self.updateScrollView.toggle()
@@ -74,6 +96,7 @@ class ChatViewModel {
 
     func clearChat() {
         self.model.resetChat()
+        try! chatRepository.save(self.model)
     }
 
     func updateChatSettings(
@@ -88,7 +111,7 @@ class ChatViewModel {
 
         self.showSettings.toggle()
 
-        try! self.model.save()
+        try! chatRepository.save(self.model)
     }
 
     func toggleSelection(_ message: MessageModel) {
@@ -105,7 +128,7 @@ class ChatViewModel {
             selectedMessages.removeAll()
             selectionModeActive = false
         }
-        try! self.model.save()
+        try! chatRepository.save(self.model)
     }
 
     func cancelDeleteMessages() {
@@ -127,9 +150,7 @@ class ChatViewModel {
     private func generateResponse(_ forIndex: Int, isContinued: Bool = false) async {
         let promptModel: PromptModel = PromptModel(prompt: model.getFullPrompt(continueResponse: isContinued), memory: model.memory, promptTemplate: TemplatePrompts().defaultRolePlayPrompt)
 
-        print("prompt: \(promptModel.memory)")
-
-        let response = await llm?.sendMessage(promptModel: promptModel)
+        let response = await languageModelService?.sendMessage(promptModel: promptModel)
 
         switch response {
         case .success(let response):
@@ -141,7 +162,7 @@ class ChatViewModel {
                     self.model.messages[forIndex].text = responseText
                 }
                 self.model.messages[forIndex].loading = false
-                try! self.model.messages[forIndex].save()
+                try! messageRepository.save(self.model.messages[forIndex])
                 self.updateScrollView.toggle()
             }
         case .failure(let error):

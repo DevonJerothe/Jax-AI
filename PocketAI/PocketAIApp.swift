@@ -12,6 +12,7 @@ import GRDB
 struct PocketAIApp: App {
 
     @State var navManager: NavigationManager = .init()
+    @State var serviceContainer: ServiceContainer = .shared
 
     init() {
         print("PocketAIApp initializing...")
@@ -27,8 +28,8 @@ struct PocketAIApp: App {
                 ChatListView()
                     .tint(.white)
             }
-
         }
         .environment(navManager)
+        .environment(serviceContainer)
     }
 }

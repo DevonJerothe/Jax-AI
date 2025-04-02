@@ -15,6 +15,8 @@
 		E9DB2F672D826261009AEF2B /* SplashImageGen in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F662D826261009AEF2B /* SplashImageGen */; };
 		E9DB2F692D826261009AEF2B /* SplashMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F682D826261009AEF2B /* SplashMarkdown */; };
 		E9DB2F6B2D826261009AEF2B /* SplashTokenizer in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F6A2D826261009AEF2B /* SplashTokenizer */; };
+		E9F4B27A2D8A3B04001549FA /* LZ77 in Frameworks */ = {isa = PBXBuildFile; productRef = E9F4B2792D8A3B04001549FA /* LZ77 */; };
+		E9F4B27C2D8A3B04001549FA /* PNG in Frameworks */ = {isa = PBXBuildFile; productRef = E9F4B27B2D8A3B04001549FA /* PNG */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,9 +83,11 @@
 				E97F95802D80C2D1007C292A /* SwiftLLMSDK in Frameworks */,
 				E9DB2F5A2D825A67009AEF2B /* MarkdownUI in Frameworks */,
 				E94CC7E32D86726D00B4AB0B /* GRDB in Frameworks */,
+				E9F4B27C2D8A3B04001549FA /* PNG in Frameworks */,
 				E9DB2F632D826261009AEF2B /* Splash in Frameworks */,
 				E9DB2F652D826261009AEF2B /* SplashHTMLGen in Frameworks */,
 				E9DB2F692D826261009AEF2B /* SplashMarkdown in Frameworks */,
+				E9F4B27A2D8A3B04001549FA /* LZ77 in Frameworks */,
 				E9DB2F672D826261009AEF2B /* SplashImageGen in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -161,6 +165,8 @@
 				E9DB2F682D826261009AEF2B /* SplashMarkdown */,
 				E9DB2F6A2D826261009AEF2B /* SplashTokenizer */,
 				E94CC7E22D86726D00B4AB0B /* GRDB */,
+				E9F4B2792D8A3B04001549FA /* LZ77 */,
+				E9F4B27B2D8A3B04001549FA /* PNG */,
 			);
 			productName = PocketAI;
 			productReference = E9E949BA2D808E9C0008861E /* PocketAI.app */;
@@ -248,6 +254,7 @@
 				E9DB2F582D825A67009AEF2B /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 				E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */,
 				E94CC7E12D86726D00B4AB0B /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				E9F4B2782D8A3B04001549FA /* XCRemoteSwiftPackageReference "swift-png" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E9E949BB2D808E9C0008861E /* Products */;
@@ -449,7 +456,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"PocketAI/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "PocketAI/Preview\\ Content PocketAI/response.png";
 				DEVELOPMENT_TEAM = S5X4E78NMS;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -484,7 +491,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"PocketAI/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "PocketAI/Preview\\ Content PocketAI/response.png";
 				DEVELOPMENT_TEAM = S5X4E78NMS;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -650,6 +657,14 @@
 				minimumVersion = 0.16.0;
 			};
 		};
+		E9F4B2782D8A3B04001549FA /* XCRemoteSwiftPackageReference "swift-png" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tayloraswift/swift-png";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.4.9;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -691,6 +706,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */;
 			productName = SplashTokenizer;
+		};
+		E9F4B2792D8A3B04001549FA /* LZ77 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E9F4B2782D8A3B04001549FA /* XCRemoteSwiftPackageReference "swift-png" */;
+			productName = LZ77;
+		};
+		E9F4B27B2D8A3B04001549FA /* PNG */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E9F4B2782D8A3B04001549FA /* XCRemoteSwiftPackageReference "swift-png" */;
+			productName = PNG;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

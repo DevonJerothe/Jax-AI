@@ -4,24 +4,21 @@
 
 import Foundation
 
-public protocol KoboldAPIRequest {
+public protocol LanguageModelService {
     var urlSession: URLSession { get}
     var baseURL: String { get }
-}
 
-public protocol KoboldAPIBase: KoboldAPIRequest {
-    func getMaxContextLength() async -> Result<Int, APIError>
-    func getMaxLength() async -> Result<Int, APIError>
-    func getVersion() async -> Result<String, APIError>
     func getModel() async -> Result<String, APIError>
     func sendMessage(promptModel: PromptModel) async -> Result<PromptResponse, APIError>
+    func getMaxContextLength() async -> Result<Int, APIError>
 }
 
-public protocol KoboldAPIExtras: KoboldAPIRequest {}
+public protocol KoboldAPIBase: LanguageModelService {
+    func getMaxLength() async -> Result<Int, APIError>
+    func getVersion() async -> Result<String, APIError>
+}
 
-
-
-extension KoboldAPIRequest {
+extension LanguageModelService {
     func sendPrompt(prompt: PromptModel) async -> Result<PromptResponse, APIError> {
 
         guard let baseURL = URL(string: baseURL + "/api/v1/generate") else {
@@ -132,8 +129,7 @@ extension KoboldAPIRequest {
     }
 }
 
-
-public struct KoboldAPI: KoboldAPIBase, KoboldAPIExtras {
+public struct KoboldAPI: KoboldAPIBase {
     
     public var urlSession: URLSession
     public var baseURL: String

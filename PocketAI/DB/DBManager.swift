@@ -8,10 +8,20 @@
 import Foundation
 import GRDB 
 
+protocol Repository {
+    associatedtype T
+
+    func getAll() throws -> [T]
+    // func get(id: String) throws -> T?
+    func save(_ item: T) throws 
+    func delete(_ item: T) throws
+}
+
 class DBManager {
     static let shared = DBManager() 
 
     private var dbQueue: DatabaseQueue!
+    private var migrator: DatabaseMigrator = DatabaseMigrator()
 
     private init() {
         setup()
@@ -44,24 +54,14 @@ class DBManager {
     }
 
     private func migrateTables() throws {
-        try dbQueue.write { db in 
-            try db.create(table: "chats", ifNotExists: true) { t in 
-                t.column("id", .text).primaryKey().notNull()
-                t.column("chatTitle", .text).notNull()
-                t.column("memory", .text).notNull()
-                t.column("firstMessage", .text).notNull()
-            }
 
-            try db.create(table: "messages", ifNotExists: true) { t in 
-                t.column("id", .text).primaryKey().notNull()
-                t.column("chatId", .text).notNull().indexed().references("chats", onDelete: .cascade)
-                t.column("actor", .integer).notNull()
-                t.column("text", .text).notNull()
-                t.column("loading", .boolean).notNull()
-                t.column("exclude", .boolean).notNull().defaults(to: false)
-                t.column("createdAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
-            }
+        migrator.registerMigration("v1") { db in
+            try ChatModel.migrateTable(db)
+            try MessageModel.migrateTable(db)
+            try CharacterCardModel.migrateTable(db)
         }
+
+        try migrator.migrate(dbQueue)
     }
 
     func write<T>(_ block: (Database) throws -> T) throws -> T {

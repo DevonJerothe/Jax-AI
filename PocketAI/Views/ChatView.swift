@@ -6,21 +6,44 @@
 //
 
 import MarkdownUI
-import SwiftUI
 import SwiftLLMSDK
-
+import SwiftUI
 
 struct ChatView: View {
+    @Environment(\.dismiss) var dismiss
+
     @State var viewModel: ChatViewModel
     @State var textPrompt: String = ""
 
-    init(chatModel: ChatModel, llm: KoboldAPI?) {
-        self.viewModel = ChatViewModel(chatModel: chatModel, llm: llm)
+    init(chatModel: ChatModel) {
+        self.viewModel = ChatViewModel.create(chatModel: chatModel)
     }
 
     var body: some View {
         VStack {
-            ChatViewHeader(viewModel: viewModel)
+            ChatViewHeader(
+                leadingButtonIcon: viewModel.selectionModeActive
+                    ? "trash.fill" : "arrow.left",
+                trailingButtonIcon: viewModel.selectionModeActive
+                    ? "xmark" : "list.dash",
+                title: viewModel.model.chatTitle,
+                leadingButtonAction: {
+                    if viewModel.selectionModeActive {
+                        Task {
+                            await viewModel.deleteMessages()
+                        }
+                    } else {
+                        dismiss()
+                    }
+                },
+                trailingButtonAction: {
+                    if viewModel.selectionModeActive {
+                        viewModel.cancelDeleteMessages()
+                    } else {
+                        viewModel.showSettings.toggle()
+                    }
+                }
+            )
 
             ScrollViewReader { proxy in
                 ScrollView {
@@ -74,6 +97,7 @@ struct ChatView: View {
                     }))
             }
             Spacer()
+
             HStack {
                 Image(systemName: "trash.fill")
                     .onTapGesture {
@@ -97,13 +121,16 @@ struct ChatView: View {
         .sheet(isPresented: $viewModel.showSettings) {
             ChatSettingsView(viewModel: self.viewModel)
         }
-        .onAppear() {
+        .onAppear {
             self.viewModel.updateScrollView.toggle()
+
+            // Check if the connection is active. For existing chats, the connection may have been lost.
+            self.viewModel.checkConnection()
         }
         .navigationBarHidden(true)
     }
 }
 
 #Preview {
-    ChatView(chatModel: ChatModel(chatTitle: "Test Chat"), llm: KoboldAPI(urlSession: URLSession.shared, host: "localhost", port: 11434))
+    ChatView(chatModel: ChatModel(chatTitle: "Test Chat"))
 }
