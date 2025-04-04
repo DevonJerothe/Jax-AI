@@ -14,120 +14,199 @@ struct ChatView: View {
 
     @State var viewModel: ChatViewModel
     @State var textPrompt: String = ""
+    
+    // ---- Add State for Keyboard Height ----
+    @State private var keyboardHeight: CGFloat = 0
+    // ---- Add State for tracking keyboard visibility ----
+    @State private var isKeyboardVisible: Bool = false
 
     init(chatModel: ChatModel) {
         self.viewModel = ChatViewModel.create(chatModel: chatModel)
     }
 
     var body: some View {
-        VStack {
-            ChatViewHeader(
-                leadingButtonIcon: viewModel.selectionModeActive
-                    ? "trash.fill" : "arrow.left",
-                trailingButtonIcon: viewModel.selectionModeActive
-                    ? "xmark" : "list.dash",
-                title: viewModel.model.chatTitle,
-                leadingButtonAction: {
-                    if viewModel.selectionModeActive {
-                        Task {
-                            await viewModel.deleteMessages()
-                        }
-                    } else {
-                        dismiss()
-                    }
-                },
-                trailingButtonAction: {
-                    if viewModel.selectionModeActive {
-                        viewModel.cancelDeleteMessages()
-                    } else {
-                        viewModel.showSettings.toggle()
-                    }
-                }
-            )
-
-            ScrollViewReader { proxy in
-                ScrollView {
-                    ForEach(viewModel.model.messages, id: \.self) { message in
-                        HStack {
-                            if viewModel.selectionModeActive {
-                                SelectionCircle(
-                                    isSelected: viewModel.selectedMessages
-                                        .contains(message)
-                                )
-                                .transition(
-                                    .asymmetric(
-                                        insertion: .scale.combined(
-                                            with: .opacity),
-                                        removal: .scale.combined(with: .opacity)
-                                    )
-                                )
-                            }
-
-                            ChatBubbleView(
-                                message: message, viewModel: viewModel
-                            )
-                            .padding(.bottom, 8)
-                            .id(message)
-                            .onLongPressGesture {
-                                if !viewModel.selectionModeActive {
-                                    viewModel.selectionModeActive = true
-                                    viewModel.toggleSelection(message)
-                                }
-                            }
-                            .onTapGesture {
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        
+                        Color.clear
+                           .frame(height: 8)
+                           .id("topAnchor")
+                        
+                        ForEach(viewModel.model.messages, id: \.self) {
+                            message in
+                            HStack {
                                 if viewModel.selectionModeActive {
-                                    viewModel.toggleSelection(message)
+                                    SelectionCircle(
+                                        isSelected: viewModel.selectedMessages
+                                            .contains(message)
+                                    )
+                                    .transition(
+                                        .asymmetric(
+                                            insertion: .scale.combined(
+                                                with: .opacity),
+                                            removal: .scale.combined(
+                                                with: .opacity)
+                                        )
+                                    )
+                                }
+
+                                ChatBubbleView(
+                                    message: message, viewModel: viewModel
+                                )
+                                .padding(.top, 4)
+                                .padding(.bottom, 4)
+                                .id(message)
+                                .onLongPressGesture {
+                                    if !viewModel.selectionModeActive {
+                                        viewModel.selectionModeActive = true
+                                        viewModel.toggleSelection(message)
+                                    }
+                                }
+                                .onTapGesture {
+                                    if viewModel.selectionModeActive {
+                                        viewModel.toggleSelection(message)
+                                    }
                                 }
                             }
+                            .animation(
+                                .spring(response: 0.3),
+                                value: viewModel.selectionModeActive)
                         }
-                        .animation(
-                            .spring(response: 0.3),
-                            value: viewModel.selectionModeActive)
+                        
+                        Color.clear
+                           .frame(height: 8)
+                           .id("bottomAnchor")
                     }
+                    .scrollIndicators(.hidden)
+                    .onChange(
+                        of: viewModel.updateScrollView,
+                        ({
+                            scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.2)
+                        }))
                 }
-                .scrollIndicators(.hidden)
-                .scrollDismissesKeyboard(.immediately)
-                .onChange(
-                    of: viewModel.updateScrollView,
-                    ({
-                        withAnimation {
-                            proxy.scrollTo(
-                                viewModel.model.messages.last, anchor: .bottom)
-                        }
-                    }))
-            }
-            Spacer()
+                .padding(.horizontal)
+                
+                VStack {
+                    EnhancedTextEditor(
+                        text: $textPrompt,
+                        placeholder: "Send a Message",
+                        maxHeight: 120,
+                        minHeight: 44
+                    )
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                }
+                .background(Color(.secondarySystemBackground))
+                .clipShape(
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: 20,
+                        bottomLeadingRadius: 0,
+                        bottomTrailingRadius: 0,
+                        topTrailingRadius: 20
+                    )
+                )
+                .shadow(radius: 12)
 
-            HStack {
-                Image(systemName: "trash.fill")
-                    .onTapGesture {
-                        viewModel.clearChat()
+                HStack {
+                    Button {
+                        // TODO: Add image upload funtionality
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 26))
+                            .foregroundColor(.gray)
                     }
-                TextField("Type a message...", text: $textPrompt)
-                    .padding()
-                    .background(Color(UIColor.systemGray5))
-                    .cornerRadius(14)
-                    .onSubmit {
-                        let prompText = self.textPrompt
+                    .disabled(true)
+                    .padding(.bottom, 8)
+                    .padding(.leading, 16)
+                    Spacer()
+                    Button {
+                        let promptText = self.textPrompt
                         self.textPrompt = ""
                         Task {
-                            await self.viewModel.sendMessage(prompt: prompText)
+                            await self.viewModel.sendMessage(
+                                prompt: promptText)
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 26))
+                            .foregroundColor(.accentColor)
+                    }
+                    .padding(.bottom, 8)
+                    .padding(.trailing, 16)
+                }
+                .background(Color(.secondarySystemBackground))
+                .ignoresSafeArea(edges: keyboardHeight > 0 ? .bottom : [])
+            }
+            .toolbar {
+                ToolBarHeader(
+                    leadingButtonIcon: viewModel.selectionModeActive
+                        ? "trash.fill" : "arrow.left",
+                    trailingButtonIcon: viewModel.selectionModeActive
+                        ? "xmark" : "list.dash",
+                    leadingButtonAction: {
+                        if viewModel.selectionModeActive {
+                            Task {
+                                await viewModel.deleteMessages()
+                            }
+                        } else {
+                            dismiss()
+                        }
+                    },
+                    trailingButtonAction: {
+                        if viewModel.selectionModeActive {
+                            viewModel.cancelDeleteMessages()
+                        } else {
+                            viewModel.showSettings.toggle()
                         }
                     }
-                    .disabled(viewModel.selectionModeActive)
+                )
+            }
+            .navigationTitle(viewModel.model.chatTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .sheet(isPresented: $viewModel.showSettings) {
+                ChatSettingsView(viewModel: self.viewModel)
+            }
+            .onAppear {
+                self.viewModel.updateScrollView.toggle()
+                // Check if the connection is active. For existing chats, the connection may have been lost.
+                self.viewModel.checkConnection()
+                
+                observeKeyboardNotifications()
+            }
+            .onDisappear {
+                // ---- Stop Observing Keyboard ----
+                NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+                NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
             }
         }
-        .padding()
-        .sheet(isPresented: $viewModel.showSettings) {
-            ChatSettingsView(viewModel: self.viewModel)
+    }
+    
+    
+    // ---- Helper function for scrolling ----
+    private func scrollToBottom(proxy: ScrollViewProxy, anchor: String, delay: Double = 0.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+             withAnimation { // Ensure scrolling is animated
+                  proxy.scrollTo(anchor, anchor: .bottom)
+             }
         }
-        .onAppear {
-            self.viewModel.updateScrollView.toggle()
+    }
 
-            // Check if the connection is active. For existing chats, the connection may have been lost.
-            self.viewModel.checkConnection()
+    // ---- Keyboard Observation Logic ----
+    private func observeKeyboardNotifications() {
+        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+            guard let userInfo = notification.userInfo,
+                  let _ = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+                  let duration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double
+            else { return }
+
+            withAnimation(.easeOut(duration: duration)) {
+                self.isKeyboardVisible = true
+                self.viewModel.updateScrollView.toggle()
+            }
         }
-        .navigationBarHidden(true)
     }
 }
 

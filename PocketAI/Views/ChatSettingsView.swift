@@ -8,10 +8,11 @@
 import SwiftUI
 
 struct ChatSettingsView: View {
+    @Environment(\.dismiss) private var dismiss
     var viewModel: ChatViewModel
 
-    @State var systemPrompt: String
-    @State var initialMessage: String
+    @State private var systemPrompt: String
+    @State private var initialMessage: String
 
     init(viewModel: ChatViewModel) {
         self.viewModel = viewModel
@@ -20,59 +21,66 @@ struct ChatSettingsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                VStack {
-                    Text("Enter a system prompt")
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    TextEditor(text: $systemPrompt)
-                        .frame(height: min(200, CGFloat(systemPrompt.count) / 10 * 20))
-                        .background(Color(UIColor.systemGray5))
-                        .padding()
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white, lineWidth: 0.5)
-                        )
+        NavigationStack {
+            Form {
+                Section {
+                    ZStack(alignment: .topLeading) {
+                        if systemPrompt.isEmpty {
+                            Text("Enter a system prompt...")
+                                .foregroundColor(.secondary)
+                                .padding(.top, 8)
+                                .padding(.leading, 5)
+                        }
+                        
+                        TextEditor(text: $systemPrompt)
+                            .frame(minHeight: 100)
+                            .scrollContentBackground(.hidden)
+                    }
+                } header: {
+                    Text("System Prompt")
+                } footer: {
+                    Text("Instructions for how the AI should behave throughout the conversation.")
                 }
-                .padding(.vertical, 10)
-
-                VStack {
-                    Text("Enter a initial message")
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    TextEditor(text: $initialMessage)
-                        .frame(height: min(200, CGFloat(initialMessage.count) / 10 * 20))
-                        .background(Color(UIColor.systemGray5))
-                        .padding()
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white, lineWidth: 0.5)
-                        )
-                }
-                .padding(.vertical, 10)
-
-                Spacer()
-
-                Button(action: {
-                    self.viewModel.updateChatSettings(
-                        memory: systemPrompt,
-                        firstMessage: initialMessage
-                    )
-                }) {
-                    // Save results to model and close sheet
-                    Text("Save")
-                        .padding()
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .background(Color.white)
-                        .cornerRadius(15)
-                        .padding(50)
+                
+                Section {
+                    ZStack(alignment: .topLeading) {
+                        if initialMessage.isEmpty {
+                            Text("Enter your first message...")
+                                .foregroundColor(.secondary)
+                                .padding(.top, 8)
+                                .padding(.leading, 5)
+                        }
+                        
+                        TextEditor(text: $initialMessage)
+                            .frame(minHeight: 100)
+                            .scrollContentBackground(.hidden)
+                    }
+                } header: {
+                    Text("Initial Message")
+                } footer: {
+                    Text("The first message to send to the AI.")
                 }
             }
-            .padding()
+            .navigationTitle("Chat Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        viewModel.updateChatSettings(
+                            memory: systemPrompt,
+                            firstMessage: initialMessage
+                        )
+                        dismiss()
+                    }
+                    .fontWeight(.bold)
+                }
+            }
         }
     }
 }

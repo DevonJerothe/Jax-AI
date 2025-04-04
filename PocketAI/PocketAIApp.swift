@@ -26,7 +26,7 @@ struct PocketAIApp: App {
             switch navManager.currentRoot {
             case .chatListView:
                 ChatListView()
-                    .tint(.white)
+                    .tint(.primary)
             }
         }
         .environment(navManager)

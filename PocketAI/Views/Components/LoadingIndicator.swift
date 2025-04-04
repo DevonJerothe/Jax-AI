@@ -19,7 +19,7 @@ struct LoadingIndicator: View {
     let frame: CGSize
     let primaryColor: Color
 
-    init(color: Color = .white, size: CGFloat = 50, speed: Double = 0.5) {
+    init(color: Color = .accentColor, size: CGFloat = 50, speed: Double = 0.5) {
         timing = speed / 2
         timer = Timer.publish(every: timing, on: .main, in: .common).autoconnect()
         frame = CGSize(width: size, height: size)

@@ -22,7 +22,7 @@ struct ChatBubbleView: View {
                         LoadingIndicator(size: 25)
                     }
                     .padding(10)
-                    .background(Color(UIColor.systemGray5))
+                    .background(Color(.secondarySystemBackground))
                     .cornerRadius(15)
                     .frame(alignment: .leading)
                 } else {
@@ -55,11 +55,30 @@ struct ChatBubbleView: View {
                             }
                             .markdownTheme(.rolePlay)
                             .padding()
-                            .background(Color(UIColor.systemGray5))
+                            .background(Color(.secondarySystemBackground))
                             .cornerRadius(15)
                             .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: .leading)
                         if viewModel.shouldShowToolbar(message) {
                             HStack(spacing: 16) {
+                                // Delete
+                                Button(action: {
+                                    Task {
+                                        await self.viewModel.deleteMessage(message)
+                                    }
+                                }) {
+                                    Image(systemName: "trash.fill")
+                                        .resizable()
+                                        .frame(width: 10, height: 10)
+                                        .foregroundStyle(Color.accentColor)
+                                        .padding(5)
+                                        .background(
+                                            Circle()
+                                                .stroke(Color.accentColor, lineWidth: 0.5)
+                                        )
+                                        .frame(width: 15, height: 15)
+                                        .padding(.leading, 8)
+                                        .padding(.top, 4)
+                                }
                                 // Regen
                                 Button(action: {
                                     Task {
@@ -67,14 +86,16 @@ struct ChatBubbleView: View {
                                     }
                                 }) {
                                     Image(systemName: "repeat")
-                                        .foregroundStyle(.white)
+                                        .resizable()
+                                        .frame(width: 10, height: 10)
+                                        .foregroundStyle(Color.accentColor)
                                         .padding(5)
                                         .background(
                                             Circle()
-                                                .stroke(Color.white, lineWidth: 0.5)
+                                                .stroke(Color.accentColor, lineWidth: 0.5)
                                         )
                                         .frame(width: 15, height: 15)
-                                        .padding(.leading, 6)
+                                        .padding(.leading, 4)
                                         .padding(.top, 4)
                                 }
                                 // Continue
@@ -84,14 +105,16 @@ struct ChatBubbleView: View {
                                     }
                                 }) {
                                     Image(systemName: "play.fill")
-                                        .foregroundStyle(.white)
+                                        .resizable()
+                                        .frame(width: 10, height: 10)
+                                        .foregroundStyle(Color.accentColor)
                                         .padding(5)
                                         .background(
                                             Circle()
-                                                .stroke(Color.white, lineWidth: 0.5)
+                                                .stroke(Color.accentColor, lineWidth: 0.5)
                                         )
                                         .frame(width: 15, height: 15)
-                                        .padding(.leading, 6)
+                                        .padding(.leading, 4)
                                         .padding(.top, 4)
                                 }
                             }
@@ -109,7 +132,7 @@ struct ChatBubbleView: View {
                         .foregroundStyle(.black)
                         .markdownTheme(.userRolePlay)
                         .padding()
-                        .background(Color.white)
+                        .background(Color(.secondarySystemFill))
                         .clipShape(
                             UnevenRoundedRectangle(topLeadingRadius: 15, bottomLeadingRadius: 15, bottomTrailingRadius: 0, topTrailingRadius: 15)
                         )

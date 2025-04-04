@@ -13,17 +13,17 @@ extension Theme {
         .code {
             FontStyle(.italic)
             FontWeight(.bold)
-            ForegroundColor(.yellow)
+            ForegroundColor(.blue)
         }
 
     static let userRolePlay = Theme()
-        .paragraph { config in
-            config.label
-                .foregroundStyle(.black)
-        }
+//        .paragraph { config in
+//            config.label
+//                .foregroundStyle(.primary)
+//        }
         .code {
             FontStyle(.italic)
             FontWeight(.bold)
-            ForegroundColor(.red)
+            ForegroundColor(.blue)
         }
 }

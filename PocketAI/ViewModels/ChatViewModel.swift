@@ -130,6 +130,13 @@ class ChatViewModel {
         }
         try! chatRepository.save(self.model)
     }
+    
+    func deleteMessage(_ message: MessageModel) async {
+        await MainActor.run {
+            self.model.messages.removeAll(where: { message == $0 })
+        }
+        try! chatRepository.save(self.model)
+    }
 
     func cancelDeleteMessages() {
         selectedMessages.removeAll()
@@ -137,10 +144,14 @@ class ChatViewModel {
     }
 
     func shouldShowToolbar(_ message: MessageModel) -> Bool {
-        if let lastBotIndex = model.messages.lastIndex(where: { $0.actor == .bot }), lastBotIndex != 0 {
-            return model.messages[lastBotIndex].id == message.id
+        if model.messages.count > 1, model.messages.last?.id == message.id {
+            return true
         }
         return false
+//        if let lastBotIndex = model.messages.lastIndex(where: { $0.actor == .bot }), lastBotIndex != 0 {
+//            return model.messages[lastBotIndex].id == message.id
+//        }
+//        return false
     }
 
     private func isBelowContextLimit() -> Bool {
