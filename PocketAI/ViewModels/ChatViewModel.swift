@@ -16,6 +16,7 @@ class ChatViewModel {
     private let chatRepository: ChatRepository
 
     var model: ChatModel
+    var connectionSettings: ConnectionSettingsModel
     var isConnected: Bool
 
     var updateScrollView: Bool = false
@@ -34,6 +35,7 @@ class ChatViewModel {
         self.messageRepository = messageRepository
         self.chatRepository = chatRepository
         self.isConnected = ServiceContainer.shared.isConnected
+        self.connectionSettings = ServiceContainer.shared.connectionSettings
     }
 
     static func create(
@@ -157,7 +159,13 @@ class ChatViewModel {
     }
 
     private func generateResponse(_ forIndex: Int, isContinued: Bool = false) async {
-        let promptModel: PromptModel = PromptModel(prompt: model.getFullPrompt(continueResponse: isContinued), memory: model.memory, promptTemplate: TemplatePrompts().defaultRolePlayPrompt)
+        let promptModel = PromptModel(
+            maxContextLength: connectionSettings.contextLength ?? 4069,
+            maxLength: connectionSettings.responseLength ?? 240,
+            prompt: model.getFullPrompt(continueResponse: isContinued),
+            memory: model.memory,
+            promptTemplate: TemplatePrompts().defaultRolePlayPrompt
+        )
 
         let response = await languageModelService?.sendMessage(promptModel: promptModel)
 
