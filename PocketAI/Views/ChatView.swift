@@ -27,6 +27,19 @@ struct ChatView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                
+                // Connection warning
+                if viewModel.isConnected == false {
+                    HStack {
+                        Spacer()
+                        Text("Not Connected")
+                            .padding(.all, 4)
+                        Spacer()
+                    }
+                    .frame(height: 20)
+                    .background(Color.red)
+                }
+                
                 ScrollViewReader { proxy in
                     ScrollView {
                         
@@ -131,8 +144,9 @@ struct ChatView: View {
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.system(size: 26))
-                            .foregroundColor(.accentColor)
+                            .foregroundColor(viewModel.isConnected ? .accentColor : .gray)
                     }
+                    .disabled(viewModel.isConnected == false)
                     .padding(.bottom, 8)
                     .padding(.trailing, 16)
                 }

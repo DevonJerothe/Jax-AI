@@ -16,6 +16,7 @@ class ChatViewModel {
     private let chatRepository: ChatRepository
 
     var model: ChatModel
+    var isConnected: Bool
 
     var updateScrollView: Bool = false
     var showSettings: Bool = false
@@ -32,6 +33,7 @@ class ChatViewModel {
         self.languageModelService = languageModelService
         self.messageRepository = messageRepository
         self.chatRepository = chatRepository
+        self.isConnected = ServiceContainer.shared.isConnected
     }
 
     static func create(
@@ -148,10 +150,6 @@ class ChatViewModel {
             return true
         }
         return false
-//        if let lastBotIndex = model.messages.lastIndex(where: { $0.actor == .bot }), lastBotIndex != 0 {
-//            return model.messages[lastBotIndex].id == message.id
-//        }
-//        return false
     }
 
     private func isBelowContextLimit() -> Bool {

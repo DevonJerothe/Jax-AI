@@ -9,27 +9,29 @@ import SwiftUI
 
 struct ConnectionSettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var viewModel: ConnectionSettingsViewModel = .init()
+    @State private var connectionManager: ServiceContainer = .shared
 
+    @State private var connectionTest: Bool? = nil
+    
     var hostBinding: Binding<String> {
         Binding<String>(
-            get: { viewModel.host ?? "" },
-            set: { viewModel.host = $0.isEmpty ? nil : $0 }
+            get: { connectionManager.connectionSettings.host ?? "" },
+            set: { connectionManager.connectionSettings.host = $0.isEmpty ? nil : $0 }
         )
     }
 
     // Add computed bindings for slider values
     private var contextLengthBinding: Binding<Double> {
         Binding<Double>(
-            get: { Double(viewModel.contextLength ?? 2048) },
-            set: { viewModel.contextLength = Int($0) }
+            get: { Double(connectionManager.connectionSettings.contextLength ?? 4096) },
+            set: { connectionManager.connectionSettings.contextLength = Int($0) }
         )
     }
     
     private var responseLengthBinding: Binding<Double> {
         Binding<Double>(
-            get: { Double(viewModel.responseLength ?? 512) },
-            set: { viewModel.responseLength = Int($0) }
+            get: { Double(connectionManager.connectionSettings.responseLength ?? 300) },
+            set: { connectionManager.connectionSettings.responseLength = Int($0) }
         )
     }
 
@@ -37,7 +39,7 @@ struct ConnectionSettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    Picker("Connection Type", selection: $viewModel.apiTypeSelection) {
+                    Picker("Connection Type", selection: $connectionManager.connectionSettings.connectionType) {
                         Text("KoboldAPI").tag(APITypeSelection.KoboldAPI)
                     }
                     .pickerStyle(.navigationLink)
@@ -51,7 +53,7 @@ struct ConnectionSettingsView: View {
                         .textInputAutocapitalization(.never)
                         .keyboardType(.URL)
                     
-                    TextField("Port", value: $viewModel.port, format: .number)
+                    TextField("Port", value: $connectionManager.connectionSettings.port, format: .number)
                         .keyboardType(.numberPad)
                 } header: {
                     Text("API Settings")
@@ -67,7 +69,7 @@ struct ConnectionSettingsView: View {
                             Text("\(Int(contextLengthBinding.wrappedValue))")
                                 .monospacedDigit()
                         }
-                        Slider(value: contextLengthBinding, in: 512...16000, step: 4096)
+                        Slider(value: contextLengthBinding, in: 1024...25600, step: 1024)
                     }
                     
                     VStack(alignment: .leading) {
@@ -77,12 +79,43 @@ struct ConnectionSettingsView: View {
                             Text("\(Int(responseLengthBinding.wrappedValue))")
                                 .monospacedDigit()
                         }
-                        Slider(value: responseLengthBinding, in: 128...16000, step: 256)
+                        Slider(value: responseLengthBinding, in: 120...3000, step: 60)
                     }
                 } header: {
                     Text("Model Settings")
                 } footer: {
                     Text("Adjust the sliders to set the model's token limits. Maximum: 16,000.")
+                }
+                
+                Section {
+                    HStack {
+                        Button(action: {
+                            Task {
+                                connectionTest = await connectionManager.connectToLanguageModel()
+                            }
+                        }, label: {
+                            Text("Test Connection")
+                        })
+                        .buttonStyle(.bordered)
+                        
+                        if let connectionTest = connectionTest {
+                            Image(systemName: connectionTest ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .foregroundStyle(connectionTest ? Color.green : Color.red)
+                        }
+                    }
+
+                    if connectionManager.isConnected {
+                        VStack(alignment: .leading) {
+                            HStack {
+                                Text("Model Name")
+                                Spacer()
+                            }
+                            Text(connectionManager.modelName ?? "N/A")
+                                .foregroundStyle(Color(UIColor.label))
+                        }
+                    }
+                } header: {
+                    Text("Connected LLM")
                 }
             }
             .navigationTitle("Connection Settings")
@@ -97,7 +130,13 @@ struct ConnectionSettingsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         Task {
-                            await viewModel.connect()
+                            if connectionManager.isConnected == false,
+                               await connectionManager.connectToLanguageModel()
+                            {
+                                connectionManager.saveConnectionSettings()
+                                dismiss()
+                            }
+                            connectionManager.saveConnectionSettings()
                             dismiss()
                         }
                     }

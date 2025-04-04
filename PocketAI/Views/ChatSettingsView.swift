@@ -34,6 +34,7 @@ struct ChatSettingsView: View {
                         
                         TextEditor(text: $systemPrompt)
                             .frame(minHeight: 100)
+                            .fixedSize(horizontal: false, vertical: true)
                             .scrollContentBackground(.hidden)
                     }
                 } header: {
@@ -53,6 +54,7 @@ struct ChatSettingsView: View {
                         
                         TextEditor(text: $initialMessage)
                             .frame(minHeight: 100)
+                            .fixedSize(horizontal: false, vertical: true)
                             .scrollContentBackground(.hidden)
                     }
                 } header: {
