@@ -12,7 +12,7 @@ public protocol CharacterImporterService {
     var siteURL: URL { get }
 
     //    func getCharList() async throws ->
-    //    func getCardViaURL(_ url: URL) async throws ->
+    func getCardViaURL(_ url: URL) async throws -> Result<CharacterCard, APIError>
 }
 
 public struct ChubImporter: CharacterImporterService {
@@ -74,6 +74,11 @@ public struct ChubImporter: CharacterImporterService {
         // Can prob be fixed, but I spent to much time trying to do it. This works fine.
         do {
             let characterCard = try getCharData(data: data)
+            // inject png image link since the avatar field is pretty much always "none"
+            // EX: https://avatars.charhub.io/avatars/characters/Anonymous/aweseomeCard/chara_card_v2.png
+            characterCard.data?.avatar = "https://avatars.charhub.io/avatars/\(fullPath)/chara_card_v2.png"
+            // Also add downloaded PNG data to model so we can skip using async image via URL
+            characterCard.pngData = data
             return .success(characterCard)
         } catch (let error) {
             throw error

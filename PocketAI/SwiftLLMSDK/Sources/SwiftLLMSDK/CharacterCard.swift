@@ -9,16 +9,16 @@
 import Foundation
 
 
-// Add ID for DB support. NOTE: This should be done via the application. 
 public class CharacterCard: Codable {
-    public var id: UUID = UUID()
     public var spec: String?
     public var spec_version: String?
     public var data: CharacterCardData?
+    
+    /// We want to pass the downloaded image data so that we can present the img on the view
+    public var pngData: Data?
 }
 
 public class CharacterCardData: Codable {
-    public var id: UUID = UUID()
     public var name: String?
     public var description: String?
     public var personality: String?

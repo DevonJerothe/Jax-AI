@@ -12,8 +12,8 @@ struct SelectionCircle: View {
 
     var body: some View {
         Circle()
-            .fill(isSelected ? .white : .white.opacity(0.1))
-            .stroke(Color.white, lineWidth: 0.5)
+            .fill(isSelected ? Color.accentColor : .white.opacity(0.1))
+            .stroke(Color.accentColor, lineWidth: 0.5)
             .frame(minWidth: 24, maxWidth: 24)
             .animation(.spring(response: 0.2), value: isSelected)
     }

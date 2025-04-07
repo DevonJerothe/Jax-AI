@@ -20,6 +20,7 @@ class ServiceContainer {
 
     private var messageRepository: MessageRepository = MessageRepository()
     private var chatRepository: ChatRepository = ChatRepository()
+    private var characterRepository: CharacterRepository = CharacterRepository()
 
     private init() {
         // Load Connection Settings if any exist
@@ -59,6 +60,10 @@ class ServiceContainer {
 
     func getChatRepository() -> ChatRepository {
         return self.chatRepository
+    }
+    
+    func getCharacterRepository() -> CharacterRepository {
+        return self.characterRepository
     }
     
     func saveConnectionSettings() {

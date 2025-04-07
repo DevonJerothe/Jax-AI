@@ -29,11 +29,12 @@ struct ChatListView: View {
                             // Content
                             HStack(spacing: 12) {
                                 // Avatar/Profile Image
-                                Image(systemName: "person.circle.fill")
+                                chat.getAvatarImg()
                                     .resizable()
-                                    .aspectRatio(contentMode: .fit)
+                                    .aspectRatio(contentMode: .fill)
                                     .frame(width: 45, height: 45)
                                     .foregroundColor(.gray)
+                                    .clipShape(Circle())
                                 
                                 // Chat info
                                 VStack(alignment: .leading, spacing: 4) {

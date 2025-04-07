@@ -57,7 +57,7 @@ struct ChatBubbleView: View {
                             .padding()
                             .background(Color(.secondarySystemBackground))
                             .cornerRadius(15)
-                            .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: .leading)
+                            .frame(maxWidth: UIScreen.main.bounds.width * 0.80, alignment: .leading)
                         if viewModel.shouldShowToolbar(message) {
                             HStack(spacing: 16) {
                                 // Delete

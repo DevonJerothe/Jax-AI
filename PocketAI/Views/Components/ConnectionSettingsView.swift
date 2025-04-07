@@ -103,6 +103,7 @@ struct ConnectionSettingsView: View {
                                 .foregroundStyle(connectionTest ? Color.green : Color.red)
                         }
                     }
+                    .listRowBackground(Color.clear)
 
                     if connectionManager.isConnected {
                         VStack(alignment: .leading) {
@@ -111,7 +112,7 @@ struct ConnectionSettingsView: View {
                                 Spacer()
                             }
                             Text(connectionManager.modelName ?? "N/A")
-                                .foregroundStyle(Color(UIColor.label))
+                                .foregroundStyle(Color(UIColor.secondaryLabel))
                         }
                     }
                 } header: {

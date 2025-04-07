@@ -14,6 +14,7 @@ class ChatViewModel {
     private var languageModelService: LanguageModelService? 
     private let messageRepository: MessageRepository
     private let chatRepository: ChatRepository
+    private let characterRepository: CharacterRepository
 
     var model: ChatModel
     var connectionSettings: ConnectionSettingsModel
@@ -28,7 +29,8 @@ class ChatViewModel {
         chatModel: ChatModel,
         languageModelService: LanguageModelService? = ServiceContainer.shared.getLanguageModelService(),
         messageRepository: MessageRepository = ServiceContainer.shared.getMessageRepository(),
-        chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository()
+        chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository(),
+        characterRepository: CharacterRepository = ServiceContainer.shared.getCharacterRepository()
     ) {
         self.model = chatModel
         self.languageModelService = languageModelService
@@ -36,6 +38,7 @@ class ChatViewModel {
         self.chatRepository = chatRepository
         self.isConnected = ServiceContainer.shared.isConnected
         self.connectionSettings = ServiceContainer.shared.connectionSettings
+        self.characterRepository = characterRepository
     }
 
     static func create(
@@ -50,30 +53,6 @@ class ChatViewModel {
     func checkConnection() {
         if languageModelService == nil {
             self.languageModelService = ServiceContainer.shared.getLanguageModelService()
-        }
-    }
-
-    func fetchModel() async {
-        let name = await languageModelService?.getModel()
-        switch name {
-            case .success(let name):
-                self.model.modelName = name
-            case .failure(let error):
-                self.model.error = error.localizedDescription
-        case .none:
-            print("not connected")
-        }
-    }
-
-    func fetchMaxContextLength() async {
-        let maxContext = await languageModelService?.getMaxContextLength()
-        switch maxContext {
-            case .success(let maxContext):
-                self.model.maxContextLength = maxContext
-            case .failure(let error):
-                self.model.error = error.localizedDescription
-        case .none:
-            print("not connected")
         }
     }
 
@@ -104,17 +83,17 @@ class ChatViewModel {
     }
 
     func updateChatSettings(
-        memory: String,
+        chatName: String,
+        description: String,
         firstMessage: String
     ) {
-        self.model.memory = memory
-        self.model.firstMessage = firstMessage
-
-        print(self.model.memory)
-        print(self.model.firstMessage)
+        self.model.characterCard.description = description
+        self.model.characterCard.firstMessage = firstMessage
+        self.model.characterCard.name = chatName
 
         self.showSettings.toggle()
 
+        try! characterRepository.save(self.model.characterCard)
         try! chatRepository.save(self.model)
     }
 
@@ -163,7 +142,7 @@ class ChatViewModel {
             maxContextLength: connectionSettings.contextLength ?? 4069,
             maxLength: connectionSettings.responseLength ?? 240,
             prompt: model.getFullPrompt(continueResponse: isContinued),
-            memory: model.memory,
+            memory: model.getFullMemory(),
             promptTemplate: TemplatePrompts().defaultRolePlayPrompt
         )
 

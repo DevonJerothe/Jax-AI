@@ -70,7 +70,6 @@ extension MessageModel: TableRecord, FetchableRecord, PersistableRecord {
         container["createdAt"] = createdAt
     }
 }
-
 extension MessageModel {
     public static func migrateTable(_ db: Database) throws {
         try db.create(table: "messages", ifNotExists: true) { t in
@@ -84,3 +83,4 @@ extension MessageModel {
         }
     }
 }
+

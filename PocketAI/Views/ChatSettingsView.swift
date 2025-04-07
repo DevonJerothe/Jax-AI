@@ -11,34 +11,44 @@ struct ChatSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: ChatViewModel
 
-    @State private var systemPrompt: String
+    @State private var botDescription: String
     @State private var initialMessage: String
+    @State private var chatName: String
 
     init(viewModel: ChatViewModel) {
         self.viewModel = viewModel
-        _systemPrompt = State(initialValue: viewModel.model.memory)
-        _initialMessage = State(initialValue: viewModel.model.firstMessage)
+        _botDescription = State(initialValue: viewModel.model.characterCard.description ?? "" )
+        _initialMessage = State(initialValue: viewModel.model.characterCard.firstMessage ?? "")
+        _chatName = State(initialValue: viewModel.model.characterCard.name ?? "" )
     }
 
     var body: some View {
         NavigationStack {
             Form {
+                
+                Section {
+                    TextField("Chat Name", text: $chatName)
+                        .autocorrectionDisabled()
+                } header: {
+                    Text("Chat Name")
+                }
+                
                 Section {
                     ZStack(alignment: .topLeading) {
-                        if systemPrompt.isEmpty {
-                            Text("Enter a system prompt...")
+                        if botDescription.isEmpty {
+                            Text("Enter a Description...")
                                 .foregroundColor(.secondary)
                                 .padding(.top, 8)
                                 .padding(.leading, 5)
                         }
                         
-                        TextEditor(text: $systemPrompt)
-                            .frame(minHeight: 100)
+                        TextEditor(text: $botDescription)
+                            .frame(minHeight: 100, maxHeight: 300)
                             .fixedSize(horizontal: false, vertical: true)
                             .scrollContentBackground(.hidden)
                     }
                 } header: {
-                    Text("System Prompt")
+                    Text("Description")
                 } footer: {
                     Text("Instructions for how the AI should behave throughout the conversation.")
                 }
@@ -53,7 +63,7 @@ struct ChatSettingsView: View {
                         }
                         
                         TextEditor(text: $initialMessage)
-                            .frame(minHeight: 100)
+                            .frame(minHeight: 100, maxHeight: 300)
                             .fixedSize(horizontal: false, vertical: true)
                             .scrollContentBackground(.hidden)
                     }
@@ -67,7 +77,8 @@ struct ChatSettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") {
+                    Button("Reset") {
+                        viewModel.clearChat()
                         dismiss()
                     }
                 }
@@ -75,7 +86,8 @@ struct ChatSettingsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         viewModel.updateChatSettings(
-                            memory: systemPrompt,
+                            chatName: chatName,
+                            description: botDescription,
                             firstMessage: initialMessage
                         )
                         dismiss()
