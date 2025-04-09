@@ -56,7 +56,7 @@ struct ChatListView: View {
                     }
                 )
             }
-            .navigationTitle("Pocket AI")
+            .navigationTitle("Jax AI")
             .navigationBarTitleDisplayMode(.inline)
             .padding()
             .sheet(isPresented: $viewModel.showNewChatSheet) {

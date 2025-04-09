@@ -36,8 +36,9 @@ struct ChatView: View {
                             .padding(.all, 4)
                         Spacer()
                     }
-                    .frame(height: 20)
                     .background(Color.red)
+                    .frame(height: 20)
+                    .padding(.vertical, 8)
                 }
                 
                 ScrollViewReader { proxy in

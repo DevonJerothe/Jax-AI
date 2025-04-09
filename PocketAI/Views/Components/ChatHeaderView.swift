@@ -12,7 +12,7 @@ struct ChatViewHeader: View {
     var leadingButtonIcon: String
     var leadingIconColor: Color = .white
     var trailingButtonIcon: String
-    var title: String = "Pocket AI"
+    var title: String = "Jax AI"
 
     var leadingButtonAction: (() -> Void)
     var trailingButtonAction: (() -> Void)
