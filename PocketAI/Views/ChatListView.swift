@@ -20,58 +20,18 @@ struct ChatListView: View {
                 // List with swipe actions
                 List {
                     ForEach(viewModel.chats, id: \.id) { chat in
-                        ZStack {
-                            // Background and border as a single unit
-                            Rectangle()
-                                .fill(Color(UIColor.secondarySystemFill))
-                                .cornerRadius(10)
-                            
-                            // Content
-                            HStack(spacing: 12) {
-                                // Avatar/Profile Image
-                                chat.getAvatarImg()
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 45, height: 45)
-                                    .foregroundColor(.gray)
-                                    .clipShape(Circle())
-                                
-                                // Chat info
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
-                                        Text(chat.chatTitle)
-                                            .fontWeight(.medium)
-                                        
-                                        Spacer()
-                                        
-                                        // Time indicator (placeholder - could show creation date)
-                                        Text("Today")
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
-                                    }
-                                    
-                                    Text(chat.messages.last?.text ?? "")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(1)
-                                }
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .background(
-                            // Hide chevron set by navigation link
-                            NavigationLink(
-                                "",
-                                destination: ChatView(chatModel: chat)
+                        ChatCellView(chat: chat)
+                            .background(
+                                // Hide chevron set by navigation link
+                                NavigationLink(
+                                    "",
+                                    destination: ChatView(chatModel: chat)
+                                )
+                                .opacity(0)
                             )
-                            .opacity(0)
-                        )
-                        .padding(.vertical, 3) // Add a small gap between list items
-                        // .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets())
-                        .listRowSeparator(.hidden)
+                            .padding(.vertical, 3) // Add a small gap between list items
+                            .listRowInsets(EdgeInsets())
+                            .listRowSeparator(.hidden)
                     }
                     .onDelete { indexSet in
                         Task {
@@ -114,6 +74,53 @@ struct ChatListView: View {
                 viewModel.loadChats()
                 print("Loaded \(viewModel.chats.count) chats")
             }
+        }
+    }
+}
+
+struct ChatCellView: View {
+    let chat: ChatModel
+
+    var body: some View {
+        ZStack {
+            // Background and border as a single unit
+            Rectangle()
+                .fill(Color(UIColor.secondarySystemFill))
+                .cornerRadius(10)
+
+            // Content
+            HStack(spacing: 12) {
+                // Avatar/Profile Image
+                chat.getAvatarImg()
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 45, height: 45)
+                    .foregroundColor(.gray)
+                    .clipShape(Circle())
+
+                // Chat info
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(chat.chatTitle)
+                            .fontWeight(.medium)
+
+                        Spacer()
+
+                        // TODO: Time indicator (placeholder - could show creation date)
+                        Text("Today") // Replace with actual timestamp formatting if needed
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+
+                    Text(chat.messages.last?.getRolePlayText(cardName: chat.chatTitle) ?? "No messages yet") // Add placeholder text
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

@@ -44,6 +44,9 @@ class ServiceContainer {
                 return true
             case .failure(let error):
                 print("Error: \(error)")
+            if case .timeout = error {
+                isConnected = false
+            }
             case .none:
                 print("Error: No model name")
         }

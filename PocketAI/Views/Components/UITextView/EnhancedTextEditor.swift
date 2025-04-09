@@ -235,19 +235,6 @@ struct EnhancedTextEditor: View {
             }
         })
         .frame(height: max(minHeight, calculatedHeight))  // Use calculated height, but not less than minHeight
-        .cornerRadius(8)  // Optional styling
-//        .onAppear {
-//            // Trigger initial height calculation slightly after appear if needed
-//            // (Often updateUIView handles this, but can be a fallback)
-//            // DispatchQueue.main.async {
-//            //    // This might not be strictly necessary if updateUIView is robust
-//            // }
-//        }
-//        // Ensure the view tries to redraw when text changes externally affecting height
-//        .onChange(of: text) { _ in
-//            // The recalculation should happen within the Representable's delegate,
-//            // but this ensures SwiftUI is aware of the dependency if needed.
-//            // No direct action needed here usually.
-//        }
+        .cornerRadius(8)
     }
 }

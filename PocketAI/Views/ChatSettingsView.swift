@@ -77,7 +77,7 @@ struct ChatSettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Reset") {
+                    Button("clear Chat") {
                         viewModel.clearChat()
                         dismiss()
                     }

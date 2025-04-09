@@ -97,6 +97,12 @@ class ChatViewModel {
         try! chatRepository.save(self.model)
     }
 
+    func updateMessage(_ message: MessageModel, newText: String) {
+        var updateMessage = model.messages.first(where: {$0.id == message.id })
+        updateMessage?.text = newText
+        try! messageRepository.save(updateMessage!)
+    }
+
     func toggleSelection(_ message: MessageModel) {
         if selectedMessages.contains(message) {
             selectedMessages.remove(message)

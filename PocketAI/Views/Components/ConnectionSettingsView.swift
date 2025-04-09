@@ -67,7 +67,6 @@ struct ConnectionSettingsView: View {
                             Text("Context Length")
                             Spacer()
                             Text("\(Int(contextLengthBinding.wrappedValue))")
-                                .monospacedDigit()
                         }
                         Slider(value: contextLengthBinding, in: 1024...25600, step: 1024)
                     }
@@ -77,7 +76,6 @@ struct ConnectionSettingsView: View {
                             Text("Response Length")
                             Spacer()
                             Text("\(Int(responseLengthBinding.wrappedValue))")
-                                .monospacedDigit()
                         }
                         Slider(value: responseLengthBinding, in: 120...3000, step: 60)
                     }
@@ -94,17 +92,25 @@ struct ConnectionSettingsView: View {
                                 connectionTest = await connectionManager.connectToLanguageModel()
                             }
                         }, label: {
-                            Text("Test Connection")
+                            Text("Connect")
                         })
-                        .buttonStyle(.bordered)
                         
-                        if let connectionTest = connectionTest {
-                            Image(systemName: connectionTest ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundStyle(connectionTest ? Color.green : Color.red)
+                        Spacer() 
+                        if connectionManager.isConnected {
+                            Text("Connected")
+                                .foregroundStyle(Color(UIColor.secondaryLabel))
+                                .padding() 
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color.green)
+                        } else {
+                            Text("Disconnected")
+                                .foregroundStyle(Color(UIColor.secondaryLabel))
+                                .padding() 
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(Color.red)
                         }
                     }
-                    .listRowBackground(Color.clear)
-
+                
                     if connectionManager.isConnected {
                         VStack(alignment: .leading) {
                             HStack {
@@ -131,9 +137,7 @@ struct ConnectionSettingsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         Task {
-                            if connectionManager.isConnected == false,
-                               await connectionManager.connectToLanguageModel()
-                            {
+                            if connectionManager.isConnected == false, await connectionManager.connectToLanguageModel() {
                                 connectionManager.saveConnectionSettings()
                                 dismiss()
                             }
@@ -142,6 +146,11 @@ struct ConnectionSettingsView: View {
                         }
                     }
                     .fontWeight(.bold)
+                }
+            }
+            .onAppear {
+                Task {
+                    connectionTest = await connectionManager.connectToLanguageModel()
                 }
             }
         }

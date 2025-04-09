@@ -5,6 +5,7 @@ public enum APIError: Error, LocalizedError {
     case invalidResponse
     case invalidData
     case decodingError
+    case timeout
     case serverError(code: Int)
 
     public var errorDescription: String? {
@@ -17,6 +18,8 @@ public enum APIError: Error, LocalizedError {
             return "Invalid data"
         case .decodingError:
             return "Decoding error"
+        case .timeout:
+            return "Timeout"
         case .serverError(code: let code):
             return "Server error (\(code))"
         }

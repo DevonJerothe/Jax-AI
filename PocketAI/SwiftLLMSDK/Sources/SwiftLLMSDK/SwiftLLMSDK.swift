@@ -7,6 +7,7 @@ import Foundation
 public protocol LanguageModelService {
     var urlSession: URLSession { get}
     var baseURL: String { get }
+    var timeoutInterval: TimeInterval { get }
 
     func getModel() async -> Result<String, APIError>
     func sendMessage(promptModel: PromptModel) async -> Result<PromptResponse, APIError>
@@ -30,7 +31,7 @@ extension LanguageModelService {
             let requestData = prompt.toJSON()
             
             // Create the request
-            var request = URLRequest(url: baseURL)
+            var request = URLRequest(url: baseURL, timeoutInterval: timeoutInterval)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = requestData.data(using: .utf8)
@@ -58,6 +59,8 @@ extension LanguageModelService {
             } catch {
                 return .failure(.decodingError)
             }
+        } catch let error as URLError where error.code == .timedOut {
+            return .failure(.timeout) // Handle timeout error
         } catch {
             return .failure(.invalidData)
         }
@@ -69,7 +72,7 @@ extension LanguageModelService {
         }
 
         do {
-            var request = URLRequest(url: baseURL)
+            var request = URLRequest(url: baseURL, timeoutInterval: timeoutInterval)
             request.httpMethod = "GET"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -91,6 +94,8 @@ extension LanguageModelService {
                 return .failure(.decodingError)
             }
 
+        } catch let error as URLError where error.code == .timedOut {
+            return .failure(.timeout) // Handle timeout error
         } catch {
             return .failure(.invalidData)
         }
@@ -102,7 +107,7 @@ extension LanguageModelService {
         }
 
         do {
-            var request = URLRequest(url: baseURL)
+            var request = URLRequest(url: baseURL, timeoutInterval: timeoutInterval)
             request.httpMethod = "GET"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -123,6 +128,8 @@ extension LanguageModelService {
             } catch {
                 return .failure(.decodingError)
             }
+        } catch let error as URLError where error.code == .timedOut {
+            return .failure(.timeout) // Handle timeout error
         } catch {
             return .failure(.invalidData)
         }
@@ -133,10 +140,12 @@ public struct KoboldAPI: KoboldAPIBase {
     
     public var urlSession: URLSession
     public var baseURL: String
+    public var timeoutInterval: TimeInterval
 
-    public init(urlSession: URLSession, host: String, port: Int) {
+    public init(urlSession: URLSession = URLSession.shared, host: String, port: Int, timeoutInterval: TimeInterval = 60.0) {
         self.urlSession = urlSession
         self.baseURL = "http://\(host):\(port)"
+        self.timeoutInterval = timeoutInterval
     }
 
     public func getMaxContextLength() async -> Result<Int, APIError> {
@@ -158,5 +167,4 @@ public struct KoboldAPI: KoboldAPIBase {
     public func sendMessage(promptModel: PromptModel) async -> Result<PromptResponse, APIError> {
         await sendPrompt(prompt: promptModel)
     }
-
 }

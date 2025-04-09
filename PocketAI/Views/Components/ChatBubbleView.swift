@@ -5,13 +5,25 @@
 //  Created by devon jerothe on 3/13/25.
 //
 
-import SwiftUI
 import MarkdownUI
+import SwiftUI
+
+struct BubbleHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
 
 struct ChatBubbleView: View {
 
+    @Environment(\.colorScheme) var colorScheme: ColorScheme
+
     var message: MessageModel
     var viewModel: ChatViewModel
+    @State private var isEditing = false
+    @State private var bubbleHeight: CGFloat = 0
+    @State private var editedText: String = ""
 
     var body: some View {
         switch message.actor {
@@ -27,43 +39,93 @@ struct ChatBubbleView: View {
                     .frame(alignment: .leading)
                 } else {
                     VStack(alignment: .leading) {
-                        Markdown(message.getRolePlayText())
+                        if isEditing {
+                            TextEditor(text: $editedText)
+                                .padding(
+                                    EdgeInsets(
+                                        top: 8, leading: 10, bottom: 8,
+                                        trailing: 10)
+                                )
+                                .background(Color(.clear))
+                                .cornerRadius(15)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 15)
+                                        .stroke(Color.accentColor, lineWidth: 1)
+                                )
+                                .frame(minHeight: bubbleHeight)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(
+                                    maxWidth: UIScreen.main.bounds.width * 0.80,
+                                    alignment: .leading
+                                )
+                                .onChange(of: editedText) {
+                                    viewModel.updateScrollView.toggle()
+                                }
+
+                        } else {
+                            Markdown(
+                                message.getRolePlayText(
+                                    cardName: viewModel.model.characterCard.name
+                                        ?? "")
+                            )
                             .markdownCodeSyntaxHighlighter(
-                                .splash(theme: .wwdc18(withFont: .init(size: 16)))
+                                .splash(
+                                    theme: colorScheme == .dark
+                                        ? .wwdc17(withFont: .init(size: 16))
+                                        : .sunset(withFont: .init(size: 16)))
                             )
                             .markdownBlockStyle(\.codeBlock) { configuration in
-                                ScrollView(.horizontal) {
-                                    configuration.label
-                                        .padding(10)
-                                        .padding(.trailing, 20)
-                                }
-                                .markdownTextStyle(textStyle: {
-                                    FontFamilyVariant(.monospaced)
-                                    FontSize(.em(0.85))
-                                })
-                                .background(Color(UIColor.systemGray3))
-                                .cornerRadius(8)
-                                .padding(.bottom)
-                                .overlay(alignment: .topTrailing) {
-                                    Button {
-                                        UIPasteboard.general.string = configuration.content
-                                    } label: {
-                                        Image(systemName: "doc.on.doc")
+                                VStack(spacing: 0) {
+                                    HStack {
+                                        Spacer()
+                                        Button {
+                                            UIPasteboard.general.string =
+                                                configuration.content
+                                        } label: {
+                                            Image(systemName: "doc.on.doc")
+                                        }
+                                        .padding(4)
                                     }
-                                    .padding(10)
+                                    .background(
+                                        Color(UIColor.secondarySystemFill))
+                                    ScrollView(.horizontal) {
+                                        configuration.label
+                                            .padding(10)
+                                            .padding(.trailing, 20)
+                                    }
+                                    .markdownTextStyle(textStyle: {
+                                        FontFamilyVariant(.monospaced)
+                                        FontSize(.em(0.85))
+                                    })
+                                    .background(
+                                        Color(UIColor.secondarySystemBackground)
+                                    )
                                 }
+                                .cornerRadius(8)
                             }
                             .markdownTheme(.rolePlay)
                             .padding()
                             .background(Color(.secondarySystemBackground))
                             .cornerRadius(15)
-                            .frame(maxWidth: UIScreen.main.bounds.width * 0.80, alignment: .leading)
+                            .frame(
+                                maxWidth: UIScreen.main.bounds.width * 0.80,
+                                alignment: .leading
+                            )
+                            .background(
+                                GeometryReader { geo in
+                                    Color.clear.preference(
+                                        key: BubbleHeightKey.self,
+                                        value: geo.size.height)
+                                }
+                            )
+                        }
                         if viewModel.shouldShowToolbar(message) {
                             HStack(spacing: 16) {
                                 // Delete
                                 Button(action: {
                                     Task {
-                                        await self.viewModel.deleteMessage(message)
+                                        await self.viewModel.deleteMessage(
+                                            message)
                                     }
                                 }) {
                                     Image(systemName: "trash.fill")
@@ -73,7 +135,9 @@ struct ChatBubbleView: View {
                                         .padding(5)
                                         .background(
                                             Circle()
-                                                .stroke(Color.accentColor, lineWidth: 0.5)
+                                                .stroke(
+                                                    Color.accentColor,
+                                                    lineWidth: 0.5)
                                         )
                                         .frame(width: 15, height: 15)
                                         .padding(.leading, 8)
@@ -82,7 +146,8 @@ struct ChatBubbleView: View {
                                 // Regen
                                 Button(action: {
                                     Task {
-                                        await self.viewModel.regenerateMessage(message)
+                                        await self.viewModel.regenerateMessage(
+                                            message)
                                     }
                                 }) {
                                     Image(systemName: "repeat")
@@ -92,16 +157,56 @@ struct ChatBubbleView: View {
                                         .padding(5)
                                         .background(
                                             Circle()
-                                                .stroke(Color.accentColor, lineWidth: 0.5)
+                                                .stroke(
+                                                    Color.accentColor,
+                                                    lineWidth: 0.5)
                                         )
                                         .frame(width: 15, height: 15)
                                         .padding(.leading, 4)
                                         .padding(.top, 4)
                                 }
+                                // Edit
+                                Button(action: {
+                                    if isEditing {
+                                        // Call viewModel to save the edited text
+                                        Task {
+                                            viewModel.updateMessage(
+                                                message, newText: editedText)
+                                        }
+                                        isEditing = false
+                                        viewModel.updateScrollView.toggle()
+                                    } else {
+                                        // Enter editing mode
+                                        editedText = message.getRolePlayText(
+                                            cardName: viewModel.model
+                                                .characterCard.name ?? "")  // Initialize editor text
+                                        isEditing = true
+                                    }
+                                }) {
+                                    Image(
+                                        systemName: isEditing
+                                            ? "checkmark.circle.fill" : "pencil"
+                                    )  // Change icon when editing
+                                    .resizable()
+                                    .frame(width: 10, height: 10)
+                                    .foregroundStyle(Color.accentColor)
+                                    .padding(5)
+                                    .background(
+                                        Circle()
+                                            .stroke(
+                                                Color.accentColor,
+                                                lineWidth: 0.5)
+                                    )
+                                    .frame(width: 15, height: 15)
+                                    .padding(.leading, 4)
+                                    .padding(.top, 4)
+                                }
+
                                 // Continue
                                 Button(action: {
                                     Task {
-                                        await self.viewModel.regenerateMessage(message, continueResponse: true)
+                                        await self.viewModel.regenerateMessage(
+                                            message, continueResponse: true)
                                     }
                                 }) {
                                     Image(systemName: "play.fill")
@@ -111,13 +216,20 @@ struct ChatBubbleView: View {
                                         .padding(5)
                                         .background(
                                             Circle()
-                                                .stroke(Color.accentColor, lineWidth: 0.5)
+                                                .stroke(
+                                                    Color.accentColor,
+                                                    lineWidth: 0.5)
                                         )
                                         .frame(width: 15, height: 15)
                                         .padding(.leading, 4)
                                         .padding(.top, 4)
                                 }
                             }
+                        }
+                    }
+                    .onPreferenceChange(BubbleHeightKey.self) { height in
+                        if height > 0 && isEditing == false {
+                            self.bubbleHeight = height
                         }
                     }
                 }
@@ -128,15 +240,96 @@ struct ChatBubbleView: View {
             HStack {
                 Spacer()
                 VStack(alignment: .trailing) {
-                    Markdown(message.getRolePlayText())
-                        .foregroundStyle(.black)
-                        .markdownTheme(.userRolePlay)
-                        .padding()
-                        .background(Color(.secondarySystemFill))
-                        .clipShape(
-                            UnevenRoundedRectangle(topLeadingRadius: 15, bottomLeadingRadius: 15, bottomTrailingRadius: 0, topTrailingRadius: 15)
-                        )
-                        .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: .trailing)
+                    if isEditing {
+                        TextEditor(text: $editedText)
+                            .padding(
+                                EdgeInsets(
+                                    top: 8, leading: 10, bottom: 8,
+                                    trailing: 10)
+                            )
+                            .background(Color(.clear))
+                            .cornerRadius(15)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .stroke(Color.accentColor, lineWidth: 1)
+                            )
+                            .frame(minHeight: bubbleHeight)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(
+                                maxWidth: UIScreen.main.bounds.width * 0.80,
+                                alignment: .leading
+                            )
+                            .onChange(of: editedText) {
+                                viewModel.updateScrollView.toggle()
+                            }
+                    } else {
+                        VStack(alignment: .trailing) {
+                            Markdown(
+                                message.getRolePlayText(
+                                    cardName: viewModel.model.characterCard.name
+                                        ?? "")
+                            )
+                            .foregroundStyle(.black)
+                            .markdownTheme(.userRolePlay)
+                            .padding()
+                            .background(Color(.secondarySystemFill))
+                            .clipShape(
+                                UnevenRoundedRectangle(
+                                    topLeadingRadius: 15,
+                                    bottomLeadingRadius: 15,
+                                    bottomTrailingRadius: 0,
+                                    topTrailingRadius: 15)
+                            )
+                            .frame(
+                                maxWidth: UIScreen.main.bounds.width * 0.75,
+                                alignment: .trailing)
+                        }
+                    }
+                    if viewModel.shouldShowToolbar(message) {
+                        HStack(spacing: 16) {
+                            // Edit
+                            Button(action: {
+                                if isEditing {
+                                    // Call viewModel to save the edited text
+                                    Task {
+                                        viewModel.updateMessage(
+                                            message, newText: editedText)
+                                    }
+                                    isEditing = false
+                                    viewModel.updateScrollView.toggle()
+                                } else {
+                                    // Enter editing mode
+                                    editedText = message.getRolePlayText(
+                                        cardName: viewModel.model
+                                            .characterCard.name ?? "")  // Initialize editor text
+                                    isEditing = true
+                                }
+                            }) {
+                                Image(
+                                    systemName: isEditing
+                                        ? "checkmark.circle.fill" : "pencil"
+                                )  // Change icon when editing
+                                .resizable()
+                                .frame(width: 10, height: 10)
+                                .foregroundStyle(Color.accentColor)
+                                .padding(5)
+                                .background(
+                                    Circle()
+                                        .stroke(
+                                            Color.accentColor,
+                                            lineWidth: 0.5)
+                                )
+                                .frame(width: 15, height: 15)
+                                .padding(.leading, 4)
+                                .padding(.top, 4)
+                            }
+                        }
+                    }
+                }
+                .onPreferenceChange(BubbleHeightKey.self) { height in
+                    if height > 0 && isEditing == false {
+                        self.bubbleHeight = height
+                    }
                 }
             }
         }
