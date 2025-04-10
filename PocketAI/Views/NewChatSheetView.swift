@@ -94,6 +94,15 @@ public struct NewChatSheetView: View {
                 }
             }
 
+            if let error = viewModel.importError {
+                VStack {
+                    Spacer()
+                    Text(error)
+                        .foregroundStyle(Color(UIColor.secondaryLabel))
+                    Spacer()
+                }
+            }
+
             if viewModel.characterCard != nil {
                 HStack {
                     Spacer()

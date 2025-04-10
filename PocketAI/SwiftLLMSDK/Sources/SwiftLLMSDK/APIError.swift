@@ -2,6 +2,7 @@ import Foundation
 
 public enum APIError: Error, LocalizedError {
     case invalidURL
+    case unsupportedURLImport
     case invalidResponse
     case invalidData
     case decodingError
@@ -12,6 +13,8 @@ public enum APIError: Error, LocalizedError {
         switch self {
         case .invalidURL:
             return "Invalid URL"
+        case .unsupportedURLImport:
+            return "Unsupported Character Card URL"
         case .invalidResponse:
             return "Invalid response"
         case .invalidData:

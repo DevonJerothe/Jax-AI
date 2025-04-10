@@ -20,6 +20,8 @@ class NewChatViewModel {
     var initialMessage: String = ""
     var imgData: Data?
 
+    var importError: String?
+
     var characterCard: CharacterCardModel?
 
     init(
@@ -58,6 +60,11 @@ class NewChatViewModel {
                     self.characterCard = characterCard
                 }
             case .failure(let error):
+                if case APIError.unsupportedURLImport = error {
+                    self.importError = "Unsupported Character Card URL"
+                } else {
+                    self.importError = error.localizedDescription
+                }
                 print("Import ERROR: \(error.localizedDescription)")
             }
         } catch (let error) {
