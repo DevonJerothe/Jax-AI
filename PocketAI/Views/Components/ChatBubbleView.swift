@@ -52,7 +52,7 @@ struct ChatBubbleView: View {
                                     RoundedRectangle(cornerRadius: 15)
                                         .stroke(Color.accentColor, lineWidth: 1)
                                 )
-                                .frame(minHeight: bubbleHeight)
+                                .frame(minHeight: bubbleHeight + 20)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .frame(
                                     maxWidth: UIScreen.main.bounds.width * 0.80,
@@ -170,7 +170,7 @@ struct ChatBubbleView: View {
                                     if isEditing {
                                         // Call viewModel to save the edited text
                                         Task {
-                                            viewModel.updateMessage(
+                                            await viewModel.updateMessage(
                                                 message, newText: editedText)
                                         }
                                         isEditing = false
@@ -253,7 +253,7 @@ struct ChatBubbleView: View {
                                 RoundedRectangle(cornerRadius: 15)
                                     .stroke(Color.accentColor, lineWidth: 1)
                             )
-                            .frame(minHeight: bubbleHeight)
+                            .frame(minHeight: bubbleHeight + 20)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(
                                 maxWidth: UIScreen.main.bounds.width * 0.80,
@@ -292,7 +292,7 @@ struct ChatBubbleView: View {
                                 if isEditing {
                                     // Call viewModel to save the edited text
                                     Task {
-                                        viewModel.updateMessage(
+                                        await viewModel.updateMessage(
                                             message, newText: editedText)
                                     }
                                     isEditing = false

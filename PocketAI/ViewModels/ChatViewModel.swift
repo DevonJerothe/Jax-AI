@@ -97,10 +97,12 @@ class ChatViewModel {
         try! chatRepository.save(self.model)
     }
 
-    func updateMessage(_ message: MessageModel, newText: String) {
-        var updateMessage = model.messages.first(where: {$0.id == message.id })
-        updateMessage?.text = newText
-        try! messageRepository.save(updateMessage!)
+    func updateMessage(_ message: MessageModel, newText: String) async {
+        let lastIndex = self.model.messages.count - 1
+        await MainActor.run {
+            self.model.messages[lastIndex].text = newText
+        }
+        try! messageRepository.save(self.model.messages[lastIndex])
     }
 
     func toggleSelection(_ message: MessageModel) {
