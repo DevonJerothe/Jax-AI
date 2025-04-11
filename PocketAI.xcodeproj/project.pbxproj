@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		E94CC7E32D86726D00B4AB0B /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = E94CC7E22D86726D00B4AB0B /* GRDB */; };
+		E97327162DA9B620009CEAE0 /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97327152DA9B620009CEAE0 /* SwiftLLMSDK */; };
 		E97F95802D80C2D1007C292A /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97F957F2D80C2D1007C292A /* SwiftLLMSDK */; };
 		E9DB2F5A2D825A67009AEF2B /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F592D825A67009AEF2B /* MarkdownUI */; };
 		E9DB2F632D826261009AEF2B /* Splash in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F622D826261009AEF2B /* Splash */; };
@@ -47,7 +48,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				SwiftLLMSDK,
 			);
 			target = E9E949B92D808E9C0008861E /* PocketAI */;
 		};
@@ -87,6 +87,7 @@
 				E9DB2F632D826261009AEF2B /* Splash in Frameworks */,
 				E9DB2F652D826261009AEF2B /* SplashHTMLGen in Frameworks */,
 				E9DB2F692D826261009AEF2B /* SplashMarkdown in Frameworks */,
+				E97327162DA9B620009CEAE0 /* SwiftLLMSDK in Frameworks */,
 				E9F4B27A2D8A3B04001549FA /* LZ77 in Frameworks */,
 				E9DB2F672D826261009AEF2B /* SplashImageGen in Frameworks */,
 			);
@@ -167,6 +168,7 @@
 				E94CC7E22D86726D00B4AB0B /* GRDB */,
 				E9F4B2792D8A3B04001549FA /* LZ77 */,
 				E9F4B27B2D8A3B04001549FA /* PNG */,
+				E97327152DA9B620009CEAE0 /* SwiftLLMSDK */,
 			);
 			productName = PocketAI;
 			productReference = E9E949BA2D808E9C0008861E /* PocketAI.app */;
@@ -255,6 +257,7 @@
 				E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */,
 				E94CC7E12D86726D00B4AB0B /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 				E9F4B2782D8A3B04001549FA /* XCRemoteSwiftPackageReference "swift-png" */,
+				E97327142DA9B620009CEAE0 /* XCLocalSwiftPackageReference "../SwiftLLMSDK" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E9E949BB2D808E9C0008861E /* Products */;
@@ -461,7 +464,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PocketAI/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Pocket AI";
+				INFOPLIST_KEY_CFBundleDisplayName = "Jax AI";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -496,7 +500,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PocketAI/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Pocket AI";
+				INFOPLIST_KEY_CFBundleDisplayName = "Jax AI";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -632,6 +637,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		E97327142DA9B620009CEAE0 /* XCLocalSwiftPackageReference "../SwiftLLMSDK" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../SwiftLLMSDK;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		E94CC7E12D86726D00B4AB0B /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -672,6 +684,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E94CC7E12D86726D00B4AB0B /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
+		};
+		E97327152DA9B620009CEAE0 /* SwiftLLMSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SwiftLLMSDK;
 		};
 		E97F957F2D80C2D1007C292A /* SwiftLLMSDK */ = {
 			isa = XCSwiftPackageProductDependency;
