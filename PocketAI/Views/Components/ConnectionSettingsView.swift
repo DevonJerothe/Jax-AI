@@ -9,8 +9,8 @@ import SwiftUI
 
 struct ConnectionSettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    
     @State private var connectionManager: ServiceContainer = .shared
-
     @State private var connectionTest: Bool? = nil
     
     var hostBinding: Binding<String> {
@@ -41,6 +41,7 @@ struct ConnectionSettingsView: View {
                 Section {
                     Picker("Connection Type", selection: $connectionManager.connectionSettings.connectionType) {
                         Text("KoboldAPI").tag(APITypeSelection.KoboldAPI)
+                        Text("OpenRouter").tag(APITypeSelection.OpenRouter)
                     }
                     .pickerStyle(.navigationLink)
                 } header: {
@@ -89,7 +90,9 @@ struct ConnectionSettingsView: View {
                     HStack {
                         Button(action: {
                             Task {
-                                connectionTest = await connectionManager.connectToLanguageModel()
+                                connectionManager.saveConnectionSettings()
+                                await connectionManager.connect()
+                                self.connectionTest?.toggle()
                             }
                         }, label: {
                             Text("Connect")
@@ -117,7 +120,7 @@ struct ConnectionSettingsView: View {
                                 Text("Model Name")
                                 Spacer()
                             }
-                            Text(connectionManager.modelName ?? "N/A")
+                            Text(connectionManager.selectedModelName ?? "N/A")
                                 .foregroundStyle(Color(UIColor.secondaryLabel))
                         }
                     }
@@ -137,8 +140,9 @@ struct ConnectionSettingsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         Task {
-                            if connectionManager.isConnected == false, await connectionManager.connectToLanguageModel() {
+                            if connectionManager.isConnected == false {
                                 connectionManager.saveConnectionSettings()
+                                await connectionManager.connect()
                                 dismiss()
                             }
                             connectionManager.saveConnectionSettings()
@@ -150,7 +154,8 @@ struct ConnectionSettingsView: View {
             }
             .onAppear {
                 Task {
-                    connectionTest = await connectionManager.connectToLanguageModel()
+                    await connectionManager.connect()
+                    self.connectionTest?.toggle()
                 }
             }
         }

@@ -8,6 +8,7 @@
 
 enum APITypeSelection: String, Codable {
     case KoboldAPI
+    case OpenRouter
 }
 
 public struct ConnectionSettingsModel: Codable {
@@ -16,12 +17,15 @@ public struct ConnectionSettingsModel: Codable {
     var connectionType: APITypeSelection = .KoboldAPI
     var contextLength: Int?
     var responseLength: Int?
+    var apiKey: String?
+    var selectedModel: String?
     
     static let defaults = ConnectionSettingsModel(
         host: "127.0.0.1",
         port: 5001,
         connectionType: .KoboldAPI,
         contextLength: 6144,
-        responseLength: 300
+        responseLength: 300,
+        selectedModel: "deepseek/deepseek-chat-v3-0324:free"
     )
 }
