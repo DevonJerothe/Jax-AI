@@ -43,8 +43,8 @@ struct ChatSettingsView: View {
                         }
                         
                         TextEditor(text: $botDescription)
-                            .frame(minHeight: 100, maxHeight: 300)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(minHeight: 300, maxHeight: 300)
+                            // .fixedSize(horizontal: false, vertical: true)
                             .scrollContentBackground(.hidden)
                     }
                 } header: {
@@ -63,8 +63,8 @@ struct ChatSettingsView: View {
                         }
                         
                         TextEditor(text: $initialMessage)
-                            .frame(minHeight: 100, maxHeight: 300)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(minHeight: 300, maxHeight: 300)
+                            // .fixedSize(horizontal: false, vertical: true)
                             .scrollContentBackground(.hidden)
                     }
                 } header: {

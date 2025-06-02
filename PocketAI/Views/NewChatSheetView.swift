@@ -270,7 +270,7 @@ public struct NewChatSheetView: View {
                     }
 
                     TextEditor(text: $viewModel.systemPrompt)
-                        .frame(minHeight: 100)
+                        .frame(minHeight: 200)
                         .scrollContentBackground(.hidden)
                 }
             } header: {
@@ -291,7 +291,7 @@ public struct NewChatSheetView: View {
                     }
 
                     TextEditor(text: $viewModel.initialMessage)
-                        .frame(minHeight: 100)
+                        .frame(minHeight: 200)
                         .scrollContentBackground(.hidden)
                 }
             } header: {
