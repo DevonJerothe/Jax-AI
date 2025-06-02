@@ -33,6 +33,10 @@ class ServiceContainer {
         self.languageModelService.availableModels
     }
 
+    var isLoadingConnection: Bool {
+        self.languageModelService.isLoadingConnection
+    }
+
     private init() {
         // Load Connection Settings if any exist
         if let savedConnectionSettings = UserDefaultsManager.shared
@@ -70,5 +74,10 @@ class ServiceContainer {
     // Its better to call the language service methods directly than here.
     func connect() async {
         await _ = self.languageModelService.connect()
+    }
+
+    func waitForConnection() async -> Bool {
+        let connectionStatus = await self.languageModelService.connect()
+        return connectionStatus
     }
 }

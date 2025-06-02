@@ -19,6 +19,7 @@ class LanguageModelService {
     var selectedModel: String?
     var availableModels: [OpenRouterModel] = []
     var isConnected: Bool = false
+    var isLoadingConnection: Bool = false
 
     init(connectionSettings: ConnectionSettingsModel) {
         self.connectionSettings = connectionSettings
@@ -55,6 +56,7 @@ class LanguageModelService {
     }
 
     func connect() async -> Bool {
+        self.isLoadingConnection = true
         switch connectionSettings.connectionType {
         case .KoboldAPI:
             let result = await koboldManager?.connect()
@@ -62,6 +64,7 @@ class LanguageModelService {
             case .success(let name):
                 self.selectedModel = name
                 self.isConnected = true
+                self.isLoadingConnection = false
                 return true
             case .failure(let error):
                 print("Error: \(error)")
@@ -73,6 +76,7 @@ class LanguageModelService {
             switch result {
             case .success(_):
                 self.isConnected = true
+                self.isLoadingConnection = false
                 return true
             case .failure(let error):
                 print("Error: \(error)")
@@ -81,6 +85,7 @@ class LanguageModelService {
             }
         }
         self.isConnected = false
+        self.isLoadingConnection = false
         return false
     }
     

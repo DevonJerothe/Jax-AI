@@ -79,18 +79,23 @@ struct ConnectionSettingsView: View {
                         })
                         
                         Spacer() 
-                        if connectionManager.isConnected {
-                            Text("Connected")
-                                .foregroundStyle(Color(UIColor.secondaryLabel))
-                                .padding() 
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(Color.green)
+                        if connectionManager.isLoadingConnection {
+                            ProgressView()
+                                .scaleEffect(0.8)
                         } else {
-                            Text("Disconnected")
-                                .foregroundStyle(Color(UIColor.secondaryLabel))
-                                .padding() 
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(Color.red)
+                            if connectionManager.isConnected {
+                                Text("Connected")
+                                    .foregroundStyle(Color(UIColor.secondaryLabel))
+                                    .padding() 
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.green)
+                            } else {
+                                Text("Disconnected")
+                                    .foregroundStyle(Color(UIColor.secondaryLabel))
+                                    .padding() 
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(Color.red)
+                            }
                         }
                     }
                 
@@ -120,23 +125,18 @@ struct ConnectionSettingsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         Task {
-                            if connectionManager.isConnected == false {
-                                connectionManager.saveConnectionSettings()
-                                await connectionManager.connect()
+                            connectionManager.saveConnectionSettings()
+                            let connected = await connectionManager.waitForConnection()
+                            if connected {
                                 dismiss()
                             }
-                            connectionManager.saveConnectionSettings()
-                            dismiss()
                         }
                     }
                     .fontWeight(.bold)
                 }
             }
             .onAppear {
-                Task {
-//                    await connectionManager.connect()
-//                    self.connectionTest?.toggle()
-                    
+                Task {                    
                     // Load available models if OpenRouter is selected
                     if connectionManager.connectionSettings.connectionType == .OpenRouter {
                         await loadAvailableModels()
@@ -267,6 +267,21 @@ struct ConnectionSettingsView: View {
             Text("Model Selection")
         } footer: {
             Text("Select the OpenRouter model to use. You can manually enter a model name or refresh to load available models.")
+        }
+
+        Section {
+            VStack(alignment: .leading) {
+                HStack {
+                    Text("Response Length")
+                    Spacer()
+                    Text("\(Int(responseLengthBinding.wrappedValue))")
+                }
+                Slider(value: responseLengthBinding, in: 120...3000, step: 60)
+            }
+        } header: {
+            Text("Model Settings")
+        } footer: {
+            Text("Adjust the sliders to set the model's token limits.")
         }
     }
 }
