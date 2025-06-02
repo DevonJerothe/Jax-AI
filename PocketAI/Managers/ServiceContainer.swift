@@ -28,6 +28,10 @@ class ServiceContainer {
     var selectedModelName: String? {
         self.languageModelService.selectedModel
     }
+    
+    var availableModels: [OpenRouterModel] {
+        self.languageModelService.availableModels
+    }
 
     private init() {
         // Load Connection Settings if any exist

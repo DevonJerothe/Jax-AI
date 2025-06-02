@@ -69,6 +69,7 @@ class NewChatViewModel {
         if type == .manual {
             self.characterCard = CharacterCardModel(
                 name: self.chatName,
+                description: self.systemPrompt,
                 firstMessage: self.initialMessage,
                 systemPrompt: self.systemPrompt,
                 imageData: self.imgData

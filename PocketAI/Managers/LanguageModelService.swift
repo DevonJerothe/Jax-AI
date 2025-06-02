@@ -15,7 +15,9 @@ class LanguageModelService {
     var connectionSettings: ConnectionSettingsModel
     var koboldManager: APIManager<KoboldAPI>?
     var openRouterManager: APIManager<OpenRouterAPI>?
+    
     var selectedModel: String?
+    var availableModels: [OpenRouterModel] = []
     var isConnected: Bool = false
 
     init(connectionSettings: ConnectionSettingsModel) {
@@ -99,7 +101,10 @@ class LanguageModelService {
             prompt: chatModel.getFullPrompt(continueResponse: continued),
             maxContextLength: connectionSettings.contextLength ?? 4096,
             maxLength: connectionSettings.responseLength ?? 240,
-            promptTemplate: TemplatePrompts().defaultRolePlayPrompt
+            promptTemplate: TemplatePrompts().defaultRolePlayPrompt,
+            characterDescription: chatModel.characterCard.description,
+            characterPersonality: chatModel.characterCard.personality,
+            characterScenario: chatModel.characterCard.scenario
         )
         
         var serviceResponse: Result<ModelResponse, APIError>?
@@ -125,8 +130,8 @@ class LanguageModelService {
         return nil
     }
         
-
     func updateConnectionSettings(connectionSettings: ConnectionSettingsModel) {
+        self.isConnected = false
         self.connectionSettings = connectionSettings
         setupManagers()
     }
@@ -134,18 +139,17 @@ class LanguageModelService {
     // MARK: - Kobold Functions
 
     // MARK: - OpenRouter Functions
-    func getAvailableModels() async -> [OpenRouterModel] {
+    func getAvailableModels() async {
         guard let manager = openRouterManager else {
             print("No OpenRouter Manager")
-            return []
+            return
         }
         let result = await manager.getAvailableModels()
         switch result {
         case .success(let models):
-            return models
+            self.availableModels = models
         case .failure(let error):
             print("Error: \(error)")
-            return []
         }
     }
 }

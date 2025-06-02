@@ -12,11 +12,26 @@ struct ConnectionSettingsView: View {
     
     @State private var connectionManager: ServiceContainer = .shared
     @State private var connectionTest: Bool? = nil
+    @State private var isLoadingModels: Bool = false
     
     var hostBinding: Binding<String> {
         Binding<String>(
             get: { connectionManager.connectionSettings.host ?? "" },
             set: { connectionManager.connectionSettings.host = $0.isEmpty ? nil : $0 }
+        )
+    }
+    
+    var apiKeyBinding: Binding<String> {
+        Binding<String>(
+            get: { connectionManager.connectionSettings.apiKey ?? "" },
+            set: { connectionManager.connectionSettings.apiKey = $0.isEmpty ? nil : $0 }
+        )
+    }
+    
+    var selectedModelBinding: Binding<String> {
+        Binding<String>(
+            get: { connectionManager.connectionSettings.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free" },
+            set: { connectionManager.connectionSettings.selectedModel = $0 }
         )
     }
 
@@ -48,43 +63,8 @@ struct ConnectionSettingsView: View {
                     Text("Connection Type")
                 }
                 
-                Section {
-                    TextField("Host", text: hostBinding)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                    
-                    TextField("Port", value: $connectionManager.connectionSettings.port, format: .number)
-                        .keyboardType(.numberPad)
-                } header: {
-                    Text("API Settings")
-                } footer: {
-                    Text("Enter the host address and port number for your API connection.")
-                }
-                
-                Section {
-                    VStack(alignment: .leading) {
-                        HStack {
-                            Text("Context Length")
-                            Spacer()
-                            Text("\(Int(contextLengthBinding.wrappedValue))")
-                        }
-                        Slider(value: contextLengthBinding, in: 1024...25600, step: 1024)
-                    }
-                    
-                    VStack(alignment: .leading) {
-                        HStack {
-                            Text("Response Length")
-                            Spacer()
-                            Text("\(Int(responseLengthBinding.wrappedValue))")
-                        }
-                        Slider(value: responseLengthBinding, in: 120...3000, step: 60)
-                    }
-                } header: {
-                    Text("Model Settings")
-                } footer: {
-                    Text("Adjust the sliders to set the model's token limits. Maximum: 16,000.")
-                }
+                // Dynamic sections based on connection type
+                connectionSpecificSections()
                 
                 Section {
                     HStack {
@@ -154,10 +134,139 @@ struct ConnectionSettingsView: View {
             }
             .onAppear {
                 Task {
-                    await connectionManager.connect()
-                    self.connectionTest?.toggle()
+//                    await connectionManager.connect()
+//                    self.connectionTest?.toggle()
+                    
+                    // Load available models if OpenRouter is selected
+                    if connectionManager.connectionSettings.connectionType == .OpenRouter {
+                        await loadAvailableModels()
+                    }
                 }
             }
+            .onChange(of: connectionManager.connectionSettings.connectionType) { _, newValue in
+                // Load models when switching to OpenRouter
+                if newValue == .OpenRouter {
+                    Task {
+                        await loadAvailableModels()
+                    }
+                }
+            }
+        }
+    }
+    
+    // TODO: This really should not be here. ViewModel may be necessary. 
+    private func loadAvailableModels() async {
+        guard connectionManager.connectionSettings.connectionType == .OpenRouter else { return }
+        
+        await MainActor.run {
+            isLoadingModels = true
+        }
+        
+        let languageService = connectionManager.getLanguageModelService()
+        await languageService.getAvailableModels()
+        
+        await MainActor.run {
+            isLoadingModels = false
+        }
+    }
+    
+    @ViewBuilder
+    private func connectionSpecificSections() -> some View {
+        switch connectionManager.connectionSettings.connectionType {
+        case .KoboldAPI:
+            koboldAPISettingsSections()
+        case .OpenRouter:
+            openRouterSettingsSections()
+        }
+    }
+    
+    @ViewBuilder
+    private func koboldAPISettingsSections() -> some View {
+        // KoboldAPI Settings
+        Section {
+            TextField("Host", text: hostBinding)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .keyboardType(.URL)
+            
+            TextField("Port", value: $connectionManager.connectionSettings.port, format: .number)
+                .keyboardType(.numberPad)
+        } header: {
+            Text("API Settings")
+        } footer: {
+            Text("Enter the host address and port number for your KoboldAPI connection.")
+        }
+        
+        // Context and Response Length Settings for KoboldAPI
+        Section {
+            VStack(alignment: .leading) {
+                HStack {
+                    Text("Context Length")
+                    Spacer()
+                    Text("\(Int(contextLengthBinding.wrappedValue))")
+                }
+                Slider(value: contextLengthBinding, in: 1024...25600, step: 1024)
+            }
+            
+            VStack(alignment: .leading) {
+                HStack {
+                    Text("Response Length")
+                    Spacer()
+                    Text("\(Int(responseLengthBinding.wrappedValue))")
+                }
+                Slider(value: responseLengthBinding, in: 120...3000, step: 60)
+            }
+        } header: {
+            Text("Model Settings")
+        } footer: {
+            Text("Adjust the sliders to set the model's token limits. Maximum: 25,600 for context.")
+        }
+    }
+    
+    @ViewBuilder
+    private func openRouterSettingsSections() -> some View {
+        // OpenRouter Settings
+        Section {
+            SecureField("API Key", text: apiKeyBinding)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+        } header: {
+            Text("OpenRouter API")
+        } footer: {
+            Text("Enter your OpenRouter API key. You can get one from openrouter.ai")
+        }
+        
+        Section {
+            HStack {
+                Text("Selected Model")
+                Spacer()
+                if isLoadingModels {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Button("Refresh Models") {
+                        Task {
+                            await loadAvailableModels()
+                        }
+                    }
+                    .font(.caption)
+                }
+            }
+            
+            if connectionManager.availableModels.isEmpty {
+                Text("No Models Available")
+            } else {
+                Picker("Model", selection: selectedModelBinding) {
+                    ForEach(connectionManager.availableModels, id: \.self.id) { model in
+                        Text(model.name).tag(model.id)
+                    }
+                }
+                .pickerStyle(.navigationLink)
+            }
+        } header: {
+            Text("Model Selection")
+        } footer: {
+            Text("Select the OpenRouter model to use. You can manually enter a model name or refresh to load available models.")
         }
     }
 }
