@@ -312,7 +312,7 @@ struct ChatBubbleView: View {
                                 .resizable()
                                 .frame(width: 10, height: 10)
                                 .foregroundStyle(Color.accentColor)
-                                .padding(5)
+                                .padding(5) 
                                 .background(
                                     Circle()
                                         .stroke(
@@ -320,7 +320,7 @@ struct ChatBubbleView: View {
                                             lineWidth: 0.5)
                                 )
                                 .frame(width: 15, height: 15)
-                                .padding(.leading, 4)
+                                .padding(.trailing, 4)
                                 .padding(.top, 4)
                             }
                         }
