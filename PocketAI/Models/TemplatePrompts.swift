@@ -23,3 +23,11 @@ struct TemplateScenarios {
     let scpFoundation: String = """
     """
 }
+
+struct TemplateInstructions {
+    let continueMessage: (String) -> String = { message in
+        """
+        [Continue the following message. Do not include ANY parts of the original message. Use capitalization and punctuation as if your reply is a part of the original message: \(message)]
+        """
+    }
+}

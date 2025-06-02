@@ -88,9 +88,25 @@ class LanguageModelService {
     func sendMessage(chatModel: ChatModel, continued: Bool = false) async -> ModelResponse? {
         
         // Map our internal message model to the request body message
-        let requestMessages = chatModel.messages.map { message in
+        var requestMessages = chatModel.messages.map { message in
             let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
             return RequestBodyMessages(role: role, message: message.text)
+        }
+        
+        // If we are continueing a message, we need to add special instructions to the system message.
+        // If we are not continuing but the message is loading, we can assume we are regenerating the same message.
+        // Pulled this method from SillyTavern.
+        if connectionSettings.connectionType == .OpenRouter {
+            if continued {
+                guard let lastMessage = requestMessages.last?.message else {
+                    print("No last message")
+                    return nil
+                }
+                let continueMessage = TemplateInstructions().continueMessage(lastMessage)
+                requestMessages.append(RequestBodyMessages(role: .system, message: continueMessage))
+            } else if chatModel.messages.last?.loading ?? false {
+                requestMessages.removeLast()
+            }
         }
         
         // TODO: Add Character Card info for OpenRouter
