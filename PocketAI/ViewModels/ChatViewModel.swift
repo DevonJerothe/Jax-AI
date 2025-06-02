@@ -146,33 +146,29 @@ class ChatViewModel {
     }
 
     private func generateResponse(_ forIndex: Int, isContinued: Bool = false) async {
-        let promptModel = PromptModel(
-            maxContextLength: connectionSettings.contextLength ?? 4069,
-            maxLength: connectionSettings.responseLength ?? 240,
-            prompt: model.getFullPrompt(continueResponse: isContinued),
-            memory: model.getFullMemory(),
-            promptTemplate: TemplatePrompts().defaultRolePlayPrompt
-        )
-
-        let response = await languageModelService?.sendMessage(promptModel: promptModel)
-
-        switch response {
-        case .success(let response):
-            let responseText = response.results.first?.text ?? "ERROR"
-            await MainActor.run {
-                if isContinued {
-                    self.model.messages[forIndex].text.append(responseText)
-                } else {
-                    self.model.messages[forIndex].text = responseText
-                }
-                self.model.messages[forIndex].loading = false
-                try! messageRepository.save(self.model.messages[forIndex])
-                self.updateScrollView.toggle()
+        
+        guard let languageModelService = languageModelService else {
+            print("service not loaded")
+            return
+        }
+        
+        // TODO: Go fix the RequestBodyBuilder
+        // right now if no response is returned or the API returns an error we return nil. Not sure I like this.
+        let response = await languageModelService.sendMessage(chatModel: self.model, continued: isContinued)
+        guard let responseMessage = response?.text else{
+            print("No response check logs")
+            return
+        }
+        
+        await MainActor.run {
+            if isContinued {
+                self.model.messages[forIndex].text.append(responseMessage)
+            } else {
+                self.model.messages[forIndex].text = responseMessage
             }
-        case .failure(let error):
-            self.model.error = error.localizedDescription
-        case .none:
-            print("not connected")
+            self.model.messages[forIndex].loading = false
+            try! messageRepository.save(self.model.messages[forIndex])
+            self.updateScrollView.toggle()
         }
     }
 }
