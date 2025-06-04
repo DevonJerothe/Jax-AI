@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 import GRDB
 
-struct ChatModel {
+struct ChatModel: Hashable {
     var id: UUID = UUID()
     var messages: [MessageModel] = []
     var memory: String
@@ -18,6 +18,15 @@ struct ChatModel {
     var error: String?
     var chatTitle: String {
         get { characterCard.name ??  "Jax AI" }
+    }
+
+    // MARK: - Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: ChatModel, rhs: ChatModel) -> Bool {
+        return lhs.id == rhs.id
     }
 
     init(fromCard: CharacterCardModel) {
@@ -102,8 +111,9 @@ struct ChatModel {
     }
 
     func getAvatarImg() -> Image {
-        if let imgData = characterCard.imageData {
-            return Image(uiImage: UIImage(data: imgData)!)
+        if let imgData = characterCard.imageData, 
+           let uiImage = UIImage(data: imgData) {
+            return Image(uiImage: uiImage)
         }
         return Image(systemName: "person.circle.fill")
     }

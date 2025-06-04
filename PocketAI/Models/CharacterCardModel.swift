@@ -10,7 +10,7 @@ import GRDB
 import SwiftLLMSDK
 import SwiftUI
 
-struct CharacterCardModel {
+struct CharacterCardModel: Hashable {
     var id: UUID = UUID()
     var chatId: String = ""
     var name: String?
@@ -73,6 +73,15 @@ struct CharacterCardModel {
         
         // There should always be a png file if importing from chub
         self.imageData = fromChub.pngData
+    }
+
+    // MARK: - Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: CharacterCardModel, rhs: CharacterCardModel) -> Bool {
+        return lhs.id == rhs.id
     }
 }
 

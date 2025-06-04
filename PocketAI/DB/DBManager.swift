@@ -42,11 +42,20 @@ class DBManager {
                 print("Created directory at: \(directoryURL.path)")
             }
 
-            dbQueue = try DatabaseQueue(path: dbURL.path) 
+            // Create configuration for WAL mode
+            var config = Configuration()
+            config.prepareDatabase { db in
+                try db.execute(sql: "PRAGMA journal_mode=WAL")
+                try db.execute(sql: "PRAGMA synchronous=NORMAL") // Optional: for better performance
+                // try db.execute(sql: "PRAGMA cache_size=10000")   // Optional: increase cache size
+                try db.execute(sql: "PRAGMA temp_store=MEMORY")  // Optional: store temp tables in memory
+            }
+
+            dbQueue = try DatabaseQueue(path: dbURL.path, configuration: config) 
 
             try migrateTables()
 
-            print("DB Opened Successfully")
+            print("DB Opened Successfully with WAL mode enabled")
         } catch {
             print("Database setup error: \(error)")
             fatalError("Failed to setup database: \(error)")

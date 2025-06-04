@@ -2,125 +2,248 @@
 //  ChatListView.swift
 //  PocketAI
 //
-//  Created by devon jerothe on 3/13/25.
+//  Created by devon jerothe on 6/2/25.
 //
 
 import SwiftUI
 
 struct ChatListView: View {
-
     @Environment(NavigationManager.self) var navManager
     @State var viewModel: ChatListViewModel = .init()
-    
+
     private var connectionManager = ServiceContainer.shared
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             VStack {
-                // List with swipe actions
-                List {
-                    ForEach(viewModel.chats, id: \.id) { chat in
-                        ChatCellView(chat: chat)
-                            .background(
-                                // Hide chevron set by navigation link
-                                NavigationLink(
-                                    "",
-                                    destination: ChatView(chatModel: chat)
-                                )
-                                .opacity(0)
-                            )
-                            .padding(.vertical, 3) // Add a small gap between list items
-                            .listRowInsets(EdgeInsets())
-                            .listRowSeparator(.hidden)
-                    }
-                    .onDelete { indexSet in
-                        Task {
-                            viewModel.deleteChat(at: indexSet)
+                if connectionManager.isConnected == false {
+                    // API Banner
+                    APIStatusBanner()
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                }
+                ScrollView {
+                    VStack {
+                        // Character Cards Section
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Text("Characters")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            
+                            // Character Cards ScrollView
+                            CharacterCardsListView(characters: viewModel.characterCards)
+                        }
+                        .padding(.vertical, 24)
+
+                        // Recent Chats Section 
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Text("Recent Chats")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+
+                            // Recent Chats List
+                            RecentChatsList(chats: viewModel.chats)
                         }
                     }
                 }
-                .environment(\.defaultMinListRowHeight, 10) // Reduce minimum row height
-                .listStyle(PlainListStyle())
-                .scrollContentBackground(.hidden)
-            }
-            .toolbar {
-                ToolBarHeader(
-                    leadingButtonIcon: connectionManager.isConnected ? "network" : "network.slash",
-                    leadingIconColor: connectionManager.isConnected ? .accentColor : .red,
-                    trailingButtonIcon: "plus",
-                    leadingButtonAction: {
-                        viewModel.showConnectionSheet.toggle()
-                    }, 
-                    trailingButtonAction: {
-                        viewModel.showNewChatSheet.toggle()
-                    }
-                )
             }
             .navigationTitle("Jax AI")
             .navigationBarTitleDisplayMode(.inline)
-            .padding()
-            .sheet(isPresented: $viewModel.showNewChatSheet) {
-                NewChatSheetView(onSave: { newChat in
-                    viewModel.showNewChatSheet = false
-                    viewModel.createNewChat(chatModel: newChat)
-                })
-            }
-            .sheet(isPresented: $viewModel.showConnectionSheet) {
-                ConnectionSettingsView()
-            }
             .onAppear() {
-                print("ChatListView appeared")
-                print("Trying to load chats...")
-                viewModel.loadChats()
-                print("Loaded \(viewModel.chats.count) chats")
+                print("Loading view data....")
+                viewModel.loadViewData()
+                print("loaded \(viewModel.characterCards.count) character cards")
+                print("loaded \(viewModel.chats.count) chats")
             }
         }
     }
 }
 
-struct ChatCellView: View {
-    let chat: ChatModel
-
+// MARK: - CharacterCardsListView
+struct CharacterCardsListView: View {
+    let characters: [CharacterCardModel]
+    
     var body: some View {
-        ZStack {
-            // Background and border as a single unit
-            Rectangle()
-                .fill(Color(UIColor.secondarySystemFill))
-                .cornerRadius(10)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 20) {
+                ForEach(characters.indices, id: \.self) { index in
+                    CharacterCardView(character: characters[index])
+                }
+                
+                // Add Character Button
+                AddCharacterButton()
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+}
 
-            // Content
-            HStack(spacing: 12) {
-                // Avatar/Profile Image
+// MARK: - Character Card View
+struct CharacterCardView: View {
+    let character: CharacterCardModel
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            // Character Avatar
+            ZStack {
+                if let imageData = character.imageData, let uiImage = UIImage(data: imageData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 80, height: 80)
+                        .clipShape(Circle())
+                } else {
+                    Circle()
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: 80, height: 80)
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .foregroundColor(.gray)
+                                .font(.title2)
+                        )
+                }
+            }
+            
+            // Character Name
+            Text(character.name ?? "Unknown")
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+                .lineLimit(1)
+        }
+        .onTapGesture {
+            // Navigate to chat with this character
+        }
+    }
+}
+
+// MARK: - Add Character Button
+struct AddCharacterButton: View {
+    var body: some View {
+        VStack(spacing: 8) {
+            Circle()
+                .fill(Color.gray.opacity(0.2))
+                .frame(width: 80, height: 80)
+                .overlay(
+                    Image(systemName: "plus")
+                        .foregroundColor(.gray)
+                        .font(.title2)
+                )
+                .overlay(
+                    Circle()
+                        .stroke(Color.gray.opacity(0.5), style: StrokeStyle(lineWidth: 2, dash: [5]))
+                )
+            
+            Text("Add")
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.gray)
+        }
+        .onTapGesture {
+            // Navigate to add character
+        }
+    }
+}
+
+// MARK: - Recent Chats List
+struct RecentChatsList: View {
+    let chats: [ChatModel]
+    
+    var body: some View {
+        LazyVStack(spacing: 0) {
+            ForEach(chats.indices, id: \.self) { index in
+                RecentChatRow(chat: chats[index])
+                
+                if index < chats.count - 1 {
+                    Divider()
+                        .background(Color.gray.opacity(0.3))
+                        .padding(.leading, 72)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Recent Chat Row
+struct RecentChatRow: View {
+    @Environment(NavigationManager.self) var navManager
+    let chat: ChatModel
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Character Avatar
+            ZStack {
                 chat.getAvatarImg()
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 45, height: 45)
+                    .frame(width: 48, height: 48)
                     .foregroundColor(.gray)
                     .clipShape(Circle())
-
-                // Chat info
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(chat.chatTitle)
-                            .fontWeight(.medium)
-
-                        Spacer()
-
-                        // TODO: Time indicator (placeholder - could show creation date)
-                        Text("Today") // Replace with actual timestamp formatting if needed
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
-
-                    Text(chat.messages.last?.getRolePlayText(cardName: chat.chatTitle) ?? "No messages yet") // Add placeholder text
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                // Character Name
+                Text(chat.chatTitle)
+                    .fontWeight(.medium)
+
+                // TODO: Last Message Preview
+                Text(chat.messages.last?.getRolePlayText(cardName: chat.chatTitle) ?? "No messages yet")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            // Timestamp
+            Text(getFormattedTimestamp())
+                .font(.caption)
+                .foregroundColor(.gray)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            // Navigate to this chat
+            navManager.navigateToChat(chat: chat)
+        }
+    }
+    
+    private func getLastMessagePreview() -> String {
+        // Get the last message from the chat
+        guard let lastMessage = chat.messages.last else {
+            return "No messages yet"
+        }
+        return lastMessage.text.isEmpty ? "..." : lastMessage.text
+    }
+    
+    private func getFormattedTimestamp() -> String {
+        // Format the timestamp of the last message
+        guard let lastMessage = chat.messages.last else {
+            return ""
+        }
+        
+        let formatter = DateFormatter()
+        let calendar = Calendar.current
+        
+        if calendar.isDateInToday(lastMessage.createdAt) {
+            formatter.dateFormat = "h:mm a"
+            return formatter.string(from: lastMessage.createdAt)
+        } else if calendar.isDateInYesterday(lastMessage.createdAt) {
+            return "Yesterday"
+        } else {
+            formatter.dateFormat = "EEE"
+            return formatter.string(from: lastMessage.createdAt)
         }
     }
 }

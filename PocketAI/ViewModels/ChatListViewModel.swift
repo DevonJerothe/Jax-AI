@@ -13,16 +13,28 @@ import GRDB
 @Observable
 class ChatListViewModel {
     private let chatRepository: ChatRepository
+    private let characterRepository: CharacterRepository
     private var serviceContainer = ServiceContainer.shared
 
     var modelName: String?
     var chats: [ChatModel] = []
+    var characterCards: [CharacterCardModel] = []
     var connected: Bool = false
     var showNewChatSheet: Bool = false
     var showConnectionSheet: Bool = false
 
-    init(chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository()) {
+    init(
+        chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository(),
+        characterRepository: CharacterRepository = ServiceContainer.shared.getCharacterRepository()
+    ) {
         self.chatRepository = chatRepository
+        self.characterRepository = characterRepository
+    }
+
+    @MainActor
+    func loadViewData() {
+        loadCharacterCards()
+        loadChats()
     }
 
     @MainActor
@@ -52,6 +64,16 @@ class ChatListViewModel {
                 print("SQL: \(dbError.sql ?? "No SQL")")
                 print("Description: \(dbError.description)")
             }
+        }
+    }
+
+    @MainActor
+    func loadCharacterCards() {
+        do {
+            print("Loading character cards from database...")
+            self.characterCards = try characterRepository.getAll()
+        } catch {
+            print("Failed to load character cards: \(error)")
         }
     }
     
