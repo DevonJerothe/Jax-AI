@@ -12,6 +12,8 @@ class MessageRepository: Repository {
     func save(_ item: MessageModel) throws {
         try dbManager.write { db in 
             try item.save(db)
+            print("Saved message: \(item.id.uuidString)")
+            print("Chat ID: \(item.chatId)")
         }
     }
 

@@ -10,7 +10,8 @@ import SwiftLLMSDK
 import SwiftUI
 
 struct ChatView: View {
-    @Environment(\.dismiss) var dismiss
+    // @Environment(\.dismiss) var dismiss
+    @Environment(NavigationManager.self) var navManager
 
     @State var viewModel: ChatViewModel
     @State var textPrompt: String = ""
@@ -151,8 +152,15 @@ struct ChatView: View {
         }
         .navigationTitle(viewModel.model.chatTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $viewModel.showSettings) {
-            ChatSettingsView(viewModel: self.viewModel)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    navManager.navigateToChatSettings(chat: viewModel)
+                } label: {
+                    Image(systemName: "gearshape")
+                        .foregroundColor(.primary)
+                }
+            }
         }
         .onAppear {
             self.viewModel.updateScrollView.toggle()

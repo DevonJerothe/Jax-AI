@@ -23,9 +23,8 @@ struct ChatSettingsView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        VStack {
             Form {
-                
                 Section {
                     TextField("Chat Name", text: $chatName)
                         .autocorrectionDisabled()
@@ -73,27 +72,27 @@ struct ChatSettingsView: View {
                     Text("The first message to send to the AI.")
                 }
             }
-            .navigationTitle("Chat Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("clear Chat") {
-                        viewModel.clearChat()
-                        dismiss()
-                    }
+        }
+        .navigationTitle("Chat Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("clear Chat") {
+                    viewModel.clearChat()
+                    dismiss()
                 }
-                
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
-                        viewModel.updateChatSettings(
-                            chatName: chatName,
-                            description: botDescription,
-                            firstMessage: initialMessage
-                        )
-                        dismiss()
-                    }
-                    .fontWeight(.bold)
+            }
+            
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Save") {
+                    viewModel.updateChatSettings(
+                        chatName: chatName,
+                        description: botDescription,
+                        firstMessage: initialMessage
+                    )
+                    dismiss()
                 }
+                .fontWeight(.bold)
             }
         }
     }

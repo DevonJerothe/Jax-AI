@@ -7,7 +7,7 @@ class ChatRepository: Repository {
 
     func getAll() throws -> [ChatModel] {
         try dbManager.read { db in 
-            var chats = try ChatModel.fetchAll(db) 
+            var chats = try ChatModel.fetchAll(db)
 
             for i in 0..<chats.count {
                 let chatId = chats[i].id.uuidString

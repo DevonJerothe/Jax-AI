@@ -20,13 +20,20 @@ struct ChatModel: Hashable {
         get { characterCard.name ??  "Jax AI" }
     }
 
+    // Computed property that changes when content changes
+    var contentIdentifier: String {
+        return "\(id.uuidString)-\(messages.count)-\(messages.last?.id.uuidString ?? "")"
+    }
+
     // MARK: - Hashable conformance
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(messages)
+        hasher.combine(characterCard)
     }
     
     static func == (lhs: ChatModel, rhs: ChatModel) -> Bool {
-        return lhs.id == rhs.id
+        return lhs.id == rhs.id && lhs.messages == rhs.messages && lhs.characterCard == rhs.characterCard
     }
 
     init(fromCard: CharacterCardModel) {

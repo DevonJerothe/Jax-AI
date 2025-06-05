@@ -60,10 +60,15 @@ struct ChatListView: View {
             .navigationTitle("Jax AI")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear() {
-                print("Loading view data....")
-                viewModel.loadViewData()
+                print("ChatListView onAppear called")
+                viewModel.refreshData()
                 print("loaded \(viewModel.characterCards.count) character cards")
                 print("loaded \(viewModel.chats.count) chats")
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .chatDataChanged)) { notification in
+                // Refresh data when any chat changes
+                print("Chat data changed notification received, refreshing chat list...")
+                viewModel.refreshData()
             }
         }
     }
@@ -76,8 +81,8 @@ struct CharacterCardsListView: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 20) {
-                ForEach(characters.indices, id: \.self) { index in
-                    CharacterCardView(character: characters[index])
+                ForEach(characters, id: \.id) { character in
+                    CharacterCardView(character: character)
                 }
                 
                 // Add Character Button
@@ -161,10 +166,10 @@ struct RecentChatsList: View {
     
     var body: some View {
         LazyVStack(spacing: 0) {
-            ForEach(chats.indices, id: \.self) { index in
-                RecentChatRow(chat: chats[index])
+            ForEach(chats, id: \.id) { chat in
+                RecentChatRow(chat: chat)
                 
-                if index < chats.count - 1 {
+                if chat != chats.last {
                     Divider()
                         .background(Color.gray.opacity(0.3))
                         .padding(.leading, 72)

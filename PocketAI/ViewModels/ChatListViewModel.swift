@@ -32,9 +32,22 @@ class ChatListViewModel {
     }
 
     @MainActor
-    func loadViewData() {
-        loadCharacterCards()
+    func refreshData() {
+        print("ChatListViewModel: refreshData() called")
+        // Force reload data from database to ensure we have the latest changes
+        self.chats = []
+        self.characterCards = []
         loadChats()
+        loadCharacterCards()
+        print("ChatListViewModel: refreshData() completed")
+    }
+
+    @MainActor
+    func updateChatInList(_ updatedChat: ChatModel) {
+        // Find and update the specific chat in our local array
+        if let index = chats.firstIndex(where: { $0.id == updatedChat.id }) {
+            chats[index] = updatedChat
+        }
     }
 
     @MainActor
@@ -55,10 +68,19 @@ class ChatListViewModel {
     @MainActor
     func loadChats() {
         do {
-            print("Loading chats from database...")
-            self.chats = try chatRepository.getAll()
+            print("ChatListViewModel: Loading chats from database...")
+            let freshChats = try chatRepository.getAll()
+            print("ChatListViewModel: Loaded \(freshChats.count) chats from database")
+            
+            // Log message counts for debugging
+            for (index, chat) in freshChats.enumerated() {
+                print("ChatListViewModel: Chat \(index): '\(chat.chatTitle)' has \(chat.messages.count) messages")
+            }
+            
+            self.chats = freshChats
+            print("ChatListViewModel: Updated local chats array")
         } catch {
-            print("Failed to load chats: \(error)")
+            print("ChatListViewModel: Failed to load chats: \(error)")
             if let dbError = error as? GRDB.DatabaseError {
                 print("Database error code: \(dbError.resultCode), message: \(dbError.message ?? "No message")")
                 print("SQL: \(dbError.sql ?? "No SQL")")
@@ -70,10 +92,11 @@ class ChatListViewModel {
     @MainActor
     func loadCharacterCards() {
         do {
-            print("Loading character cards from database...")
+            print("ChatListViewModel: Loading character cards from database...")
             self.characterCards = try characterRepository.getAll()
+            print("ChatListViewModel: Loaded \(self.characterCards.count) character cards")
         } catch {
-            print("Failed to load character cards: \(error)")
+            print("ChatListViewModel: Failed to load character cards: \(error)")
         }
     }
     

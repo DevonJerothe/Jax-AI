@@ -18,6 +18,7 @@ class NavigationManager {
     enum Destination: Hashable {
         case chatView(ChatModel)
         case characterView(CharacterCardModel)
+        case chatSettings(ChatViewModel)
         case settingsView
         case newChatView
     }
@@ -26,7 +27,7 @@ class NavigationManager {
         case newChat
         case connectionSettings
         case characterDetails(CharacterCardModel)
-        case chatDetails(ChatModel)
+        case chatSettings(ChatViewModel)
 
         var id: String {
             switch self {
@@ -36,8 +37,8 @@ class NavigationManager {
                 return "connectionSettings"
             case .characterDetails(let character):
                 return "characterDetails_\(character.id)"
-            case .chatDetails(let chat):
-                return "chatDetails_\(chat.id)"
+            case .chatSettings(let chat):
+                return "chatDetails_\(chat.model.id)"
             }
         }
     }
@@ -103,6 +104,14 @@ class NavigationManager {
             currentTab = .chatList
             clearPath(for: .chatList)
             chatListPath.append(Destination.chatView(chat))
+        }
+    }
+
+    func navigateToChatSettings(chat: ChatViewModel, sheet: Bool = false) {
+        if sheet {
+            presentedSheet = .chatSettings(chat)
+        } else {
+            appendToCurrentPath(Destination.chatSettings(chat))
         }
     }
 

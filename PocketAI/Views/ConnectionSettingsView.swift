@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+
 struct ConnectionSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     
@@ -49,106 +50,124 @@ struct ConnectionSettingsView: View {
             set: { connectionManager.connectionSettings.responseLength = Int($0) }
         )
     }
-
+    
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Picker("Connection Type", selection: $connectionManager.connectionSettings.connectionType) {
-                        Text("KoboldAPI").tag(APITypeSelection.KoboldAPI)
-                        Text("OpenRouter").tag(APITypeSelection.OpenRouter)
-                    }
-                    .pickerStyle(.navigationLink)
-                } header: {
-                    Text("Connection Type")
+        ScrollView {
+            VStack {
+                // Connection Type and Response Length Slider 
+                HStack {
+                    Text("Connection")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Spacer() 
                 }
-                
-                // Dynamic sections based on connection type
-                connectionSpecificSections()
-                
-                Section {
+                .padding(.top, 24)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+
+                // Connection Type Picker 
+                Menu {
+                    Button("KoboldAPI") {
+                        connectionManager.connectionSettings.connectionType = .KoboldAPI
+                    }
+                    Button("OpenRouter") {
+                        connectionManager.connectionSettings.connectionType = .OpenRouter
+                    }
+                } label: {
                     HStack {
-                        Button(action: {
-                            Task {
-                                connectionManager.saveConnectionSettings()
-                                await connectionManager.connect()
-                                self.connectionTest?.toggle()
-                            }
-                        }, label: {
-                            Text("Connect")
-                        })
-                        
-                        Spacer() 
-                        if connectionManager.isLoadingConnection {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else {
-                            if connectionManager.isConnected {
-                                Text("Connected")
-                                    .foregroundStyle(Color(UIColor.secondaryLabel))
-                                    .padding() 
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(Color.green)
-                            } else {
-                                Text("Disconnected")
-                                    .foregroundStyle(Color(UIColor.secondaryLabel))
-                                    .padding() 
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(Color.red)
-                            }
-                        }
-                    }
-                
-                    if connectionManager.isConnected {
                         VStack(alignment: .leading) {
-                            HStack {
-                                Text("Model Name")
-                                Spacer()
-                            }
-                            Text(connectionManager.selectedModelName ?? "N/A")
-                                .foregroundStyle(Color(UIColor.secondaryLabel))
+                            Text("Connection Type") 
+                                .foregroundColor(.primary)
+                            Text(connectionManager.connectionSettings.connectionType.rawValue)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                         }
+                        Spacer() 
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.secondary)
                     }
-                } header: {
-                    Text("Connected LLM")
+                    .padding()
+                    .background(Color(.systemGray6).opacity(0.6))
+                    .cornerRadius(12)
                 }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 16)
+
+                // Response Length Slider 
+                VStack(alignment: .leading) {
+                    HStack {
+                        Text("Response Length")
+                            .foregroundColor(.primary)
+                        Spacer() 
+                        Text("\(Int(responseLengthBinding.wrappedValue))")
+                            .foregroundColor(.secondary)
+                            .font(.subheadline)
+                    }
+                    Slider(value: responseLengthBinding, in: 120...3000, step: 60)
+                }
+                .padding()
+                .background(Color(.systemGray6).opacity(0.6))
+                .cornerRadius(12)
+                .padding(.horizontal, 16)
+
+                // Connection Specific Settings
+                connectionSpecificSections()
             }
-            .navigationTitle("Connection Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+
+        }
+        .scrollDismissesKeyboard(.immediately)
+        .safeAreaInset(edge: .bottom) {
+            HStack {
+                Text("Status")
+                    .foregroundColor(.primary.opacity(0.8))
+                if connectionManager.isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .primary))
+                        .scaleEffect(0.7)
+                    Text("Connecting...")
+                        .foregroundColor(.primary.opacity(0.8))
+                        .font(.subheadline)
+                } else {
+                    Circle()
+                        .fill(connectionManager.isConnected ? .green : .red)
+                        .frame(width: 10, height: 10)
+                    Text(connectionManager.isConnected ? "Connected" : "Disconnected")
+                        .foregroundColor(connectionManager.isConnected ? .green : .red)
                 }
-                
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
-                        Task {
-                            connectionManager.saveConnectionSettings()
-                            let connected = await connectionManager.waitForConnection()
-                            if connected {
-                                dismiss()
-                            }
-                        }
-                    }
-                    .fontWeight(.bold)
-                }
-            }
-            .onAppear {
-                Task {                    
-                    // Load available models if OpenRouter is selected
-                    if connectionManager.connectionSettings.connectionType == .OpenRouter {
-                        await loadAvailableModels()
-                    }
-                }
-            }
-            .onChange(of: connectionManager.connectionSettings.connectionType) { _, newValue in
-                // Load models when switching to OpenRouter
-                if newValue == .OpenRouter {
+                Spacer() 
+                Button {
                     Task {
-                        await loadAvailableModels()
+                        await connectionManager.connect()
                     }
+                } label: {
+                    Text("Connect")
+                        .foregroundColor(.yellow)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(.red)
+                        .cornerRadius(20)
+                        .animation(.easeInOut, value: connectionManager.isLoading)
+                }
+                .disabled(connectionManager.isLoading)
+            }
+            .padding()
+            .background(.thinMaterial)
+            .ignoresSafeArea(.keyboard)
+        }
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if connectionManager.connectionSettings.connectionType == .OpenRouter {
+                Task {
+                    await loadAvailableModels()
+                }
+            }
+        }
+        .onChange(of: connectionManager.connectionSettings.connectionType) {
+            if connectionManager.connectionSettings.connectionType == .OpenRouter {
+                Task {
+                    await loadAvailableModels()
                 }
             }
         }
@@ -182,106 +201,98 @@ struct ConnectionSettingsView: View {
     
     @ViewBuilder
     private func koboldAPISettingsSections() -> some View {
-        // KoboldAPI Settings
-        Section {
-            TextField("Host", text: hostBinding)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                .keyboardType(.URL)
-            
-            TextField("Port", value: $connectionManager.connectionSettings.port, format: .number)
-                .keyboardType(.numberPad)
-        } header: {
-            Text("API Settings")
-        } footer: {
-            Text("Enter the host address and port number for your KoboldAPI connection.")
-        }
-        
-        // Context and Response Length Settings for KoboldAPI
-        Section {
+        VStack(spacing: 18) {
+            HStack {
+                Text("KoboldAPI")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Spacer() 
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Host")
+                    .foregroundColor(.primary)
+                TextField("", text: hostBinding, prompt: Text("e.g., 127.0.0.1"))
+                    .keyboardType(.URL)
+                    .padding()
+                    .background(Color(.systemGray6).opacity(0.6))
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal, 16)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Port")
+                    .foregroundColor(.primary)
+                TextField("", value: $connectionManager.connectionSettings.port, format: .number)
+                    .keyboardType(.numberPad)
+                    .padding()
+                    .background(Color(.systemGray6).opacity(0.6))
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal, 16)
+
             VStack(alignment: .leading) {
                 HStack {
-                    Text("Context Length")
-                    Spacer()
+                    Text("Context Limit")
+                        .foregroundColor(.primary)
+                    Spacer() 
                     Text("\(Int(contextLengthBinding.wrappedValue))")
+                        .foregroundColor(.secondary)
+                        .font(.subheadline)
                 }
                 Slider(value: contextLengthBinding, in: 1024...25600, step: 1024)
             }
-            
-            VStack(alignment: .leading) {
-                HStack {
-                    Text("Response Length")
-                    Spacer()
-                    Text("\(Int(responseLengthBinding.wrappedValue))")
-                }
-                Slider(value: responseLengthBinding, in: 120...3000, step: 60)
-            }
-        } header: {
-            Text("Model Settings")
-        } footer: {
-            Text("Adjust the sliders to set the model's token limits. Maximum: 25,600 for context.")
+            .padding()
+            .background(Color(.systemGray6).opacity(0.6))
+            .cornerRadius(12)
+            .padding(.horizontal, 16)
         }
     }
     
     @ViewBuilder
     private func openRouterSettingsSections() -> some View {
-        // OpenRouter Settings
-        Section {
-            SecureField("API Key", text: apiKeyBinding)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-        } header: {
-            Text("OpenRouter API")
-        } footer: {
-            Text("Enter your OpenRouter API key. You can get one from openrouter.ai")
-        }
-        
-        Section {
+        VStack(spacing: 18) {
             HStack {
-                Text("Selected Model")
-                Spacer()
-                if isLoadingModels {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                } else {
-                    Button("Refresh Models") {
-                        Task {
-                            await loadAvailableModels()
-                        }
-                    }
-                    .font(.caption)
-                }
+                Text("OpenRouter")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Spacer() 
             }
-            
-            if connectionManager.availableModels.isEmpty {
-                Text("No Models Available")
-            } else {
-                Picker("Model", selection: selectedModelBinding) {
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("API Key")
+                    .foregroundColor(.primary)
+                SecureField("Enter your API key", text: apiKeyBinding)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .padding()
+                    .background(Color(.systemGray6).opacity(0.6))
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal, 16)
+
+            // Model Selection Picker 
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Selected Model")
+                    .foregroundColor(.primary)
+                Picker("Selected Model", selection: selectedModelBinding) {
                     ForEach(connectionManager.availableModels, id: \.self.id) { model in
                         Text(model.name).tag(model.id)
                     }
                 }
+                .tint(.secondary)
                 .pickerStyle(.navigationLink)
+                .padding()
+                .background(Color(.systemGray6).opacity(0.6))
+                .cornerRadius(12)
             }
-        } header: {
-            Text("Model Selection")
-        } footer: {
-            Text("Select the OpenRouter model to use. You can manually enter a model name or refresh to load available models.")
-        }
-
-        Section {
-            VStack(alignment: .leading) {
-                HStack {
-                    Text("Response Length")
-                    Spacer()
-                    Text("\(Int(responseLengthBinding.wrappedValue))")
-                }
-                Slider(value: responseLengthBinding, in: 120...3000, step: 60)
-            }
-        } header: {
-            Text("Model Settings")
-        } footer: {
-            Text("Adjust the sliders to set the model's token limits.")
+            .padding(.horizontal, 16)
         }
     }
 }

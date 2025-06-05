@@ -52,7 +52,7 @@ struct PocketAIApp: App {
 
                 // Settings Tab
                 NavigationStack(path: $navManager.settingsPath) {
-                    Text("TODO: Settings")
+                    ConnectionSettingsView()
                         .navigationDestination(for: NavigationManager.Destination.self) { destination in
                             destinationView(for: destination)
                         }
@@ -63,6 +63,10 @@ struct PocketAIApp: App {
                 }
                 .tag(NavigationManager.Tab.settings)
             }
+            .sheet(item: $navManager.presentedSheet) { sheet in
+                sheetView(for: sheet)
+            }
+            .tint(.primary)
         }
         .environment(navManager)
         .environment(serviceContainer)
@@ -78,14 +82,21 @@ struct PocketAIApp: App {
         case .characterView(let character):
             Text("Character View")
         case .settingsView:
-            Text("Settings View")
+            ConnectionSettingsView()
         case .newChatView:
             Text("New Chat View")
+        case .chatSettings(let chat):
+            ChatSettingsView(viewModel: chat)
         }
     }
 
     @ViewBuilder
     private func sheetView(for sheet: NavigationManager.SheetType) -> some View {
-        Text("TODO: Sheet View")
+        switch sheet {
+        case .chatSettings(let chat):
+            ChatSettingsView(viewModel: chat)
+        default:
+            Text("TODO: Sheet View")
+        }
     }
 }

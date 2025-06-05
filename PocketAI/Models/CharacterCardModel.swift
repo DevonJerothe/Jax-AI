@@ -78,10 +78,38 @@ struct CharacterCardModel: Hashable {
     // MARK: - Hashable conformance
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(name)
+        hasher.combine(description)
+        hasher.combine(personality)
+        hasher.combine(firstMessage)
+        hasher.combine(imagePath)
+        hasher.combine(messageExample)
+        hasher.combine(scenario)
+        hasher.combine(systemPrompt)
+        hasher.combine(altGreetings)
+        hasher.combine(tags)
+        hasher.combine(createdAt)
+        hasher.combine(imageData)
     }
     
     static func == (lhs: CharacterCardModel, rhs: CharacterCardModel) -> Bool {
-        return lhs.id == rhs.id
+        // Break up the long comparison into multiple lines for better readability and performance
+        guard lhs.id == rhs.id,
+              lhs.name == rhs.name,
+              lhs.description == rhs.description,
+              lhs.personality == rhs.personality,
+              lhs.firstMessage == rhs.firstMessage,
+              lhs.imagePath == rhs.imagePath,
+              lhs.messageExample == rhs.messageExample,
+              lhs.scenario == rhs.scenario,
+              lhs.systemPrompt == rhs.systemPrompt,
+              lhs.altGreetings == rhs.altGreetings,
+              lhs.tags == rhs.tags,
+              lhs.createdAt == rhs.createdAt,
+              lhs.imageData == rhs.imageData else {
+            return false
+        }
+        return true
     }
 }
 
