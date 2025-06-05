@@ -36,7 +36,7 @@ struct ChatListView: View {
                             .padding(.horizontal, 16)
                             
                             // Character Cards ScrollView
-                            CharacterCardsListView(characters: viewModel.characterCards)
+                            CharacterCardsListView(viewModel: viewModel)
                         }
                         .padding(.vertical, 24)
 
@@ -59,6 +59,15 @@ struct ChatListView: View {
             }
             .navigationTitle("Jax AI")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        navManager.navigateToNewChat(sheet: true)
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
             .onAppear() {
                 print("ChatListView onAppear called")
                 viewModel.refreshData()
@@ -76,13 +85,19 @@ struct ChatListView: View {
 
 // MARK: - CharacterCardsListView
 struct CharacterCardsListView: View {
-    let characters: [CharacterCardModel]
+    @Environment(NavigationManager.self) var navManager
+    let viewModel: ChatListViewModel
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 20) {
-                ForEach(characters, id: \.id) { character in
+                ForEach(viewModel.characterCards, id: \.id) { character in
                     CharacterCardView(character: character)
+                        .onTapGesture {
+                            if let newChat = viewModel.createNewChat(fromCharacter: character) {
+                                navManager.navigateToChat(chat: newChat)
+                            }
+                        }
                 }
                 
                 // Add Character Button
@@ -125,9 +140,6 @@ struct CharacterCardView: View {
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
                 .lineLimit(1)
-        }
-        .onTapGesture {
-            // Navigate to chat with this character
         }
     }
 }

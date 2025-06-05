@@ -88,6 +88,7 @@ class NavigationManager {
 
     // MARK: - Navigation Methods
     func navigateHome() {
+        presentedSheet = nil
         currentTab = .chatList
         chatListPath = NavigationPath()
         characterListPath = NavigationPath()
@@ -98,6 +99,7 @@ class NavigationManager {
     // - Parameter chat: The chat to navigate to
     // - Parameter keepCurrentPath: Whether to preserve the current path (default is false)
     func navigateToChat(chat: ChatModel, keepCurrentPath: Bool = false) {
+        presentedSheet = nil
         if keepCurrentPath {
             appendToCurrentPath(Destination.chatView(chat))
         } else {
@@ -111,6 +113,7 @@ class NavigationManager {
         if sheet {
             presentedSheet = .chatSettings(chat)
         } else {
+            presentedSheet = nil
             appendToCurrentPath(Destination.chatSettings(chat))
         }
     }
@@ -119,6 +122,7 @@ class NavigationManager {
     // - Parameter character: The character to navigate to
     // - Parameter keepCurrentPath: Whether to preserve the current path (default is false)
     func navigateToCharacter(character: CharacterCardModel, keepCurrentPath: Bool = false) {
+        presentedSheet = nil
         if keepCurrentPath {
             appendToCurrentPath(Destination.characterView(character))
         } else {
@@ -131,6 +135,7 @@ class NavigationManager {
     // Navigates to settings, optionally preserving the current path
     // - Parameter keepCurrentPath: Whether to preserve the current path (default is false)
     func navigateToSettings(keepCurrentPath: Bool = false) {
+        presentedSheet = nil
         if keepCurrentPath {
             appendToCurrentPath(Destination.settingsView)
         } else {
@@ -140,15 +145,21 @@ class NavigationManager {
     }
 
     // Navigates to new chat, optionally preserving the current path
-    func navigateToNewChat() {
-        chatListPath = NavigationPath()
-        chatListPath.append(Destination.newChatView)
-        currentTab = .chatList
+    func navigateToNewChat(sheet: Bool = false) {
+        if sheet {
+            presentedSheet = .newChat
+        } else {
+            presentedSheet = nil
+            chatListPath = NavigationPath()
+            chatListPath.append(Destination.newChatView)
+            currentTab = .chatList
+        }
     }
 
     /// Navigates to a specified destination within the current tab's navigation stack
     /// - Parameter destination: The destination to navigate to
     func goTo(destination: Destination) {
+        presentedSheet = nil
         appendToCurrentPath(destination)
     }
 }

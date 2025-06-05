@@ -103,13 +103,11 @@ class ChatViewModel: Hashable {
         description: String,
         firstMessage: String
     ) {
-        self.model.characterCard.description = description
-        self.model.characterCard.firstMessage = firstMessage
-        self.model.characterCard.name = chatName
+        model.updateCard(name: chatName, description: description, firstMessage: firstMessage)
 
         self.showSettings.toggle()
-
-        try! characterRepository.save(self.model.characterCard)
+        
+//        try! characterRepository.save(self.model.characterCard)
         try! chatRepository.save(self.model)
         
         // Post notification that chat data has changed

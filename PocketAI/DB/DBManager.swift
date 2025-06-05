@@ -65,6 +65,7 @@ class DBManager {
             try ChatModel.migrateTable(db)
             try MessageModel.migrateTable(db)
             try CharacterCardModel.migrateTable(db)
+            try ChatCharacterJoin.migrateTable(db)
         }
 
         try migrator.migrate(dbQueue)

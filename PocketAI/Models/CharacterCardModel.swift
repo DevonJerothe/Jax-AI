@@ -12,7 +12,6 @@ import SwiftUI
 
 struct CharacterCardModel: Hashable {
     var id: UUID = UUID()
-    var chatId: String = ""
     var name: String?
     var description: String?
     var personality: String?
@@ -29,7 +28,6 @@ struct CharacterCardModel: Hashable {
     var imageData: Data?
     
     init(
-        chatId: String = "",
         name: String,
         description: String? = nil,
         personality: String? = nil,
@@ -41,7 +39,6 @@ struct CharacterCardModel: Hashable {
         tags: [String] = [],
         imageData: Data? = nil
     ) {
-        self.chatId = chatId
         self.name = name
         self.description = description
         self.personality = personality
@@ -118,7 +115,6 @@ extension CharacterCardModel: TableRecord, FetchableRecord, PersistableRecord {
 
     init(row: GRDB.Row) throws {
         id = UUID(uuidString: row["id"]!)!
-        chatId = row["chatId"]
         name = row["name"]
         description = row["description"]
         personality = row["personality"]
@@ -148,7 +144,6 @@ extension CharacterCardModel: TableRecord, FetchableRecord, PersistableRecord {
 
     func encode(to container: inout GRDB.PersistenceContainer) throws {
         container["id"] = id.uuidString
-        container["chatId"] = chatId
         container["name"] = name
         container["description"] = description
         container["personality"] = personality
@@ -171,12 +166,15 @@ extension CharacterCardModel: TableRecord, FetchableRecord, PersistableRecord {
             container["tags"] = String(data: tagsData, encoding: .utf8)
         }
     }
+    
+    // MARK: - RelationShips
+    // Relationships will be handled manually in the repository layer
 }
+
 extension CharacterCardModel {
     public static func migrateTable(_ db: Database) throws {
         try db.create(table: "char_cards", ifNotExists: true) { t in
             t.column("id", .text).primaryKey().notNull()
-            t.column("chatId", .text).notNull().indexed().references("chats", onDelete: .cascade)
             t.column("name", .text)
             t.column("description", .text)
             t.column("personality", .text)

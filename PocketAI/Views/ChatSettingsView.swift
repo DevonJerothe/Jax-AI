@@ -17,9 +17,9 @@ struct ChatSettingsView: View {
 
     init(viewModel: ChatViewModel) {
         self.viewModel = viewModel
-        _botDescription = State(initialValue: viewModel.model.characterCard.description ?? "" )
-        _initialMessage = State(initialValue: viewModel.model.characterCard.firstMessage ?? "")
-        _chatName = State(initialValue: viewModel.model.characterCard.name ?? "" )
+        _botDescription = State(initialValue: viewModel.model.characterCard.first?.description ?? "" )
+        _initialMessage = State(initialValue: viewModel.model.characterCard.first?.firstMessage ?? "")
+        _chatName = State(initialValue: viewModel.model.characterCard.first?.name ?? "" )
     }
 
     var body: some View {

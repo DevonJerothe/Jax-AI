@@ -17,6 +17,7 @@ public enum NewChatTab: String, CaseIterable, Identifiable {
 
 public struct NewChatSheetView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(NavigationManager.self) var navManager
 
     @State private var viewModel: NewChatViewModel = .init()
 
@@ -25,8 +26,6 @@ public struct NewChatSheetView: View {
 
     @State private var selectedTab: NewChatTab = .manual
     @FocusState private var isURLFieldFocused: Bool
-
-    var onSave: ((ChatModel) -> Void)?
 
     public var body: some View {
         NavigationStack {
@@ -59,9 +58,9 @@ public struct NewChatSheetView: View {
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Create") {
-                        let newChat = viewModel.createChat(type: selectedTab)
-                        onSave?(newChat)
-                        dismiss()
+                        if let newChat = viewModel.createChat(type: selectedTab) {
+                            navManager.navigateToChat(chat: newChat)
+                        }
                     }
                     .fontWeight(.bold)
                     .disabled(viewModel.isCreateDisabled(type: selectedTab))

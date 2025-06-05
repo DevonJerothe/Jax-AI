@@ -11,13 +11,15 @@ import GRDB
 
 struct ChatModel: Hashable {
     var id: UUID = UUID()
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
     var messages: [MessageModel] = []
     var memory: String
-    var characterCard: CharacterCardModel
+    var characterCard: [CharacterCardModel] = []
     
     var error: String?
     var chatTitle: String {
-        get { characterCard.name ??  "Jax AI" }
+        get { characterCard.first?.name ??  "Jax AI" }
     }
 
     // Computed property that changes when content changes
@@ -37,9 +39,9 @@ struct ChatModel: Hashable {
     }
 
     init(fromCard: CharacterCardModel) {
-        self.characterCard = fromCard
+        self.characterCard = [fromCard]
         self.memory = fromCard.description ?? ""
-        self.characterCard.chatId = self.id.uuidString
+        // self.characterCard.first?.chatId = self.id.uuidString
     
         self.addMessage(fromCard.firstMessage, forActor: .bot)
     }
@@ -54,20 +56,21 @@ struct ChatModel: Hashable {
         self.messages = messages
         self.memory = description
 
-        self.characterCard = CharacterCardModel(
-            chatId: self.id.uuidString,
+        let newCard = CharacterCardModel(
+            // chatId: self.id.uuidString,
             name: chatTitle,
             description: description,
             firstMessage: firstMessage,
             imageData: avatarImg
         )
+        self.characterCard = [newCard]
 
         self.addMessage(firstMessage, forActor: .bot)
     }
 
     mutating func resetChat() {
         self.messages.removeAll()
-        self.addMessage(characterCard.firstMessage ?? "", forActor: .bot)
+        self.addMessage(characterCard.first?.firstMessage ?? "", forActor: .bot)
     }
 
     mutating func addMessage(_ message: String? = "", forActor: MessageActor, isLoading: Bool = false) {
@@ -80,6 +83,19 @@ struct ChatModel: Hashable {
             )
             messages.append(messageModel)
         }
+    }
+    
+    mutating func updateCard(name: String, description: String, firstMessage: String) {
+        // Only supports 1 character card for now
+        guard var char = characterCard.first else {
+            return
+        }
+
+        char.name = name
+        char.description = description
+        char.firstMessage = firstMessage
+        
+        characterCard = [char]
     }
 
     func getFullPrompt(continueResponse: Bool = false) -> String {
@@ -102,15 +118,15 @@ struct ChatModel: Hashable {
     }
     
     func getFullMemory() -> String {
-        guard var fullMemory = characterCard.description else {
+        guard var fullMemory = characterCard.first?.description else {
             return self.memory
         }
         
         // Build out the memory object from characterCard
-        if let personality = characterCard.personality {
-            fullMemory += "\n\(characterCard.name ?? "")'s personality: \(personality)\n"
+        if let personality = characterCard.first?.personality {
+            fullMemory += "\n\(characterCard.first?.name ?? "")'s personality: \(personality)\n"
         }
-        if let scenario = characterCard.scenario {
+        if let scenario = characterCard.first?.scenario {
             fullMemory += "\nScenario: \(scenario)\n"
         }
         
@@ -118,7 +134,7 @@ struct ChatModel: Hashable {
     }
 
     func getAvatarImg() -> Image {
-        if let imgData = characterCard.imageData, 
+        if let imgData = characterCard.first?.imageData, 
            let uiImage = UIImage(data: imgData) {
             return Image(uiImage: uiImage)
         }
@@ -131,22 +147,27 @@ extension ChatModel: TableRecord, FetchableRecord, PersistableRecord {
     
     init(row: GRDB.Row) throws {
         id = UUID(uuidString: row["id"]!)!
+        createdAt = row["createdAt"]
+        updatedAt = row["updatedAt"]
         memory = row["memory"]
         messages = []
-
-        // Havent figured out a way to get this working nicer with GRDB unless we make it nullable... prob have to later on. 
-        characterCard = CharacterCardModel(name: "Unknown")
+        characterCard = []
     }
 
     func encode(to container: inout PersistenceContainer) {
         container["id"] = id.uuidString
+        container["createdAt"] = createdAt
+        container["updatedAt"] = updatedAt
         container["memory"] = memory
     }
 }
+
 extension ChatModel {
     static public func migrateTable(_ db: Database) throws {
         try db.create(table: "chats", ifNotExists: true) { t in
             t.column("id", .text).primaryKey().notNull()
+            t.column("createdAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
+            t.column("updatedAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
             t.column("memory", .text).notNull()
         }
     }

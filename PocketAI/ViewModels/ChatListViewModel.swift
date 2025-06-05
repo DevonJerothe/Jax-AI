@@ -51,10 +51,11 @@ class ChatListViewModel {
     }
 
     @MainActor
-    func createNewChat(chatModel: ChatModel) {
+    func createNewChat(fromCharacter: CharacterCardModel) -> ChatModel? {
         do {
-            try chatRepository.save(chatModel)
-            chats.append(chatModel)
+            let newChat = ChatModel(fromCard: fromCharacter)
+            try chatRepository.save(newChat)
+            return newChat
         } catch {
             print("Failed to save chat: \(error)")
             if let dbError = error as? GRDB.DatabaseError {
@@ -62,6 +63,7 @@ class ChatListViewModel {
                 print("SQL: \(dbError.sql ?? "No SQL")")
                 print("Description: \(dbError.description)")
             }
+            return nil
         }
     }
 
