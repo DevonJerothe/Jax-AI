@@ -85,25 +85,16 @@ struct ChatModel: Hashable {
         }
     }
     
-    mutating func updateCard(name: String, description: String, firstMessage: String) {
-        // Only supports 1 character card for now
-        guard var char = characterCard.first else {
-            return
-        }
-
-        char.name = name
-        char.description = description
-        char.firstMessage = firstMessage
-        
-        characterCard = [char]
+    mutating func updateCard(_ newCard: CharacterCardModel) {        
+        characterCard = [newCard]
     }
 
     func getFullPrompt(continueResponse: Bool = false) -> String {
-        var prompt = "\nBot: "
+        var prompt = "\nAssistant: "
         for message in messages {
             switch message.actor {
             case .user:
-                prompt += "\(message.text)\nBot:"
+                prompt += "\(message.text)\nAssistant:"
             case .bot:
                 if !message.loading || continueResponse {
                     prompt += "\(message.text)"
@@ -121,7 +112,7 @@ struct ChatModel: Hashable {
         guard var fullMemory = characterCard.first?.description else {
             return self.memory
         }
-        
+        fullMemory = "\nDescription: \(fullMemory)"
         // Build out the memory object from characterCard
         if let personality = characterCard.first?.personality {
             fullMemory += "\n\(characterCard.first?.name ?? "")'s personality: \(personality)\n"
@@ -139,6 +130,10 @@ struct ChatModel: Hashable {
             return Image(uiImage: uiImage)
         }
         return Image(systemName: "person.circle.fill")
+    }
+
+    func getCharacterCard() -> CharacterCardModel {
+        return characterCard.first ?? CharacterCardModel(name: "Jax AI")
     }
 }
 

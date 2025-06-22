@@ -38,11 +38,4 @@ struct ChatCharacterJoin: FetchableRecord, PersistableRecord {
             t.uniqueKey(["chatId", "charCardId"])
         }
     }
-    
-//    // MARK - RelationShips
-//    static let chatKey = ForeignKey(["chatId"])
-//    static let chat = belongsTo(ChatModel.self, using: chatKey)
-//    
-//    static let charKey = ForeignKey(["charCardId"])
-//    static let characterCard = belongsTo(CharacterCardModel.self, using: charKey)
 }

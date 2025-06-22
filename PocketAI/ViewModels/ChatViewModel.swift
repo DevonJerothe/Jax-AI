@@ -98,18 +98,16 @@ class ChatViewModel: Hashable {
         NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
     }
 
-    func updateChatSettings(
-        chatName: String,
-        description: String,
-        firstMessage: String
-    ) {
-        model.updateCard(name: chatName, description: description, firstMessage: firstMessage)
 
-        self.showSettings.toggle()
-        
-//        try! characterRepository.save(self.model.characterCard)
+    func updateChatSettings(
+        characterCard: CharacterCardModel
+    ) {
+        model.updateCard(characterCard)
         try! chatRepository.save(self.model)
-        
+
+        // update the connection settings
+        serviceContainer.saveConnectionSettings()
+
         // Post notification that chat data has changed
         NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
     }

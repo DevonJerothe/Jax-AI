@@ -11,7 +11,7 @@ import SwiftUI
 struct ConnectionSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     
-    @State private var connectionManager: ServiceContainer = .shared
+    private var connectionManager: ServiceContainer = .shared
     @State private var connectionTest: Bool? = nil
     @State private var isLoadingModels: Bool = false
     
@@ -19,6 +19,13 @@ struct ConnectionSettingsView: View {
         Binding<String>(
             get: { connectionManager.connectionSettings.host ?? "" },
             set: { connectionManager.connectionSettings.host = $0.isEmpty ? nil : $0 }
+        )
+    }
+
+    var portBinding: Binding<Int> {
+        Binding<Int>(
+            get: { connectionManager.connectionSettings.port ?? 5000 },
+            set: { connectionManager.connectionSettings.port = $0 }
         )
     }
     
@@ -142,10 +149,10 @@ struct ConnectionSettingsView: View {
                     }
                 } label: {
                     Text("Connect")
-                        .foregroundColor(.yellow)
+                        .foregroundColor(.primary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(.red)
+                        .background(.secondary)
                         .cornerRadius(20)
                         .animation(.easeInOut, value: connectionManager.isLoading)
                 }
@@ -226,7 +233,7 @@ struct ConnectionSettingsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Port")
                     .foregroundColor(.primary)
-                TextField("", value: $connectionManager.connectionSettings.port, format: .number)
+                TextField("", value: portBinding, format: .number.grouping(.never))
                     .keyboardType(.numberPad)
                     .padding()
                     .background(Color(.systemGray6).opacity(0.6))

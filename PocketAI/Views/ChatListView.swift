@@ -22,40 +22,27 @@ struct ChatListView: View {
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
                 }
-                ScrollView {
-                    VStack {
-                        // Character Cards Section
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                                Text("Characters")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            
-                            // Character Cards ScrollView
-                            CharacterCardsListView(viewModel: viewModel)
-                        }
-                        .padding(.vertical, 24)
-
-                        // Recent Chats Section 
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                                Text("Recent Chats")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-
-                            // Recent Chats List
-                            RecentChatsList(chats: viewModel.chats)
-                        }
+                List {
+                    // Character Cards as a Section Header
+                    Section(
+                        header: Text("Characters").font(.title2).fontWeight(.bold)
+                    ) {
+                        CharacterCardsListView(viewModel: viewModel)
                     }
+                    .listSectionSeparator(.hidden)
+
+                    // Recent Chats
+                    Section(
+                        header: Text("Recent Chats").font(.title2).fontWeight(.bold)
+                    ) {
+                        ForEach(viewModel.chats, id: \.id) { chat in
+                            RecentChatRow(chat: chat)
+                        }
+                        .onDelete(perform: viewModel.deleteChat)
+                    }
+                    .listSectionSeparator(.hidden)
                 }
+                .listStyle(.plain)
             }
             .navigationTitle("Jax AI")
             .navigationBarTitleDisplayMode(.inline)
@@ -68,15 +55,20 @@ struct ChatListView: View {
                     }
                 }
             }
-            .onAppear() {
+            .onAppear {
                 print("ChatListView onAppear called")
                 viewModel.refreshData()
-                print("loaded \(viewModel.characterCards.count) character cards")
+                print(
+                    "loaded \(viewModel.characterCards.count) character cards")
                 print("loaded \(viewModel.chats.count) chats")
             }
-            .onReceive(NotificationCenter.default.publisher(for: .chatDataChanged)) { notification in
+            .onReceive(
+                NotificationCenter.default.publisher(for: .chatDataChanged)
+            ) { notification in
                 // Refresh data when any chat changes
-                print("Chat data changed notification received, refreshing chat list...")
+                print(
+                    "Chat data changed notification received, refreshing chat list..."
+                )
                 viewModel.refreshData()
             }
         }
@@ -87,19 +79,21 @@ struct ChatListView: View {
 struct CharacterCardsListView: View {
     @Environment(NavigationManager.self) var navManager
     let viewModel: ChatListViewModel
-    
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 20) {
                 ForEach(viewModel.characterCards, id: \.id) { character in
                     CharacterCardView(character: character)
                         .onTapGesture {
-                            if let newChat = viewModel.createNewChat(fromCharacter: character) {
+                            if let newChat = viewModel.createNewChat(
+                                fromCharacter: character)
+                            {
                                 navManager.navigateToChat(chat: newChat)
                             }
                         }
                 }
-                
+
                 // Add Character Button
                 AddCharacterButton()
             }
@@ -111,12 +105,14 @@ struct CharacterCardsListView: View {
 // MARK: - Character Card View
 struct CharacterCardView: View {
     let character: CharacterCardModel
-    
+
     var body: some View {
         VStack(spacing: 8) {
             // Character Avatar
             ZStack {
-                if let imageData = character.imageData, let uiImage = UIImage(data: imageData) {
+                if let imageData = character.imageData,
+                    let uiImage = UIImage(data: imageData)
+                {
                     Image(uiImage: uiImage)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -133,7 +129,7 @@ struct CharacterCardView: View {
                         )
                 }
             }
-            
+
             // Character Name
             Text(character.name ?? "Unknown")
                 .font(.caption)
@@ -146,6 +142,8 @@ struct CharacterCardView: View {
 
 // MARK: - Add Character Button
 struct AddCharacterButton: View {
+    @Environment(NavigationManager.self) var navManager
+
     var body: some View {
         VStack(spacing: 8) {
             Circle()
@@ -158,9 +156,11 @@ struct AddCharacterButton: View {
                 )
                 .overlay(
                     Circle()
-                        .stroke(Color.gray.opacity(0.5), style: StrokeStyle(lineWidth: 2, dash: [5]))
+                        .stroke(
+                            Color.gray.opacity(0.5),
+                            style: StrokeStyle(lineWidth: 2, dash: [5]))
                 )
-            
+
             Text("Add")
                 .font(.caption)
                 .fontWeight(.medium)
@@ -168,25 +168,7 @@ struct AddCharacterButton: View {
         }
         .onTapGesture {
             // Navigate to add character
-        }
-    }
-}
-
-// MARK: - Recent Chats List
-struct RecentChatsList: View {
-    let chats: [ChatModel]
-    
-    var body: some View {
-        LazyVStack(spacing: 0) {
-            ForEach(chats, id: \.id) { chat in
-                RecentChatRow(chat: chat)
-                
-                if chat != chats.last {
-                    Divider()
-                        .background(Color.gray.opacity(0.3))
-                        .padding(.leading, 72)
-                }
-            }
+            navManager.navigateToNewChat(sheet: true)
         }
     }
 }
@@ -195,7 +177,7 @@ struct RecentChatsList: View {
 struct RecentChatRow: View {
     @Environment(NavigationManager.self) var navManager
     let chat: ChatModel
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Character Avatar
@@ -207,21 +189,23 @@ struct RecentChatRow: View {
                     .foregroundColor(.gray)
                     .clipShape(Circle())
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 // Character Name
                 Text(chat.chatTitle)
                     .fontWeight(.medium)
 
-                // TODO: Last Message Preview
-                Text(chat.messages.last?.getRolePlayText(cardName: chat.chatTitle) ?? "No messages yet")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                Text(
+                    chat.messages.last?.getRolePlayText(
+                        cardName: chat.chatTitle) ?? "No messages yet"
+                )
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
             }
-            
+
             Spacer()
-            
+
             // Timestamp
             Text(getFormattedTimestamp())
                 .font(.caption)
@@ -235,7 +219,7 @@ struct RecentChatRow: View {
             navManager.navigateToChat(chat: chat)
         }
     }
-    
+
     private func getLastMessagePreview() -> String {
         // Get the last message from the chat
         guard let lastMessage = chat.messages.last else {
@@ -243,16 +227,16 @@ struct RecentChatRow: View {
         }
         return lastMessage.text.isEmpty ? "..." : lastMessage.text
     }
-    
+
     private func getFormattedTimestamp() -> String {
         // Format the timestamp of the last message
         guard let lastMessage = chat.messages.last else {
             return ""
         }
-        
+
         let formatter = DateFormatter()
         let calendar = Calendar.current
-        
+
         if calendar.isDateInToday(lastMessage.createdAt) {
             formatter.dateFormat = "h:mm a"
             return formatter.string(from: lastMessage.createdAt)

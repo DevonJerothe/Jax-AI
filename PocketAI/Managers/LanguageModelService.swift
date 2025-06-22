@@ -114,7 +114,6 @@ class LanguageModelService {
             }
         }
         
-        // TODO: Add Character Card info for OpenRouter
         let requestBuilder = RequestBodyBuilder(
             selectedModel: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
             messages: requestMessages,
