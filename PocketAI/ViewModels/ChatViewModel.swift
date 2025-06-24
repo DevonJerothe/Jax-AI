@@ -10,7 +10,9 @@ import SwiftUI
 import SwiftLLMSDK
 
 @Observable
-class ChatViewModel {
+class ChatViewModel: Hashable {
+    var id: UUID = UUID()
+
     private var languageModelService: LanguageModelService? 
     private let messageRepository: MessageRepository
     private let chatRepository: ChatRepository
@@ -18,12 +20,24 @@ class ChatViewModel {
 
     var model: ChatModel
     var connectionSettings: ConnectionSettingsModel
-    var isConnected: Bool
+    var isConnected: Bool {
+        return serviceContainer.isConnected
+    }
 
     var updateScrollView: Bool = false
     var showSettings: Bool = false
     var selectionModeActive: Bool = false
     var selectedMessages: Set<MessageModel> = []
+    var serviceContainer: ServiceContainer = ServiceContainer.shared
+
+    // MARK: - Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: ChatViewModel, rhs: ChatViewModel) -> Bool {
+        return lhs.id == rhs.id
+    }
 
     init(
         chatModel: ChatModel,
@@ -36,7 +50,6 @@ class ChatViewModel {
         self.languageModelService = languageModelService
         self.messageRepository = messageRepository
         self.chatRepository = chatRepository
-        self.isConnected = ServiceContainer.shared.isConnected
         self.connectionSettings = ServiceContainer.shared.connectionSettings
         self.characterRepository = characterRepository
     }
@@ -80,21 +93,23 @@ class ChatViewModel {
     func clearChat() {
         self.model.resetChat()
         try! chatRepository.save(self.model)
+        
+        // Post notification that chat data has changed
+        NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
     }
 
+
     func updateChatSettings(
-        chatName: String,
-        description: String,
-        firstMessage: String
+        characterCard: CharacterCardModel
     ) {
-        self.model.characterCard.description = description
-        self.model.characterCard.firstMessage = firstMessage
-        self.model.characterCard.name = chatName
-
-        self.showSettings.toggle()
-
-        try! characterRepository.save(self.model.characterCard)
+        model.updateCard(characterCard)
         try! chatRepository.save(self.model)
+
+        // update the connection settings
+        serviceContainer.saveConnectionSettings()
+
+        // Post notification that chat data has changed
+        NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
     }
 
     func updateMessage(_ message: MessageModel, newText: String) async {
@@ -103,6 +118,11 @@ class ChatViewModel {
             self.model.messages[lastIndex].text = newText
         }
         try! messageRepository.save(self.model.messages[lastIndex])
+        
+        // Post notification that chat data has changed
+        await MainActor.run {
+            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+        }
     }
 
     func toggleSelection(_ message: MessageModel) {
@@ -120,18 +140,34 @@ class ChatViewModel {
             selectionModeActive = false
         }
         try! chatRepository.save(self.model)
+        
+        // Post notification that chat data has changed
+        await MainActor.run {
+            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+        }
     }
     
     func deleteMessage(_ message: MessageModel) async {
+        print("ChatViewModel: Starting deleteMessage for message ID: \(message.id.uuidString)")
+        print("ChatViewModel: Current message count before delete: \(self.model.messages.count)")
+        
         await MainActor.run {
             self.model.messages.removeAll(where: { message == $0 })
+            print("ChatViewModel: Message count after in-memory delete: \(self.model.messages.count)")
         }
-        try! chatRepository.save(self.model)
-    }
-
-    func cancelDeleteMessages() {
-        selectedMessages.removeAll()
-        selectionModeActive = false
+        
+        do {
+            try chatRepository.save(self.model)
+            print("ChatViewModel: Successfully saved chat to database after delete")
+        } catch {
+            print("ChatViewModel: ERROR saving chat after delete: \(error)")
+        }
+        
+        // Post notification that chat data has changed
+        await MainActor.run {
+            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+            print("ChatViewModel: Posted chatDataChanged notification")
+        }
     }
 
     func shouldShowToolbar(_ message: MessageModel) -> Bool {
@@ -167,8 +203,21 @@ class ChatViewModel {
                 self.model.messages[forIndex].text = responseMessage
             }
             self.model.messages[forIndex].loading = false
-            try! messageRepository.save(self.model.messages[forIndex])
+            
+            do {
+                try messageRepository.save(self.model.messages[forIndex])
+            } catch(let error) {
+                print("ERROR: \(error.localizedDescription)")
+            }
             self.updateScrollView.toggle()
+            
+            // Post notification that chat data has changed
+            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
         }
     }
+}
+
+// MARK: - Notification Names
+extension Notification.Name {
+    static let chatDataChanged = Notification.Name("chatDataChanged")
 }

@@ -10,6 +10,7 @@ class ServiceContainer {
     static let shared = ServiceContainer()
 
     var connectionSettings: ConnectionSettingsModel = .defaults
+    var isLoading: Bool = false
 
     private var languageModelService: LanguageModelService = LanguageModelService(connectionSettings: .defaults)
     private var databaseManager: DBManager?
@@ -73,11 +74,21 @@ class ServiceContainer {
     // MARK: - LanguageModelService Helpers
     // Its better to call the language service methods directly than here.
     func connect() async {
+        self.saveConnectionSettings()
+        self.isLoading = true
         await _ = self.languageModelService.connect()
+        self.isLoading = false
     }
 
     func waitForConnection() async -> Bool {
+        self.saveConnectionSettings()
+        self.isLoading = true
         let connectionStatus = await self.languageModelService.connect()
+        self.isLoading = false
         return connectionStatus
+    }
+
+    func getAvailableModels() async {
+        await self.languageModelService.getAvailableModels()
     }
 }

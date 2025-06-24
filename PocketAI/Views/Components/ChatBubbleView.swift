@@ -65,7 +65,7 @@ struct ChatBubbleView: View {
                         } else {
                             Markdown(
                                 message.getRolePlayText(
-                                    cardName: viewModel.model.characterCard.name
+                                    cardName: viewModel.model.characterCard.first?.name
                                         ?? "")
                             )
                             .markdownCodeSyntaxHighlighter(
@@ -179,7 +179,7 @@ struct ChatBubbleView: View {
                                         // Enter editing mode
                                         editedText = message.getRolePlayText(
                                             cardName: viewModel.model
-                                                .characterCard.name ?? "")  // Initialize editor text
+                                                .characterCard.first?.name ?? "")  // Initialize editor text
                                         isEditing = true
                                     }
                                 }) {
@@ -266,7 +266,7 @@ struct ChatBubbleView: View {
                         VStack(alignment: .trailing) {
                             Markdown(
                                 message.getRolePlayText(
-                                    cardName: viewModel.model.characterCard.name
+                                    cardName: viewModel.model.characterCard.first?.name
                                         ?? "")
                             )
                             .foregroundStyle(.black)
@@ -301,7 +301,7 @@ struct ChatBubbleView: View {
                                     // Enter editing mode
                                     editedText = message.getRolePlayText(
                                         cardName: viewModel.model
-                                            .characterCard.name ?? "")  // Initialize editor text
+                                            .characterCard.first?.name ?? "")  // Initialize editor text
                                     isEditing = true
                                 }
                             }) {

@@ -114,7 +114,6 @@ class LanguageModelService {
             }
         }
         
-        // TODO: Add Character Card info for OpenRouter
         let requestBuilder = RequestBodyBuilder(
             selectedModel: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
             messages: requestMessages,
@@ -123,9 +122,9 @@ class LanguageModelService {
             maxContextLength: connectionSettings.contextLength ?? 4096,
             maxLength: connectionSettings.responseLength ?? 240,
             promptTemplate: TemplatePrompts().defaultRolePlayPrompt,
-            characterDescription: chatModel.characterCard.description,
-            characterPersonality: chatModel.characterCard.personality,
-            characterScenario: chatModel.characterCard.scenario
+            characterDescription: chatModel.characterCard.first?.description,
+            characterPersonality: chatModel.characterCard.first?.personality,
+            characterScenario: chatModel.characterCard.first?.scenario
         )
         
         var serviceResponse: Result<ModelResponse, APIError>?

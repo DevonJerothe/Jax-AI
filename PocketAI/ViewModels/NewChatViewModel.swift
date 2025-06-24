@@ -11,6 +11,7 @@ import SwiftUI
 @Observable
 class NewChatViewModel {
     private let characterRepository: CharacterRepository
+    private let chatRepository: ChatRepository
     private let serviceContainer: ServiceContainer = .shared
     private let characterImporter: CharacterImporterService
     
@@ -25,10 +26,11 @@ class NewChatViewModel {
     var characterCard: CharacterCardModel?
 
     init(
-        characterRepository: CharacterRepository = ServiceContainer.shared
-            .getCharacterRepository()
+        characterRepository: CharacterRepository = ServiceContainer.shared.getCharacterRepository(),
+        chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository()
     ) {
         self.characterRepository = characterRepository
+        self.chatRepository = chatRepository
 
         // For now only support chub AI cards.. tbh not even sure other sources
         self.characterImporter = ChubImporter(urlSession: URLSession.shared)
@@ -72,7 +74,7 @@ class NewChatViewModel {
         }
     }
     
-    func createChat(type: NewChatTab) -> ChatModel {
+    func createChat(type: NewChatTab) -> ChatModel?{
         if type == .manual {
             self.characterCard = CharacterCardModel(
                 name: self.chatName,
@@ -88,12 +90,13 @@ class NewChatViewModel {
         }
 
         let newChat = ChatModel(fromCard: characterCard)
-        return newChat
-    }
-
-    func saveCharacterCard() {
-        if let characterCard {
-            try! self.characterRepository.save(characterCard)
+        do {
+            try self.chatRepository.save(newChat)
+            
+            return newChat
+        } catch {
+            print("Failed to save chat: \(error)")
+            return nil
         }
     }
 }

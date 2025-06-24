@@ -42,11 +42,17 @@ class DBManager {
                 print("Created directory at: \(directoryURL.path)")
             }
 
-            dbQueue = try DatabaseQueue(path: dbURL.path) 
+           // Create configuration for WAL mode
+           var config = Configuration()
+           config.prepareDatabase { db in
+               try db.execute(sql: "PRAGMA journal_mode=WAL")
+           }
+
+            dbQueue = try DatabaseQueue(path: dbURL.path, configuration: config)
 
             try migrateTables()
 
-            print("DB Opened Successfully")
+            print("DB Opened Successfully with WAL mode enabled")
         } catch {
             print("Database setup error: \(error)")
             fatalError("Failed to setup database: \(error)")
@@ -59,6 +65,7 @@ class DBManager {
             try ChatModel.migrateTable(db)
             try MessageModel.migrateTable(db)
             try CharacterCardModel.migrateTable(db)
+            try ChatCharacterJoin.migrateTable(db)
         }
 
         try migrator.migrate(dbQueue)

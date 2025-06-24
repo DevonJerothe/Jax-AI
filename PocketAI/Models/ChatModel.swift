@@ -9,21 +9,39 @@ import Foundation
 import SwiftUI
 import GRDB
 
-struct ChatModel {
+struct ChatModel: Hashable {
     var id: UUID = UUID()
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
     var messages: [MessageModel] = []
     var memory: String
-    var characterCard: CharacterCardModel
+    var characterCard: [CharacterCardModel] = []
     
     var error: String?
     var chatTitle: String {
-        get { characterCard.name ??  "Jax AI" }
+        get { characterCard.first?.name ??  "Jax AI" }
+    }
+
+    // Computed property that changes when content changes
+    var contentIdentifier: String {
+        return "\(id.uuidString)-\(messages.count)-\(messages.last?.id.uuidString ?? "")"
+    }
+
+    // MARK: - Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(messages)
+        hasher.combine(characterCard)
+    }
+    
+    static func == (lhs: ChatModel, rhs: ChatModel) -> Bool {
+        return lhs.id == rhs.id && lhs.messages == rhs.messages && lhs.characterCard == rhs.characterCard
     }
 
     init(fromCard: CharacterCardModel) {
-        self.characterCard = fromCard
+        self.characterCard = [fromCard]
         self.memory = fromCard.description ?? ""
-        self.characterCard.chatId = self.id.uuidString
+        // self.characterCard.first?.chatId = self.id.uuidString
     
         self.addMessage(fromCard.firstMessage, forActor: .bot)
     }
@@ -38,20 +56,21 @@ struct ChatModel {
         self.messages = messages
         self.memory = description
 
-        self.characterCard = CharacterCardModel(
-            chatId: self.id.uuidString,
+        let newCard = CharacterCardModel(
+            // chatId: self.id.uuidString,
             name: chatTitle,
             description: description,
             firstMessage: firstMessage,
             imageData: avatarImg
         )
+        self.characterCard = [newCard]
 
         self.addMessage(firstMessage, forActor: .bot)
     }
 
     mutating func resetChat() {
         self.messages.removeAll()
-        self.addMessage(characterCard.firstMessage ?? "", forActor: .bot)
+        self.addMessage(characterCard.first?.firstMessage ?? "", forActor: .bot)
     }
 
     mutating func addMessage(_ message: String? = "", forActor: MessageActor, isLoading: Bool = false) {
@@ -65,13 +84,17 @@ struct ChatModel {
             messages.append(messageModel)
         }
     }
+    
+    mutating func updateCard(_ newCard: CharacterCardModel) {        
+        characterCard = [newCard]
+    }
 
     func getFullPrompt(continueResponse: Bool = false) -> String {
-        var prompt = "\nBot: "
+        var prompt = "\nAssistant: "
         for message in messages {
             switch message.actor {
             case .user:
-                prompt += "\(message.text)\nBot:"
+                prompt += "\(message.text)\nAssistant:"
             case .bot:
                 if !message.loading || continueResponse {
                     prompt += "\(message.text)"
@@ -86,15 +109,15 @@ struct ChatModel {
     }
     
     func getFullMemory() -> String {
-        guard var fullMemory = characterCard.description else {
+        guard var fullMemory = characterCard.first?.description else {
             return self.memory
         }
-        
+        fullMemory = "\nDescription: \(fullMemory)"
         // Build out the memory object from characterCard
-        if let personality = characterCard.personality {
-            fullMemory += "\n\(characterCard.name ?? "")'s personality: \(personality)\n"
+        if let personality = characterCard.first?.personality {
+            fullMemory += "\n\(characterCard.first?.name ?? "")'s personality: \(personality)\n"
         }
-        if let scenario = characterCard.scenario {
+        if let scenario = characterCard.first?.scenario {
             fullMemory += "\nScenario: \(scenario)\n"
         }
         
@@ -102,10 +125,15 @@ struct ChatModel {
     }
 
     func getAvatarImg() -> Image {
-        if let imgData = characterCard.imageData {
-            return Image(uiImage: UIImage(data: imgData)!)
+        if let imgData = characterCard.first?.imageData, 
+           let uiImage = UIImage(data: imgData) {
+            return Image(uiImage: uiImage)
         }
         return Image(systemName: "person.circle.fill")
+    }
+
+    func getCharacterCard() -> CharacterCardModel {
+        return characterCard.first ?? CharacterCardModel(name: "Jax AI")
     }
 }
 
@@ -114,22 +142,27 @@ extension ChatModel: TableRecord, FetchableRecord, PersistableRecord {
     
     init(row: GRDB.Row) throws {
         id = UUID(uuidString: row["id"]!)!
+        createdAt = row["createdAt"]
+        updatedAt = row["updatedAt"]
         memory = row["memory"]
         messages = []
-
-        // Havent figured out a way to get this working nicer with GRDB unless we make it nullable... prob have to later on. 
-        characterCard = CharacterCardModel(name: "Unknown")
+        characterCard = []
     }
 
     func encode(to container: inout PersistenceContainer) {
         container["id"] = id.uuidString
+        container["createdAt"] = createdAt
+        container["updatedAt"] = updatedAt
         container["memory"] = memory
     }
 }
+
 extension ChatModel {
     static public func migrateTable(_ db: Database) throws {
         try db.create(table: "chats", ifNotExists: true) { t in
             t.column("id", .text).primaryKey().notNull()
+            t.column("createdAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
+            t.column("updatedAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
             t.column("memory", .text).notNull()
         }
     }
