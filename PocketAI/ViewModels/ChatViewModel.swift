@@ -26,8 +26,6 @@ class ChatViewModel: Hashable {
 
     var updateScrollView: Bool = false
     var showSettings: Bool = false
-    var selectionModeActive: Bool = false
-    var selectedMessages: Set<MessageModel> = []
     var serviceContainer: ServiceContainer = ServiceContainer.shared
 
     // MARK: - Hashable conformance
@@ -118,28 +116,6 @@ class ChatViewModel: Hashable {
             self.model.messages[lastIndex].text = newText
         }
         try! messageRepository.save(self.model.messages[lastIndex])
-        
-        // Post notification that chat data has changed
-        await MainActor.run {
-            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
-        }
-    }
-
-    func toggleSelection(_ message: MessageModel) {
-        if selectedMessages.contains(message) {
-            selectedMessages.remove(message)
-        } else {
-            selectedMessages.insert(message)
-        }
-    }
-
-    func deleteMessages() async {
-        await MainActor.run {
-            self.model.messages.removeAll(where: { self.selectedMessages.contains($0) })
-            selectedMessages.removeAll()
-            selectionModeActive = false
-        }
-        try! chatRepository.save(self.model)
         
         // Post notification that chat data has changed
         await MainActor.run {

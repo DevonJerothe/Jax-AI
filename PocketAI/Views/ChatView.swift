@@ -40,53 +40,26 @@ struct ChatView: View {
                 ScrollView {
 
                     Color.clear
-                       .frame(height: 8)
-                       .id("topAnchor")
+                        .frame(height: 8)
+                        .id("topAnchor")
                     
                     ForEach(viewModel.model.messages, id: \.self) {
                         message in
                         HStack {
-                            if viewModel.selectionModeActive {
-                                SelectionCircle(
-                                    isSelected: viewModel.selectedMessages
-                                        .contains(message)
-                                )
-                                .transition(
-                                    .asymmetric(
-                                        insertion: .scale.combined(
-                                            with: .opacity),
-                                        removal: .scale.combined(
-                                            with: .opacity)
-                                    )
-                                )
-                            }
-
+                        
                             ChatBubbleView(
                                 message: message, viewModel: viewModel
                             )
                             .padding(.top, 4)
                             .padding(.bottom, 4)
                             .id(message)
-                            .onLongPressGesture {
-                                if !viewModel.selectionModeActive {
-                                    viewModel.selectionModeActive = true
-                                    viewModel.toggleSelection(message)
-                                }
-                            }
-                            .onTapGesture {
-                                if viewModel.selectionModeActive {
-                                    viewModel.toggleSelection(message)
-                                }
-                            }
+                            .onLongPressGesture {}
                         }
-                        .animation(
-                            .spring(response: 0.3),
-                            value: viewModel.selectionModeActive)
                     }
                     
                     Color.clear
-                       .frame(height: 8)
-                       .id("bottomAnchor")
+                        .frame(height: 8)
+                        .id("bottomAnchor")
                 }
                 .scrollIndicators(.hidden)
                 .onChange(
