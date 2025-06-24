@@ -92,11 +92,17 @@ class NavigationManager {
         presentedSheet = nil
         switch currentTab {
         case .chatList:
-            chatListPath.removeLast()
+            if !chatListPath.isEmpty {
+                chatListPath.removeLast()
+            }
         case .characterList:
-            characterListPath.removeLast()
+            if !characterListPath.isEmpty {
+                characterListPath.removeLast()
+            }
         case .settings:
-            settingsPath.removeLast()
+            if !settingsPath.isEmpty {
+                settingsPath.removeLast()
+            }
         }
     }
 
@@ -150,6 +156,10 @@ class NavigationManager {
         presentedSheet = nil
         if keepCurrentPath {
             appendToCurrentPath(Destination.characterCardsView)
+        } else {
+            currentTab = .characterList
+            clearPath(for: .characterList)
+            characterListPath.append(Destination.characterCardsView)
         }
     }
 
@@ -169,15 +179,15 @@ class NavigationManager {
     func navigateToNewChat(keepCurrentPath: Bool = false, sheet: Bool = false, createCharacterCard: Bool = false) {
         if sheet {
             presentedSheet = .newChat
+            return 
+        } 
+        presentedSheet = nil
+        if keepCurrentPath {
+            appendToCurrentPath(Destination.newChatView(createCharacterCard))
         } else {
-            if keepCurrentPath {
-                appendToCurrentPath(Destination.newChatView(createCharacterCard))
-            } else {
-                presentedSheet = nil
-                chatListPath = NavigationPath()
-                chatListPath.append(Destination.newChatView(createCharacterCard))
-                currentTab = .chatList
-            }
+            currentTab = .chatList
+            clearPath(for: .chatList)
+            chatListPath.append(Destination.newChatView(createCharacterCard))
         }
     }
 
