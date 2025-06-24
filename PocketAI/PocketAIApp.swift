@@ -84,7 +84,7 @@ struct PocketAIApp: App {
         case .settingsView:
             ConnectionSettingsView()
         case .newChatView:
-            NewChatSheetView() 
+            NewChatView() 
         case .chatSettings(let chat):
             ChatSettingsView(viewModel: chat)
         }
@@ -96,7 +96,7 @@ struct PocketAIApp: App {
         case .chatSettings(let chat):
             ChatSettingsView(viewModel: chat)
         case .newChat:
-            NewChatSheetView()
+            NewChatView()
         default:
             Text("TODO: Sheet View")
         }

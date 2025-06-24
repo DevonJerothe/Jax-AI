@@ -49,7 +49,7 @@ struct ChatListView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        navManager.navigateToNewChat(sheet: true)
+                        navManager.navigateToNewChat()
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -168,7 +168,7 @@ struct AddCharacterButton: View {
         }
         .onTapGesture {
             // Navigate to add character
-            navManager.navigateToNewChat(sheet: true)
+            navManager.navigateToNewChat()
         }
     }
 }
