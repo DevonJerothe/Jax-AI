@@ -72,68 +72,28 @@ struct ChatSettingsView: View {
                 .padding(.top, 24)
                 .padding(.horizontal, 16)
 
-                // Chat Name (char name) 
-                VStack(alignment: .leading) {
-                    Text("Chat Name")
-                        .foregroundColor(.primary)
-                        
-                    TextField(
-                            "Chat Name",
-                            text: Binding(
-                                get: { characterCard.name ?? "" },
-                                set: { characterCard.name = $0 }
-                            )
-                        )
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .padding()
-                        .background(Color(.systemGray6).opacity(0.6))
-                        .cornerRadius(12)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                FormField(title: "Chat Name", textBinding: Binding(
+                    get: { characterCard.name ?? "" },
+                    set: { characterCard.name = $0 }
+                ))
 
-                // Description 
-                VStack(alignment: .leading) {
-                    Text("Description")
-                        .foregroundColor(.primary)
-                        
-                    TextEditor(
-                            text: Binding(
-                                get: { characterCard.description ?? "" },
-                                set: { characterCard.description = $0 }
-                            )
-                        )
-                        .frame(minHeight: 75, maxHeight: 300)
-                        .scrollContentBackground(.hidden)
-                        .textInputAutocapitalization(.never)
-                        .padding()
-                        .background(Color(.systemGray6).opacity(0.6))
-                        .cornerRadius(12)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-
-                // First Message 
-                VStack(alignment: .leading) {
-                    Text("First Message")
-                        .foregroundColor(.primary)
-                        
-                    TextEditor(
-                        text: Binding(
-                            get: { characterCard.firstMessage ?? "" },
-                            set: { characterCard.firstMessage = $0 }
-                        )
+                FormEditor(
+                    title: "Description",
+                    placeholder: "A brief description of the character...",
+                    textBinding: Binding(
+                        get: { characterCard.description ?? "" },
+                        set: { characterCard.description = $0 }
                     )
-                    .frame(minHeight: 75, maxHeight: 300)
-                    .scrollContentBackground(.hidden)
-                    .textInputAutocapitalization(.never)
-                    .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                )
+
+                FormEditor(
+                    title: "First Message",
+                    placeholder: "The first message to send to the AI...",
+                    textBinding: Binding(
+                        get: { characterCard.firstMessage ?? "" },
+                        set: { characterCard.firstMessage = $0 }
+                    )
+                )
 
                 // Mark: - Clear Chat Button 
                 HStack {
