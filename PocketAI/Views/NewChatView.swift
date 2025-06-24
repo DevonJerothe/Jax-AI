@@ -18,6 +18,12 @@ public struct NewChatView: View {
     @State private var selectedImage: PhotosPickerItem?
     @FocusState private var isURLFieldFocused: Bool
 
+    var createCharacterCard: Bool
+    
+    init(createCharacterCard: Bool = false) {
+        self.createCharacterCard = createCharacterCard
+    }
+
     public var body: some View {
         ScrollView {
             VStack {
@@ -47,8 +53,12 @@ public struct NewChatView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Create") {
-                    if let newChat = viewModel.createChat(type: selectedTab) {
-                        navManager.navigateToChat(chat: newChat)
+                    if createCharacterCard, let _ = viewModel.createCharacterCard(type: selectedTab) {
+                        navManager.popBack()
+                    } else {
+                        if let newChat = viewModel.createChat(type: selectedTab) {
+                            navManager.navigateToChat(chat: newChat)
+                        }
                     }
                 }
                 .fontWeight(.bold)

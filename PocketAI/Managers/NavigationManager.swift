@@ -18,9 +18,10 @@ class NavigationManager {
     enum Destination: Hashable {
         case chatView(ChatModel)
         case characterView(CharacterCardModel)
+        case characterCardsView
         case chatSettings(ChatViewModel)
         case settingsView
-        case newChatView
+        case newChatView(Bool)
     }
 
     enum SheetType: Identifiable {
@@ -86,6 +87,25 @@ class NavigationManager {
         }
     }
 
+    // Pop the last item from the current path
+    func popBack() {
+        presentedSheet = nil
+        switch currentTab {
+        case .chatList:
+            if !chatListPath.isEmpty {
+                chatListPath.removeLast()
+            }
+        case .characterList:
+            if !characterListPath.isEmpty {
+                characterListPath.removeLast()
+            }
+        case .settings:
+            if !settingsPath.isEmpty {
+                settingsPath.removeLast()
+            }
+        }
+    }
+
     // MARK: - Navigation Methods
     func navigateHome() {
         presentedSheet = nil
@@ -132,6 +152,17 @@ class NavigationManager {
         }
     }
 
+    func navigateToCharacterCards(keepCurrentPath: Bool = false) {
+        presentedSheet = nil
+        if keepCurrentPath {
+            appendToCurrentPath(Destination.characterCardsView)
+        } else {
+            currentTab = .characterList
+            clearPath(for: .characterList)
+            characterListPath.append(Destination.characterCardsView)
+        }
+    }
+
     // Navigates to settings, optionally preserving the current path
     // - Parameter keepCurrentPath: Whether to preserve the current path (default is false)
     func navigateToSettings(keepCurrentPath: Bool = false) {
@@ -145,14 +176,18 @@ class NavigationManager {
     }
 
     // Navigates to new chat, optionally preserving the current path
-    func navigateToNewChat(sheet: Bool = false) {
+    func navigateToNewChat(keepCurrentPath: Bool = false, sheet: Bool = false, createCharacterCard: Bool = false) {
         if sheet {
             presentedSheet = .newChat
+            return 
+        } 
+        presentedSheet = nil
+        if keepCurrentPath {
+            appendToCurrentPath(Destination.newChatView(createCharacterCard))
         } else {
-            presentedSheet = nil
-            chatListPath = NavigationPath()
-            chatListPath.append(Destination.newChatView)
             currentTab = .chatList
+            clearPath(for: .chatList)
+            chatListPath.append(Destination.newChatView(createCharacterCard))
         }
     }
 
