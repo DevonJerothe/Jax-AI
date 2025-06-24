@@ -106,69 +106,19 @@ public struct NewChatView: View {
                 }
             }
 
-            // Chat Name Section
-            VStack(alignment: .leading) {
-                Text("Chat Name")
-                    .foregroundColor(.primary)
-                    
-                TextField("Chat Name", text: $viewModel.chatName)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
-                    .cornerRadius(12)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            FormField(title: "Chat Name", textBinding: $viewModel.chatName)
 
-            // System Prompt Section
-            VStack(alignment: .leading) {
-                Text("System Prompt")
-                    .foregroundColor(.primary)
-                    
-                ZStack(alignment: .topLeading) {
-                    if viewModel.systemPrompt.isEmpty {
-                        Text("Instructions for how the AI should behave throughout the conversation...")
-                            .foregroundColor(.secondary)
-                            .padding(.top, 8)
-                            .padding(.leading, 5)
-                    }
+            FormEditor(
+                title: "System Prompt",
+                placeholder: "Instructions for how the AI should behave throughout the conversation...",
+                textBinding: $viewModel.systemPrompt
+            )   
 
-                    TextEditor(text: $viewModel.systemPrompt)
-                        .frame(minHeight: 75, maxHeight: 300)
-                        .scrollContentBackground(.hidden)
-                }
-                .padding()
-                .background(Color(.systemGray6).opacity(0.6))
-                .cornerRadius(12)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-
-            // Initial Message Section
-            VStack(alignment: .leading) {
-                Text("Initial Message")
-                    .foregroundColor(.primary)
-                    
-                ZStack(alignment: .topLeading) {
-                    if viewModel.initialMessage.isEmpty {
-                        Text("The first message to send to the AI...")
-                            .foregroundColor(.secondary)
-                            .padding(.top, 8)
-                            .padding(.leading, 5)
-                    }
-
-                    TextEditor(text: $viewModel.initialMessage)
-                        .frame(minHeight: 150, maxHeight: 300)
-                        .scrollContentBackground(.hidden)
-                        .textInputAutocapitalization(.never)
-                }
-                .padding()
-                .background(Color(.systemGray6).opacity(0.6))
-                .cornerRadius(12)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            FormEditor(
+                title: "Initial Message",
+                placeholder: "The first message to send to the AI...",
+                textBinding: $viewModel.initialMessage
+            )
         }
     }
 
@@ -248,90 +198,40 @@ public struct NewChatView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
                 
-                // Card Name
-                VStack(alignment: .leading) {
-                    Text("Card Name")
-                        .foregroundColor(.primary)
-                        
-                    TextField(
-                        "Card Name", 
-                        text: Binding(
-                            get: { viewModel.characterCard?.name ?? "" },
-                            set: { viewModel.characterCard?.name = $0 }
-                        )
+                FormField(
+                    title: "Card Name", 
+                    textBinding: Binding(
+                        get: { viewModel.characterCard?.name ?? "" },
+                        set: { viewModel.characterCard?.name = $0 }
                     )
-                    .textInputAutocapitalization(.never)
-                    .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                )
                 
-                // Description
-                VStack(alignment: .leading) {
-                    Text("Description")
-                        .foregroundColor(.primary)
-                        
-                    TextEditor(
-                        text: Binding(
-                            get: { viewModel.characterCard?.description ?? "" },
-                            set: { viewModel.characterCard?.description = $0 }
-                        )
+                FormEditor(
+                    title: "Description",
+                    placeholder: "A brief description of the character...",
+                    textBinding: Binding(
+                        get: { viewModel.characterCard?.description ?? "" },
+                        set: { viewModel.characterCard?.description = $0 }
                     )
-                    .frame(minHeight: 100, maxHeight: 200)
-                    .scrollContentBackground(.hidden)
-                    .textInputAutocapitalization(.never)
-                    .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                
-                // System Prompt (if exists)
-                if (viewModel.characterCard?.systemPrompt) != nil {
-                    VStack(alignment: .leading) {
-                        Text("System Prompt")
-                            .foregroundColor(.primary)
-                            
-                        TextEditor(
-                            text: Binding(
-                                get: { viewModel.characterCard?.systemPrompt ?? "" },
-                                set: { viewModel.characterCard?.systemPrompt = $0 }
-                            )
-                        )
-                        .frame(minHeight: 100, maxHeight: 200)
-                        .scrollContentBackground(.hidden)
-                        .textInputAutocapitalization(.never)
-                        .padding()
-                        .background(Color(.systemGray6).opacity(0.6))
-                        .cornerRadius(12)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                }
-                
-                // First Message
-                VStack(alignment: .leading) {
-                    Text("First Message")
-                        .foregroundColor(.primary)
-                        
-                    TextEditor(
-                        text: Binding(
-                            get: { viewModel.characterCard?.firstMessage ?? "" },
-                            set: { viewModel.characterCard?.firstMessage = $0 }
-                        )
+                )
+
+                FormEditor(
+                    title: "System Prompt",
+                    placeholder: "Additional instructions for the AI...",
+                    textBinding: Binding(
+                        get: { viewModel.characterCard?.systemPrompt ?? "" },
+                        set: { viewModel.characterCard?.systemPrompt = $0 }
                     )
-                    .frame(minHeight: 100, maxHeight: 200)
-                    .scrollContentBackground(.hidden)
-                    .textInputAutocapitalization(.never)
-                    .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                )
+
+                FormEditor(
+                    title: "First Message",
+                    placeholder: "The first message to send to the AI...",
+                    textBinding: Binding(
+                        get: { viewModel.characterCard?.firstMessage ?? "" },
+                        set: { viewModel.characterCard?.firstMessage = $0 }
+                    )
+                )
                 
                 // Alternative Greetings (if they exist)
                 if let altGreetings = viewModel.characterCard?.altGreetings, !altGreetings.isEmpty {
@@ -358,47 +258,23 @@ public struct NewChatView: View {
                     .padding(.vertical, 10)
                 }
                 
-                // Scenario
-                VStack(alignment: .leading) {
-                    Text("Scenario")
-                        .foregroundColor(.primary)
-                        
-                    TextEditor(
-                        text: Binding(
-                            get: { viewModel.characterCard?.scenario ?? "" },
-                            set: { viewModel.characterCard?.scenario = $0}
-                        )
+                FormEditor(
+                    title: "Scenario",
+                    placeholder: "A brief description of the scenario...",
+                    textBinding: Binding(
+                        get: { viewModel.characterCard?.scenario ?? "" },
+                        set: { viewModel.characterCard?.scenario = $0 }
                     )
-                    .frame(minHeight: 100, maxHeight: 200)
-                    .scrollContentBackground(.hidden)
-                    .textInputAutocapitalization(.never)
-                    .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                
-                // Personality
-                VStack(alignment: .leading) {
-                    Text("Personality")
-                        .foregroundColor(.primary)
-                        
-                    TextEditor(
-                        text: Binding(
-                            get: { viewModel.characterCard?.personality ?? "" },
-                            set: { viewModel.characterCard?.personality = $0 }
-                        )
+                )
+
+                FormEditor(
+                    title: "Personality",
+                    placeholder: "A brief description of the personality...",
+                    textBinding: Binding(
+                        get: { viewModel.characterCard?.personality ?? "" },
+                        set: { viewModel.characterCard?.personality = $0 }
                     )
-                    .frame(minHeight: 100, maxHeight: 200)
-                    .scrollContentBackground(.hidden)
-                    .textInputAutocapitalization(.never)
-                    .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                )
             }
         }
     }
