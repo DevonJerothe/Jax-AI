@@ -26,4 +26,13 @@ class CharacterCardsViewModel {
             print("CharacterCardsViewModel: Failed to load character cards: \(error)")
         }
     }
+
+    func deleteCharacterCard(card: CharacterCardModel) {
+        do {
+            try characterRepository.delete(card)
+            self.loadCharacterCards()
+        } catch {
+            print("CharacterCardsViewModel: Failed to delete character card: \(error)")
+        }
+    }
 }

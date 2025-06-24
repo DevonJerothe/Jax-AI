@@ -16,6 +16,13 @@ struct CharacterCardsView: View {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(viewModel.characterCards, id: \.self) { card in
                             CharacterCardPreview(card: card)
+                                .withBottomContextMenu {
+                                    Button(role: .destructive) {
+                                        viewModel.deleteCharacterCard(card: card)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                         }
                     }
                     .padding()
@@ -86,9 +93,7 @@ struct CharacterCardPreview: View {
                     HStack(spacing: 4) {
                         Image(systemName: "message")
                             .foregroundColor(.secondary)
-                        // TODO: add once we include chats in the model
-                        // Text("\(card.chats.count)")
-                        Text("0")
+                        Text("\(card.chats.count)")
                             .foregroundColor(.secondary)
                     }
                     .font(.caption)

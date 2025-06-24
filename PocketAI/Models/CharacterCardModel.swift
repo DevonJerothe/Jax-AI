@@ -24,6 +24,9 @@ struct CharacterCardModel: Hashable {
     var tags: [String]?
     var createdAt: Date = Date()
 
+    // IDs of chats that use this character card
+    var chats: [String] = []
+
     var imageURL: URL?
     var imageData: Data?
     
@@ -37,7 +40,8 @@ struct CharacterCardModel: Hashable {
         systemPrompt: String? = nil,
         altGreetings: [String] = [],
         tags: [String] = [],
-        imageData: Data? = nil
+        imageData: Data? = nil,
+        chats: [String] = []
     ) {
         self.name = name
         self.description = description
@@ -49,6 +53,7 @@ struct CharacterCardModel: Hashable {
         self.altGreetings = altGreetings
         self.tags = tags
         self.imageData = imageData
+        self.chats = chats
     }
 
     init(fromChub: CharacterCard) {
@@ -86,24 +91,27 @@ struct CharacterCardModel: Hashable {
         hasher.combine(altGreetings)
         hasher.combine(tags)
         hasher.combine(createdAt)
+        hasher.combine(chats)
         hasher.combine(imageData)
     }
     
     static func == (lhs: CharacterCardModel, rhs: CharacterCardModel) -> Bool {
         // Break up the long comparison into multiple lines for better readability and performance
         guard lhs.id == rhs.id,
-              lhs.name == rhs.name,
-              lhs.description == rhs.description,
-              lhs.personality == rhs.personality,
-              lhs.firstMessage == rhs.firstMessage,
-              lhs.imagePath == rhs.imagePath,
-              lhs.messageExample == rhs.messageExample,
-              lhs.scenario == rhs.scenario,
-              lhs.systemPrompt == rhs.systemPrompt,
-              lhs.altGreetings == rhs.altGreetings,
-              lhs.tags == rhs.tags,
-              lhs.createdAt == rhs.createdAt,
-              lhs.imageData == rhs.imageData else {
+            lhs.name == rhs.name,
+            lhs.description == rhs.description,
+            lhs.personality == rhs.personality,
+            lhs.firstMessage == rhs.firstMessage,
+            lhs.imagePath == rhs.imagePath,
+            lhs.messageExample == rhs.messageExample,
+            lhs.scenario == rhs.scenario,
+            lhs.systemPrompt == rhs.systemPrompt,
+            lhs.altGreetings == rhs.altGreetings,
+            lhs.tags == rhs.tags,
+            lhs.createdAt == rhs.createdAt,
+            lhs.chats == rhs.chats,
+            lhs.imageData == rhs.imageData else 
+        {
             return false
         }
         return true
@@ -166,9 +174,6 @@ extension CharacterCardModel: TableRecord, FetchableRecord, PersistableRecord {
             container["tags"] = String(data: tagsData, encoding: .utf8)
         }
     }
-    
-    // MARK: - RelationShips
-    // Relationships will be handled manually in the repository layer
 }
 
 extension CharacterCardModel {
