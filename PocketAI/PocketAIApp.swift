@@ -39,7 +39,7 @@ struct PocketAIApp: App {
 
                 // Character List Tab
                 NavigationStack(path: $navManager.characterListPath) {
-                    Text("TODO: Character List")
+                    CharacterCardsView()
                         .navigationDestination(for: NavigationManager.Destination.self) { destination in
                             destinationView(for: destination)
                         }
@@ -79,12 +79,14 @@ struct PocketAIApp: App {
         case .chatView(let chat):
             ChatView(chatModel: chat)
                 .toolbar(.hidden, for: .tabBar)
-        case .characterView(let character):
+        case .characterView(_):
             Text("Character View")
+        case .characterCardsView:
+            CharacterCardsView()
         case .settingsView:
             ConnectionSettingsView()
-        case .newChatView:
-            NewChatView() 
+        case .newChatView(let createChar):
+            NewChatView(createCharacterCard: createChar)
         case .chatSettings(let chat):
             ChatSettingsView(viewModel: chat)
         }

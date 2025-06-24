@@ -73,8 +73,8 @@ class NewChatViewModel {
             print("Import ERROR: \(error.localizedDescription)")
         }
     }
-    
-    func createChat(type: NewChatTab) -> ChatModel?{
+
+    func createCharacterCard(type: NewChatTab) -> CharacterCardModel? {
         if type == .manual {
             self.characterCard = CharacterCardModel(
                 name: self.chatName,
@@ -84,6 +84,23 @@ class NewChatViewModel {
                 imageData: self.imgData
             )
         }
+
+        guard let characterCard else {
+            fatalError("Failed to create character card")
+        }
+
+        do {
+            try self.characterRepository.save(characterCard)
+        } catch {
+            print("Failed to save character card: \(error)")
+            return nil
+        }
+        
+        return characterCard
+    }
+    
+    func createChat(type: NewChatTab) -> ChatModel?{
+        let _ = createCharacterCard(type: type)
 
         guard let characterCard else {
             fatalError("Failed to add new chat")
