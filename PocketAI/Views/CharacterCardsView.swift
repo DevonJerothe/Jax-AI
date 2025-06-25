@@ -74,7 +74,7 @@ struct CharacterCardPreview: View {
                     .font(.headline)
                     .foregroundColor(.primary)
                 
-                Text(card.description ?? "No description available.")
+                Text(card.cardTagline ?? card.description ?? "No description available.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(3)

@@ -36,6 +36,13 @@ class NewChatViewModel {
         self.characterImporter = ChubImporter(urlSession: URLSession.shared)
     }
 
+    func getAvatarImg() -> Image? {
+        if let imgData = imgData, let uiImage = UIImage(data: imgData) {
+            return Image(uiImage: uiImage)
+        }
+        return nil
+    }
+
     func isCreateDisabled(type: NewChatTab) -> Bool {
         switch type {
         case .manual:

@@ -124,12 +124,11 @@ struct ChatModel: Hashable {
         return fullMemory
     }
 
-    func getAvatarImg() -> Image {
-        if let imgData = characterCard.first?.imageData, 
-           let uiImage = UIImage(data: imgData) {
+    func getAvatarImg() -> Image? {
+        if let imgData = characterCard.first?.imageData, let uiImage = UIImage(data: imgData) {
             return Image(uiImage: uiImage)
         }
-        return Image(systemName: "person.circle.fill")
+        return nil
     }
 
     func getCharacterCard() -> CharacterCardModel {

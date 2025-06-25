@@ -90,20 +90,7 @@ public struct NewChatView: View {
                     matching: .images,
                     photoLibrary: .shared()
                 ) {
-                    if viewModel.imgData == nil {
-                        Image(systemName: "person.circle.fill")
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 80, height: 80)
-                            .foregroundColor(.gray)
-                            .clipShape(Circle())
-                    } else {
-                        Image(uiImage: UIImage(data: viewModel.imgData!)!)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 80, height: 80)
-                            .clipShape(Circle())
-                    }
+                    AvatarImage(image: viewModel.getAvatarImg(), size: 80)
                 }
                 Spacer()
             }
