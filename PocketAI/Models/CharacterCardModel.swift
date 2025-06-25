@@ -14,6 +14,7 @@ struct CharacterCardModel: Hashable {
     var id: UUID = UUID()
     var name: String?
     var description: String?
+    var cardTagline: String? 
     var personality: String?
     var firstMessage: String?
     var imagePath: String?
@@ -33,6 +34,7 @@ struct CharacterCardModel: Hashable {
     init(
         name: String,
         description: String? = nil,
+        cardTagline: String? = nil,
         personality: String? = nil,
         firstMessage: String? = nil,
         messageExample: String? = nil,
@@ -45,6 +47,7 @@ struct CharacterCardModel: Hashable {
     ) {
         self.name = name
         self.description = description
+        self.cardTagline = cardTagline
         self.personality = personality
         self.firstMessage = firstMessage
         self.messageExample = messageExample
@@ -60,6 +63,7 @@ struct CharacterCardModel: Hashable {
         let chubData = fromChub.data
         self.name = chubData?.name
         self.description = chubData?.description
+        self.cardTagline = fromChub.cardDescription
         self.personality = chubData?.personality
         self.firstMessage = chubData?.firstMessage
         self.imagePath = chubData?.avatar
@@ -82,6 +86,7 @@ struct CharacterCardModel: Hashable {
         hasher.combine(id)
         hasher.combine(name)
         hasher.combine(description)
+        hasher.combine(cardTagline)
         hasher.combine(personality)
         hasher.combine(firstMessage)
         hasher.combine(imagePath)
@@ -100,6 +105,7 @@ struct CharacterCardModel: Hashable {
         guard lhs.id == rhs.id,
             lhs.name == rhs.name,
             lhs.description == rhs.description,
+            lhs.cardTagline == rhs.cardTagline,
             lhs.personality == rhs.personality,
             lhs.firstMessage == rhs.firstMessage,
             lhs.imagePath == rhs.imagePath,
@@ -133,6 +139,7 @@ extension CharacterCardModel: TableRecord, FetchableRecord, PersistableRecord {
         id = UUID(uuidString: row["id"]!)!
         name = row["name"]
         description = row["description"]
+        cardTagline = row["cardTagline"]
         personality = row["personality"]
         firstMessage = row["firstMessage"]
         imagePath = row["imagePath"]
@@ -162,6 +169,7 @@ extension CharacterCardModel: TableRecord, FetchableRecord, PersistableRecord {
         container["id"] = id.uuidString
         container["name"] = name
         container["description"] = description
+        container["cardTagline"] = cardTagline
         container["personality"] = personality
         container["firstMessage"] = firstMessage
         container["imagePath"] = imagePath
@@ -190,6 +198,7 @@ extension CharacterCardModel {
             t.column("id", .text).primaryKey().notNull()
             t.column("name", .text)
             t.column("description", .text)
+            t.column("cardTagline", .text)
             t.column("personality", .text)
             t.column("firstMessage", .text)
             t.column("imagePath", .text)
