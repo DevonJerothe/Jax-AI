@@ -55,7 +55,7 @@ struct ChatBubbleView: View {
                                 .frame(minHeight: bubbleHeight + 20)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .frame(
-                                    maxWidth: UIScreen.main.bounds.width * 0.80,
+                                    maxWidth: UIScreen.main.bounds.width * 1,
                                     alignment: .leading
                                 )
                                 .onChange(of: editedText) {
@@ -95,7 +95,7 @@ struct ChatBubbleView: View {
                                     }
                                     .markdownTextStyle(textStyle: {
                                         FontFamilyVariant(.monospaced)
-                                        FontSize(.em(0.85))
+                                        FontSize(.em(0.65))
                                     })
                                     .background(
                                         Color(UIColor.secondarySystemBackground)
@@ -105,10 +105,10 @@ struct ChatBubbleView: View {
                             }
                             .markdownTheme(.rolePlay)
                             .padding()
-                            .background(Color(.secondarySystemBackground))
+                            // .background(Color(.secondarySystemBackground))
                             .cornerRadius(15)
                             .frame(
-                                maxWidth: UIScreen.main.bounds.width * 0.80,
+                                maxWidth: UIScreen.main.bounds.width * 1,
                                 alignment: .leading
                             )
                             .background(

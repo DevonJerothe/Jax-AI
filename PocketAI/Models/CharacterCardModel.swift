@@ -116,6 +116,14 @@ struct CharacterCardModel: Hashable {
         }
         return true
     }
+
+    // MARK: - Helping functions
+    func getAvatarImg() -> Image? {
+        if let imgData = imageData, let uiImage = UIImage(data: imgData) {
+            return Image(uiImage: uiImage)
+        }
+        return nil
+    }
 }
 
 extension CharacterCardModel: TableRecord, FetchableRecord, PersistableRecord {

@@ -28,6 +28,7 @@ struct ChatListView: View {
                         header: Text("Characters").font(.title2).fontWeight(.bold)
                     ) {
                         CharacterCardsListView(viewModel: viewModel)
+                            .listRowInsets(EdgeInsets())
                     }
                     .listSectionSeparator(.hidden)
 
@@ -37,6 +38,7 @@ struct ChatListView: View {
                     ) {
                         ForEach(viewModel.chats, id: \.id) { chat in
                             RecentChatRow(chat: chat)
+                                .listRowInsets(EdgeInsets())
                         }
                         .onDelete(perform: viewModel.deleteChat)
                     }
@@ -108,27 +110,7 @@ struct CharacterCardView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            // Character Avatar
-            ZStack {
-                if let imageData = character.imageData,
-                    let uiImage = UIImage(data: imageData)
-                {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 80, height: 80)
-                        .clipShape(Circle())
-                } else {
-                    Circle()
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 80, height: 80)
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .foregroundColor(.gray)
-                                .font(.title2)
-                        )
-                }
-            }
+            AvatarImage(image: character.getAvatarImg(), size: 80)
 
             // Character Name
             Text(character.name ?? "Unknown")
@@ -180,15 +162,7 @@ struct RecentChatRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Character Avatar
-            ZStack {
-                chat.getAvatarImg()
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 48, height: 48)
-                    .foregroundColor(.gray)
-                    .clipShape(Circle())
-            }
+            AvatarImage(image: chat.getAvatarImg(), size: 48)
 
             VStack(alignment: .leading, spacing: 4) {
                 // Character Name
