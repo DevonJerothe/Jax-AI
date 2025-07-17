@@ -171,12 +171,18 @@ class ChatViewModel: Hashable {
             print("No response check logs")
             return
         }
-        
+
+        // Remove everything from the beginning of the string up to and including the first </think> tag.
+        // The opening <think> tag may or may not be present; we only rely on the closing tag.
+        let sanitizedResponse = responseMessage
+            .replacingOccurrences(of: "^[\\s\\S]*?<\\/think>\\s*", with: "", options: [.regularExpression, .caseInsensitive])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
         await MainActor.run {
             if isContinued {
-                self.model.messages[forIndex].text.append(responseMessage)
+                self.model.messages[forIndex].text.append(sanitizedResponse)
             } else {
-                self.model.messages[forIndex].text = responseMessage
+                self.model.messages[forIndex].text = sanitizedResponse
             }
             self.model.messages[forIndex].loading = false
             

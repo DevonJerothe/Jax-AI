@@ -10,8 +10,6 @@ import SwiftLLMSDK
 
 @Observable
 class LanguageModelService {
-    // static let shared =  LanguageModelService()
-
     var connectionSettings: ConnectionSettingsModel
     var koboldManager: APIManager<KoboldAPI>?
     var openRouterManager: APIManager<OpenRouterAPI>?
@@ -100,7 +98,7 @@ class LanguageModelService {
         
         // If we are continueing a message, we need to add special instructions to the system message.
         // If we are not continuing but the message is loading, we can assume we are regenerating the same message.
-        // Pulled this method from SillyTavern.
+        // Pulled this instruction from SillyTavern.
         if connectionSettings.connectionType == .OpenRouter {
             if continued {
                 guard let lastMessage = requestMessages.last?.message else {
@@ -118,7 +116,7 @@ class LanguageModelService {
             selectedModel: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
             messages: requestMessages,
             memory: chatModel.getFullMemory(),
-            prompt: chatModel.getFullPrompt(continueResponse: continued),
+            prompt: chatModel.getFullPrompt(continueResponse: continued, enableThinking: true),
             maxContextLength: connectionSettings.contextLength ?? 4096,
             maxLength: connectionSettings.responseLength ?? 240,
             promptTemplate: TemplatePrompts().defaultRolePlayPrompt,

@@ -89,12 +89,15 @@ struct ChatModel: Hashable {
         characterCard = [newCard]
     }
 
-    func getFullPrompt(continueResponse: Bool = false) -> String {
+    func getFullPrompt(continueResponse: Bool = false, enableThinking: Bool = false) -> String {
         var prompt = "\nAssistant: "
         for message in messages {
             switch message.actor {
             case .user:
-                prompt += "\(message.text)\nAssistant:"
+                prompt += "\(message.text)\nAssistant: "
+                if enableThinking {
+                    prompt += "<think>\nOk, first I need to consider who I am and not to speak for the user."
+                }
             case .bot:
                 if !message.loading || continueResponse {
                     prompt += "\(message.text)"

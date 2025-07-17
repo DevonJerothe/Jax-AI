@@ -52,7 +52,7 @@ struct ChatBubbleView: View {
                                     RoundedRectangle(cornerRadius: 15)
                                         .stroke(Color.accentColor, lineWidth: 1)
                                 )
-                                .frame(minHeight: bubbleHeight + 20)
+                                .frame(minHeight: bubbleHeight + 30)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .frame(
                                     maxWidth: UIScreen.main.bounds.width * 1,
@@ -61,7 +61,6 @@ struct ChatBubbleView: View {
                                 .onChange(of: editedText) {
                                     viewModel.updateScrollView.toggle()
                                 }
-
                         } else {
                             Markdown(
                                 message.getRolePlayText(
@@ -253,7 +252,7 @@ struct ChatBubbleView: View {
                                 RoundedRectangle(cornerRadius: 15)
                                     .stroke(Color.accentColor, lineWidth: 1)
                             )
-                            .frame(minHeight: bubbleHeight + 20)
+                            .frame(minHeight: bubbleHeight + 30)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(
                                 maxWidth: UIScreen.main.bounds.width * 0.80,
@@ -282,11 +281,41 @@ struct ChatBubbleView: View {
                             )
                             .frame(
                                 maxWidth: UIScreen.main.bounds.width * 0.75,
-                                alignment: .trailing)
+                                alignment: .trailing
+                            )
+                            .background(
+                                GeometryReader { geo in
+                                    Color.clear.preference(
+                                        key: BubbleHeightKey.self,
+                                        value: geo.size.height)
+                                }
+                            )
                         }
                     }
                     if viewModel.shouldShowToolbar(message) {
                         HStack(spacing: 16) {
+                            // Delete
+                                Button(action: {
+                                    Task {
+                                        await self.viewModel.deleteMessage(
+                                            message)
+                                    }
+                                }) {
+                                    Image(systemName: "trash.fill")
+                                        .resizable()
+                                        .frame(width: 10, height: 10)
+                                        .foregroundStyle(Color.accentColor)
+                                        .padding(5)
+                                        .background(
+                                            Circle()
+                                                .stroke(
+                                                    Color.accentColor,
+                                                    lineWidth: 0.5)
+                                        )
+                                        .frame(width: 15, height: 15)
+                                        .padding(.trailing, 4)
+                                        .padding(.top, 4)
+                                }
                             // Edit
                             Button(action: {
                                 if isEditing {
