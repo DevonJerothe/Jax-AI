@@ -87,6 +87,86 @@ class LanguageModelService {
         return false
     }
     
+    func sendStreamedMessage(chatModel: ChatModel, continued: Bool = false) -> AsyncStream<ModelResponse> {
+                
+        // Map our internal message model to the request body message
+        var requestMessages = chatModel.messages.map { message in
+            let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
+            return RequestBodyMessages(role: role, message: message.text)
+        }
+        
+        // If we are continueing a message, we need to add special instructions to the system message.
+        // If we are not continuing but the message is loading, we can assume we are regenerating the same message.
+        // Pulled this instruction from SillyTavern.
+        if connectionSettings.connectionType == .OpenRouter {
+            if continued {
+                guard let lastMessage = requestMessages.last?.message else {
+                    print("No last message")
+                    return AsyncStream { continuation in
+                        continuation.finish()
+                    }
+                }
+                let continueMessage = TemplateInstructions().continueMessage(lastMessage)
+                requestMessages.append(RequestBodyMessages(role: .system, message: continueMessage))
+            } else if chatModel.messages.last?.loading ?? false {
+                requestMessages.removeLast()
+            }
+        }
+
+        let (stream, continueation) = AsyncStream<ModelResponse>.makeStream()
+        var streamResponse: AsyncStream<Result<ModelResponse, APIError>>
+        
+        switch connectionSettings.connectionType {
+        case .KoboldAPI:
+            guard let koboldManager = koboldManager else {
+                fatalError("KoboldManager not connected")
+            }
+            
+            let promptBuilder = KoboldRequestBuilder(
+                prompt: chatModel.getFullPrompt(continueResponse: continued, enableThinking: true),
+                memory: chatModel.getFullMemory(),
+                maxContextLength: connectionSettings.contextLength ?? 4096,
+                maxLength: connectionSettings.responseLength ?? 240,
+                promptTemplate: TemplatePrompts().defaultRolePlayPrompt
+            )
+            
+            streamResponse = koboldManager.streamMessage(builder: promptBuilder)
+        case .OpenRouter:
+            guard let openRouterManager = openRouterManager else {
+                fatalError("OpenRouterManager not connected")
+            }
+            
+            let promptBuilder = OpenRouterRequestBuilder(
+                model: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
+                messages: requestMessages,
+                maxTokens: connectionSettings.responseLength ?? 240,
+                stream: true,
+                systemPromptTemplate: TemplatePrompts().defaultRolePlayPrompt,
+                characterDescription: chatModel.characterCard.first?.description,
+                characterPersonality: chatModel.characterCard.first?.personality,
+                characterScenario: chatModel.characterCard.first?.scenario
+            )
+            
+            streamResponse = openRouterManager.streamMessage(builder: promptBuilder)
+        }
+        Task.detached(priority: .medium) {
+            for await response in streamResponse {
+                switch response {
+                case .success(let modelResponse):
+                    var modelResponse = modelResponse
+                    // Hacky way to remove the need of deltas... which would be beter long term but I'm a lazy bum
+                    if continued {
+                        modelResponse.text = "\(chatModel.messages.last!.text) \(modelResponse.text ?? "")"
+                    }
+                    continueation.yield(modelResponse)
+                case .failure(let error):
+                    print("Error: \(error)")
+                }
+            }
+        }
+        return stream
+    }
+    
     // Put all context switching of service type in this class and out of the view models.
     func sendMessage(chatModel: ChatModel, continued: Bool = false) async -> ModelResponse? {
         

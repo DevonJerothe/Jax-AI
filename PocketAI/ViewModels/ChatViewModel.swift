@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import SwiftLLMSDK
+import UIKit
 
 @Observable
 class ChatViewModel: Hashable {
@@ -26,8 +27,10 @@ class ChatViewModel: Hashable {
 
     var updateScrollView: Bool = false
     var showSettings: Bool = false
+    var isStreaming: Bool = false
     var serviceContainer: ServiceContainer = ServiceContainer.shared
     var editingMessageID: UUID?
+    private var lastHapticTriggerAt: Date? = nil
 
     // MARK: - Hashable conformance
     func hash(into hasher: inout Hasher) {
@@ -100,12 +103,12 @@ class ChatViewModel: Hashable {
 
     func updateChatSettings(
         characterCard: CharacterCardModel
-    ) {
+    ) async {
         model.updateCard(characterCard)
         try! chatRepository.save(self.model)
 
         // update the connection settings
-        serviceContainer.saveConnectionSettings()
+        await serviceContainer.connect()
 
         // Post notification that chat data has changed
         NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
@@ -148,7 +151,7 @@ class ChatViewModel: Hashable {
     }
 
     func shouldShowToolbar(_ message: MessageModel) -> Bool {
-        if model.messages.count > 1, model.messages.last?.id == message.id {
+        if model.messages.count > 1, model.messages.last?.id == message.id, isStreaming == false {
             return true
         }
         return false
@@ -157,26 +160,93 @@ class ChatViewModel: Hashable {
     private func isBelowContextLimit() -> Bool {
         return true
     }
-
-    private func generateResponse(_ forIndex: Int, isContinued: Bool = false) async {
+    
+    private func generateStreamedResponse(_ forIndex: Int, isContinued: Bool = false, excludeThinking: Bool = true) {
         
         guard let languageModelService = languageModelService else {
             print("service not loaded")
             return
         }
         
-        // TODO: Go fix the RequestBodyBuilder
+        Task {
+            let stream = languageModelService.sendStreamedMessage(chatModel: self.model, continued: isContinued)
+            self.isStreaming = true
+            
+            for await response in stream {
+                let isThinkingFinished = (response.text?.contains("</think>")) ?? false || isContinued
+                
+                // Remove everything from the beginning of the string up to and including the first </think> tag.
+                // The opening <think> tag may or may not be present; we only rely on the closing tag.
+                await MainActor.run {
+                    if !excludeThinking || isThinkingFinished {
+                        let responseMessage = response.text ?? ""
+                        let sanitizedResponse = responseMessage
+                            .replacing(/\A[\s\S]*?<\/think>\s*/, with: "")
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                        
+                        if self.model.messages[forIndex].loading {
+                            self.model.messages[forIndex].loading = false
+                        }
+                        
+                        self.model.messages[forIndex].text = sanitizedResponse
+
+                        self.updateScrollView.toggle()
+
+                        do {
+                            if response.streaming == false {
+                                self.isStreaming = false
+                                try messageRepository.save(self.model.messages[forIndex])
+                            }
+                        } catch (let error) {
+                            print("ERROR: \(error.localizedDescription)")
+                        }
+
+                        let now = Date()
+                        if self.lastHapticTriggerAt == nil || now.timeIntervalSince(self.lastHapticTriggerAt!) >= 0.1 {
+                            let generator = UIImpactFeedbackGenerator(style: .soft)
+                            generator.impactOccurred()
+                            self.lastHapticTriggerAt = now
+                        }
+                    }
+                    
+                    if response.streaming == false, self.isStreaming {
+                        self.model.messages[forIndex].loading = false
+                        self.model.messages[forIndex].text = "A promblem accured, please regenerate the response."
+                    }
+                }
+            }
+        }
+    }
+
+    private func generateResponse(_ forIndex: Int, isContinued: Bool = false, streamed: Bool = true) async {
+        
+        guard let languageModelService = languageModelService else {
+            print("service not loaded")
+            return
+        }
+        
+        if streamed {
+            ///TODO: once thinking becomes a settings we need to handle this cleanly.
+            ///Right now only kobold needs to filter out the thinking manually. OpenRouter does this at the API level.
+            let excludeThinking: Bool = connectionSettings.connectionType == .KoboldAPI
+            return generateStreamedResponse(forIndex, isContinued: isContinued, excludeThinking: excludeThinking)
+        }
+        
         // right now if no response is returned or the API returns an error we return nil. Not sure I like this.
         let response = await languageModelService.sendMessage(chatModel: self.model, continued: isContinued)
         guard let responseMessage = response?.text else{
             print("No response check logs")
+            await MainActor.run {
+                self.model.messages[forIndex].loading = false
+                self.model.messages[forIndex].text = "There was an error processing your request. Please try again later."
+            }
             return
         }
 
         // Remove everything from the beginning of the string up to and including the first </think> tag.
         // The opening <think> tag may or may not be present; we only rely on the closing tag.
         let sanitizedResponse = responseMessage
-            .replacingOccurrences(of: "^[\\s\\S]*?<\\/think>\\s*", with: "", options: [.regularExpression, .caseInsensitive])
+            .replacing(/\A[\s\S]*?<\/think>\s*/, with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         await MainActor.run {
