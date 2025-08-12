@@ -15,6 +15,7 @@ struct ChatView: View {
 
     @State var viewModel: ChatViewModel
     @State var textPrompt: String = ""
+    @FocusState private var isInputFocused: Bool
     
     // ---- Add State for Keyboard Height ----
     @State private var keyboardHeight: CGFloat = 0
@@ -67,6 +68,17 @@ struct ChatView: View {
                     ({
                         scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.2)
                     }))
+                .onChange(of: viewModel.editingMessageID) { _, messageID in
+                    if let messageID {
+                        scrollToBottom(proxy: proxy, anchor: messageID, delay: 0.2)
+                        viewModel.editingMessageID = nil
+                    }
+                }
+                .onChange(of: isInputFocused) { _, isFocused in
+                    if isFocused {
+                        scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.2)
+                    }
+                }
             }
             .padding(.horizontal)
             .padding(.top, 8)
@@ -78,6 +90,7 @@ struct ChatView: View {
                     maxHeight: 120,
                     minHeight: 44
                 )
+                .focused($isInputFocused)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
             }
@@ -121,7 +134,6 @@ struct ChatView: View {
                 .padding(.trailing, 16)
             }
             .background(Color(.secondarySystemBackground))
-            .ignoresSafeArea(edges: keyboardHeight > 0 ? .bottom : [])
         }
         .navigationTitle(viewModel.model.chatTitle)
         .navigationBarTitleDisplayMode(.inline)
@@ -139,38 +151,16 @@ struct ChatView: View {
             self.viewModel.updateScrollView.toggle()
             // Check if the connection is active. For existing chats, the connection may have been lost.
             self.viewModel.checkConnection()
-            
-            observeKeyboardNotifications()
-        }
-        .onDisappear {
-            // ---- Stop Observing Keyboard ----
-            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
-            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
         }
     }
-    
-    
+
+
     // ---- Helper function for scrolling ----
-    private func scrollToBottom(proxy: ScrollViewProxy, anchor: String, delay: Double = 0.0) {
+    private func scrollToBottom(proxy: ScrollViewProxy, anchor: any Hashable, delay: Double = 0.0) {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
              withAnimation { // Ensure scrolling is animated
                   proxy.scrollTo(anchor, anchor: .bottom)
              }
-        }
-    }
-
-    // ---- Keyboard Observation Logic ----
-    private func observeKeyboardNotifications() {
-        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
-            guard let userInfo = notification.userInfo,
-                  let _ = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
-                  let duration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double
-            else { return }
-
-            withAnimation(.easeOut(duration: duration)) {
-                self.isKeyboardVisible = true
-                self.viewModel.updateScrollView.toggle()
-            }
         }
     }
 }

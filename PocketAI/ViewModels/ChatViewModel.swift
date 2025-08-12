@@ -27,6 +27,7 @@ class ChatViewModel: Hashable {
     var updateScrollView: Bool = false
     var showSettings: Bool = false
     var serviceContainer: ServiceContainer = ServiceContainer.shared
+    var editingMessageID: UUID?
 
     // MARK: - Hashable conformance
     func hash(into hasher: inout Hasher) {

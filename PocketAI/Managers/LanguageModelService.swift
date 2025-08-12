@@ -112,26 +112,32 @@ class LanguageModelService {
             }
         }
         
-        let requestBuilder = RequestBodyBuilder(
-            selectedModel: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
-            messages: requestMessages,
-            memory: chatModel.getFullMemory(),
-            prompt: chatModel.getFullPrompt(continueResponse: continued, enableThinking: true),
-            maxContextLength: connectionSettings.contextLength ?? 4096,
-            maxLength: connectionSettings.responseLength ?? 240,
-            promptTemplate: TemplatePrompts().defaultRolePlayPrompt,
-            characterDescription: chatModel.characterCard.first?.description,
-            characterPersonality: chatModel.characterCard.first?.personality,
-            characterScenario: chatModel.characterCard.first?.scenario
-        )
-        
         var serviceResponse: Result<ModelResponse, APIError>?
         
         switch connectionSettings.connectionType {
         case .KoboldAPI:
-            serviceResponse = await koboldManager?.sendMessage(promptModel: requestBuilder)
+            let promptBuilder = KoboldRequestBuilder(
+                prompt: chatModel.getFullPrompt(continueResponse: continued, enableThinking: true),
+                memory: chatModel.getFullMemory(),
+                maxContextLength: connectionSettings.contextLength ?? 4096,
+                maxLength: connectionSettings.responseLength ?? 240,
+                promptTemplate: TemplatePrompts().defaultRolePlayPrompt
+            )
+            
+            serviceResponse = await koboldManager?.sendMessage(builder: promptBuilder)
         case .OpenRouter:
-            serviceResponse = await openRouterManager?.sendMessage(promptModel: requestBuilder)
+            let promptBuilder = OpenRouterRequestBuilder(
+                model: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
+                messages: requestMessages,
+                maxTokens: connectionSettings.responseLength ?? 240,
+                stream: false,
+                systemPromptTemplate: TemplatePrompts().defaultRolePlayPrompt,
+                characterDescription: chatModel.characterCard.first?.description,
+                characterPersonality: chatModel.characterCard.first?.personality,
+                characterScenario: chatModel.characterCard.first?.scenario
+            )
+            
+            serviceResponse = await openRouterManager?.sendMessage(builder: promptBuilder)
         }
         
         switch serviceResponse {
