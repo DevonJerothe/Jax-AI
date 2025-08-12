@@ -5,8 +5,8 @@ struct CharacterCardsView: View {
     @State var viewModel: CharacterCardsViewModel = CharacterCardsViewModel()
     
     private let columns: [GridItem] = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
+        GridItem(.flexible(maximum: 200), spacing: 16),
+        GridItem(.flexible(maximum: 200), spacing: 16)
     ]
     
     var body: some View {
@@ -56,6 +56,7 @@ struct CharacterCardPreview: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(height: 150)
+                    .frame(maxWidth: 195)
                     .clipped()
             } else {
                 // Placeholder image

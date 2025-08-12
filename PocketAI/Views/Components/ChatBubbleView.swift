@@ -180,6 +180,7 @@ struct ChatBubbleView: View {
                                             cardName: viewModel.model
                                                 .characterCard.first?.name ?? "")  // Initialize editor text
                                         isEditing = true
+                                        viewModel.editingMessageID = message.id
                                     }
                                 }) {
                                     Image(
@@ -332,6 +333,7 @@ struct ChatBubbleView: View {
                                         cardName: viewModel.model
                                             .characterCard.first?.name ?? "")  // Initialize editor text
                                     isEditing = true
+                                    viewModel.editingMessageID = message.id
                                 }
                             }) {
                                 Image(
