@@ -43,10 +43,10 @@ class DBManager {
             }
 
            // Create configuration for WAL mode
-           var config = Configuration()
-           config.prepareDatabase { db in
-               try db.execute(sql: "PRAGMA journal_mode=WAL")
-           }
+            var config = Configuration()
+            config.prepareDatabase { db in
+                try db.execute(sql: "PRAGMA journal_mode=WAL")
+            }
 
             dbQueue = try DatabaseQueue(path: dbURL.path, configuration: config)
 
@@ -66,6 +66,12 @@ class DBManager {
             try MessageModel.migrateTable(db)
             try CharacterCardModel.migrateTable(db)
             try ChatCharacterJoin.migrateTable(db)
+        }
+
+        migrator.registerMigration("v2") { db in
+            try db.alter(table: "messages") { t in
+                t.add(column: "tokenCount", .integer).notNull().defaults(to: 0)
+            }
         }
 
         try migrator.migrate(dbQueue)

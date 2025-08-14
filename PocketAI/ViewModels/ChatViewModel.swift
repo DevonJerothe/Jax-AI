@@ -100,7 +100,6 @@ class ChatViewModel: Hashable {
         NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
     }
 
-
     func updateChatSettings(
         characterCard: CharacterCardModel
     ) async {
@@ -161,7 +160,7 @@ class ChatViewModel: Hashable {
         return true
     }
     
-    private func generateStreamedResponse(_ forIndex: Int, isContinued: Bool = false, excludeThinking: Bool = true) {
+    private func generateStreamedResponse(_ forIndex: Int, isContinued: Bool = false, excludeThinking: Bool = true, trimmedPrompt: String) {
         
         guard let languageModelService = languageModelService else {
             print("service not loaded")
@@ -169,7 +168,7 @@ class ChatViewModel: Hashable {
         }
         
         Task {
-            let stream = languageModelService.sendStreamedMessage(chatModel: self.model, continued: isContinued)
+            let stream = languageModelService.sendStreamedMessage(chatModel: self.model, continued: isContinued, trimmedPrompt: trimmedPrompt)
             self.isStreaming = true
             
             for await response in stream {
@@ -184,9 +183,7 @@ class ChatViewModel: Hashable {
                             .replacing(/\A[\s\S]*?<\/think>\s*/, with: "")
                             .trimmingCharacters(in: .whitespacesAndNewlines)
                         
-                        if self.model.messages[forIndex].loading {
-                            self.model.messages[forIndex].loading = false
-                        }
+                        self.model.messages[forIndex].loading = false
                         
                         self.model.messages[forIndex].text = sanitizedResponse
 
@@ -194,8 +191,11 @@ class ChatViewModel: Hashable {
 
                         do {
                             if response.streaming == false {
+                                print("STREAMING FINISHED SUCCESSFULLY")
                                 self.isStreaming = false
                                 try messageRepository.save(self.model.messages[forIndex])
+                                // Post notification that chat data has changed
+                                NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
                             }
                         } catch (let error) {
                             print("ERROR: \(error.localizedDescription)")
@@ -209,9 +209,22 @@ class ChatViewModel: Hashable {
                         }
                     }
                     
+                    // Sometimes the stream can break.. or thinking doesn't provide a closing tag. 
                     if response.streaming == false, self.isStreaming {
+                        print("STREAMING FAILED")
                         self.model.messages[forIndex].loading = false
-                        self.model.messages[forIndex].text = "A promblem accured, please regenerate the response."
+                        self.isStreaming = false
+                        self.model.messages[forIndex].text = response.text ?? ""
+                        
+                        do {
+                            try messageRepository.save(self.model.messages[forIndex])
+                            // Post notification that chat data has changed
+                            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+                            self.updateScrollView.toggle()
+
+                        } catch {
+                            print("ERROR: \(error.localizedDescription)")
+                        }
                     }
                 }
             }
@@ -228,8 +241,10 @@ class ChatViewModel: Hashable {
         if streamed {
             ///TODO: once thinking becomes a settings we need to handle this cleanly.
             ///Right now only kobold needs to filter out the thinking manually. OpenRouter does this at the API level.
+            //Also auto trimmed prompts require await.. so have to do it here. We really need to keep tokens on the message model.
             let excludeThinking: Bool = connectionSettings.connectionType == .KoboldAPI
-            return generateStreamedResponse(forIndex, isContinued: isContinued, excludeThinking: excludeThinking)
+            let trimmedPrompt = await model.autoTrimFullPrompt(continueResponse: isContinued)
+            return generateStreamedResponse(forIndex, isContinued: isContinued, excludeThinking: excludeThinking, trimmedPrompt: trimmedPrompt)
         }
         
         // right now if no response is returned or the API returns an error we return nil. Not sure I like this.

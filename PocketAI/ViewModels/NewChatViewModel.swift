@@ -49,6 +49,8 @@ class NewChatViewModel {
             return self.chatName.isEmpty && self.systemPrompt.isEmpty
         case .importCard:
             return self.characterCard == nil
+        case .charHub: 
+            return true 
         }
     }
 
