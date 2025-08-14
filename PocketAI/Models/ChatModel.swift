@@ -95,9 +95,9 @@ struct ChatModel: Hashable {
             switch message.actor {
             case .user:
                 prompt += "\(message.text)\nAssistant: "
-                if enableThinking {
-                    prompt += "<think>\nOk, first I need to consider who I am and not to speak for the user."
-                }
+                // if enableThinking {
+                //     prompt += "<think>\nOk, first we need to consider who we are and not to speak for the user."
+                // }
             case .bot:
                 if !message.loading || continueResponse {
                     prompt += "\(message.text)"
@@ -108,6 +108,75 @@ struct ChatModel: Hashable {
             }
         }
         print(prompt)
+        return prompt
+    }
+
+    func autoTrimFullPrompt(continueResponse: Bool = false) async -> String {
+        let languageModelService = ServiceContainer.shared.getLanguageModelService()
+        let settings = ServiceContainer.shared.connectionSettings
+
+        let maxContextTokens = settings.contextLength ?? 4096
+        let reservedResponseTokens = settings.responseLength ?? 240
+
+        // Always include memory; it must never be trimmed
+        let memory = getFullMemory()
+        let memoryTokens = await languageModelService.getTokenCount(string: memory)
+
+        // Include the prompt template used with Kobold
+        let systemTemplate = TemplatePrompts().defaultRolePlayPrompt + TemplateInstructions().reasoningInstructions
+        let systemTokens = await languageModelService.getTokenCount(string: systemTemplate)
+
+        // Initial prefix token cost ("\nAssistant: ")
+        let prefix = "\nAssistant: "
+        let prefixTokens = await languageModelService.getTokenCount(string: prefix)
+
+        // If fixed overhead already exhausts context, return just the prefix. Memory is supplied separately.
+        let fixedOverhead = memoryTokens + systemTokens + prefixTokens + reservedResponseTokens
+        print("Fixed Tokens: \(fixedOverhead)")
+        if fixedOverhead >= maxContextTokens {
+            return prefix
+        }
+
+        // Build message blocks exactly as getFullPrompt would serialize them, per-message
+        struct Block { let text: String; let tokens: Int }
+        var blocks: [Block] = []
+
+        for message in messages {
+            switch message.actor {
+            case .user:
+                let text = "\(message.text)\nAssistant: "
+                let tokens = await languageModelService.getTokenCount(string: text)
+                blocks.append(Block(text: text, tokens: tokens))
+            case .bot:
+                if !message.loading || continueResponse {
+                    let suffix = continueResponse ? "" : "\nUser:"
+                    let text = "\(message.text)\(suffix)"
+                    let tokens = await languageModelService.getTokenCount(string: text)
+                    blocks.append(Block(text: text, tokens: tokens))
+                }
+            }
+        }
+
+        // Greedy include from the end (most recent first) until we hit limit
+        var remaining = maxContextTokens - fixedOverhead
+        var selectedReversed: [Block] = []
+        for block in blocks.reversed() {
+            if block.tokens <= remaining {
+                selectedReversed.append(block)
+                remaining -= block.tokens
+            } else {
+                print("Max Tokens Reached!!! Trimmed remaining messages")
+                break
+            }
+        }
+
+        let selectedBlocks = selectedReversed.reversed()
+
+        // Reconstruct prompt
+        var prompt = prefix
+        for block in selectedBlocks {
+            prompt += block.text
+        }
         return prompt
     }
     
@@ -123,6 +192,7 @@ struct ChatModel: Hashable {
         if let scenario = characterCard.first?.scenario {
             fullMemory += "\nScenario: \(scenario)\n"
         }
+        
         
         return fullMemory
     }

@@ -21,6 +21,7 @@ struct MessageModel: Identifiable, Hashable {
     var loading: Bool = false
     var createdAt: Date = Date()
     var exclude: Bool = false
+    var tokenCount: Int = 0
 
     static let databaseTableName = "messages"
 
@@ -64,6 +65,7 @@ extension MessageModel: TableRecord, FetchableRecord, PersistableRecord {
         loading = row["loading"]
         exclude = row["exclude"]
         createdAt = row["createdAt"]
+        tokenCount = row["tokenCount"]
     }
     
     func encode(to container: inout GRDB.PersistenceContainer) {
@@ -74,6 +76,7 @@ extension MessageModel: TableRecord, FetchableRecord, PersistableRecord {
         container["loading"] = loading
         container["exclude"] = exclude
         container["createdAt"] = createdAt
+        container["tokenCount"] = tokenCount
     }
 }
 extension MessageModel {

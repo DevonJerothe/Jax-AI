@@ -60,6 +60,11 @@ class LanguageModelService {
             let result = await koboldManager?.connect()
             switch result {
             case .success(let name):
+
+                // Set Max Context Length 
+                let result = await getMaxContextLength()
+                self.connectionSettings.contextLength = result
+
                 self.selectedModel = name
                 self.isConnected = true
                 self.isLoadingConnection = false
@@ -87,7 +92,7 @@ class LanguageModelService {
         return false
     }
     
-    func sendStreamedMessage(chatModel: ChatModel, continued: Bool = false) -> AsyncStream<ModelResponse> {
+    func sendStreamedMessage(chatModel: ChatModel, continued: Bool = false, trimmedPrompt: String) -> AsyncStream<ModelResponse> {
                 
         // Map our internal message model to the request body message
         var requestMessages = chatModel.messages.map { message in
@@ -123,11 +128,11 @@ class LanguageModelService {
             }
             
             let promptBuilder = KoboldRequestBuilder(
-                prompt: chatModel.getFullPrompt(continueResponse: continued, enableThinking: true),
+                prompt: trimmedPrompt,
                 memory: chatModel.getFullMemory(),
                 maxContextLength: connectionSettings.contextLength ?? 4096,
                 maxLength: connectionSettings.responseLength ?? 240,
-                promptTemplate: TemplatePrompts().defaultRolePlayPrompt
+                promptTemplate: TemplatePrompts().defaultRolePlayPrompt + TemplateInstructions().reasoningInstructions
             )
             
             streamResponse = koboldManager.streamMessage(builder: promptBuilder)
@@ -197,11 +202,11 @@ class LanguageModelService {
         switch connectionSettings.connectionType {
         case .KoboldAPI:
             let promptBuilder = KoboldRequestBuilder(
-                prompt: chatModel.getFullPrompt(continueResponse: continued, enableThinking: true),
+                prompt: await chatModel.autoTrimFullPrompt(continueResponse: continued),
                 memory: chatModel.getFullMemory(),
                 maxContextLength: connectionSettings.contextLength ?? 4096,
                 maxLength: connectionSettings.responseLength ?? 240,
-                promptTemplate: TemplatePrompts().defaultRolePlayPrompt
+                promptTemplate: TemplatePrompts().defaultRolePlayPrompt + TemplateInstructions().reasoningInstructions
             )
             
             serviceResponse = await koboldManager?.sendMessage(builder: promptBuilder)
@@ -241,6 +246,36 @@ class LanguageModelService {
     }
 
     // MARK: - Kobold Functions
+    func getMaxContextLength() async -> Int? {
+        guard let manager = koboldManager else {
+            print("No Kobold Manager")
+            return nil
+        }
+        let result = await manager.getMaxContextLength()
+        switch result {
+        case .success(let maxContextLength):
+            return maxContextLength
+        case .failure(let error):
+            print("Error: \(error)")
+            return nil
+        }
+    }
+
+    func getTokenCount(string: String) async -> Int {
+        guard let manager = koboldManager else {
+            print("No Kobold Manager")
+            return 0
+        }
+        let result = await manager.countTokens(text: string)
+        switch result {
+        case .success(let tokenCount):
+            return tokenCount
+        case .failure(let error):
+            print("Error: \(error)")
+            return 0
+        }
+    }
+
 
     // MARK: - OpenRouter Functions
     func getAvailableModels() async {

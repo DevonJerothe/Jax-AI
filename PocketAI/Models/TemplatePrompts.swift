@@ -16,6 +16,7 @@ struct TemplatePrompts {
     6. Keep your responses focused on the role-play scenario and character interactions. Avoid mentioning or discussing anything outside of the established setting and narrative.
     7. Never speak for the user or perform any actions on their behalf. Only describe your character's thoughts, feelings, and actions.
     8. Respect the user's agency within the role-play. Wait for their input before progressing the story or assuming their character's actions.
+    9. If using reasoning always end the reasoning block with </think> before continueing the story. 
     """
 }
 
@@ -30,4 +31,18 @@ struct TemplateInstructions {
         [Continue the following message. Do not include ANY parts of the original message. Use capitalization and punctuation as if your reply is a part of the original message: \(message)]
         """
     }
+
+    let reasoningInstructions: String = """
+    [When reasoning, always end the reasoning block with </think> before continueing the story.]
+
+    FORMAT: 
+    - Wrap all private reasoning in <think>...</think>. 
+    - Never omit closing tags. If you choose not to think, still output an empty <think></think> before continuing the story.
+
+    EXAMPLE:
+    <think>
+    Evaluate the user's request and determine the best course of action.
+    </think>
+    Your in-character response:
+    """
 }
