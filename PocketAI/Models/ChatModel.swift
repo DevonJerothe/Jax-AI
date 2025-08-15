@@ -22,6 +22,10 @@ struct ChatModel: Hashable {
         get { characterCard.first?.name ??  "Jax AI" }
     }
 
+    var isLoading: Bool = false 
+    var isStreaming: Bool = false
+    var isThinking: Bool = false
+
     // Computed property that changes when content changes
     var contentIdentifier: String {
         return "\(id.uuidString)-\(messages.count)-\(messages.last?.id.uuidString ?? "")"
@@ -32,10 +36,13 @@ struct ChatModel: Hashable {
         hasher.combine(id)
         hasher.combine(messages)
         hasher.combine(characterCard)
+        hasher.combine(isLoading)
+        hasher.combine(isStreaming)
+        hasher.combine(isThinking)
     }
     
     static func == (lhs: ChatModel, rhs: ChatModel) -> Bool {
-        return lhs.id == rhs.id && lhs.messages == rhs.messages && lhs.characterCard == rhs.characterCard
+        return lhs.id == rhs.id && lhs.messages == rhs.messages && lhs.characterCard == rhs.characterCard && lhs.isLoading == rhs.isLoading && lhs.isStreaming == rhs.isStreaming && lhs.isThinking == rhs.isThinking
     }
 
     init(fromCard: CharacterCardModel) {

@@ -118,11 +118,9 @@ struct ChatSettingsView: View {
                 // Save Button 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
-                        Task {
-                            await viewModel.updateChatSettings(
-                                characterCard: characterCard
-                            )
-                        }
+                        viewModel.updateChatSettings(
+                            characterCard: characterCard
+                        )
                         dismiss()
                     }
                     .fontWeight(.bold)

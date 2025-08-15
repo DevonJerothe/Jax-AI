@@ -360,9 +360,9 @@ struct CharHubResultsGrid: View {
                 
                 GeometryReader { geo in
                     Color.clear
-                        .onChange(of: geo.frame(in: .global).minY) { y in
+                        .onChange(of: geo.frame(in: .global).minY) { _, newValue in
                             let screenHeight = UIScreen.main.bounds.height
-                            if y < screenHeight {
+                            if newValue < screenHeight {
                                 Task {
                                     await loadMore()
                                 }
@@ -405,6 +405,15 @@ struct CharHubCardPreview: View {
                             .frame(maxWidth: 195)
                             .clipped()
                     case .failure(_):
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(height: 150)
+                            .overlay(
+                                Image(systemName: "photo")
+                                    .font(.largeTitle)
+                                    .foregroundStyle(.gray)
+                            )
+                    @unknown default:
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
                             .frame(height: 150)

@@ -25,44 +25,38 @@ struct LoadingIndicator: View {
     }
 
     var body: some View {
-        let loadingDots = HStack(spacing: 5) {
-            ForEach(0..<3) { index in
-                BouncingDot(
-                    color: primaryColor,
-                    size: frame.height / 4,
-                    delay: Double(index) * timing,
-                    timing: timing
-                )
-            }
-        }
-        
-        let thinkingText = Text("thinking...")
-            .font(.callout)
-            .foregroundColor(primaryColor)
-            .transition(.scale.combined(with: .opacity))
-        
-        let contentView = HStack(spacing: 8) {
-            loadingDots
-            
-            if animatedThinking {
-                thinkingText
-            }
-        }
-        
-        return contentView
-            .frame(
-                width: animatedThinking ? frame.width + 90 : frame.width,
-                height: frame.height,
-                alignment: Alignment.leading
-            )
-            .onChange(of: thinking) { _, newValue in
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    animatedThinking = newValue
+        HStack(spacing: 8) {
+            HStack(spacing: 5) {
+                ForEach(0..<3) { index in
+                    BouncingDot(
+                        color: primaryColor,
+                        size: frame.height / 4,
+                        delay: Double(index) * timing,
+                        timing: timing
+                    )
                 }
             }
-            .onAppear {
-                animatedThinking = thinking
+
+            if animatedThinking {
+                Text("thinking...")
+                    .font(.callout)
+                    .foregroundColor(primaryColor)
+                    .transition(.scale.combined(with: .opacity))
             }
+        }
+        .frame(
+            width: animatedThinking ? frame.width + 90 : frame.width,
+            height: frame.height,
+            alignment: .leading
+        )
+        .onChange(of: thinking) { _, newValue in
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                animatedThinking = newValue
+            }
+        }
+        .onAppear {
+            animatedThinking = thinking
+        }
     }
 }
 

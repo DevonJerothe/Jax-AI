@@ -27,11 +27,30 @@ class ChatViewModel: Hashable {
 
     var updateScrollView: Bool = false
     var showSettings: Bool = false
-    var isStreaming: Bool = false
-    var isThinking: Bool = false
+    var isStreaming: Bool = false {
+        didSet {
+            self.model.isStreaming = self.isStreaming
+            self.model.isLoading = self.isStreaming
+
+            if oldValue != self.isStreaming {
+                NotificationCenter.default.post(name: .chatStreamingChanged, object: self.model)
+            }
+        }
+    }
+    var isThinking: Bool = false {
+        didSet {
+            self.model.isThinking = self.isThinking
+
+            if oldValue != self.isThinking {
+                NotificationCenter.default.post(name: .chatStreamingChanged, object: self.model)
+            }
+        }
+    }
     var serviceContainer: ServiceContainer = ServiceContainer.shared
     var editingMessageID: UUID?
     private var lastHapticTriggerAt: Date? = nil
+    var newInstance: Bool = true
+    var isViewActive: Bool = false
 
     // MARK: - Hashable conformance
     func hash(into hasher: inout Hasher) {
@@ -68,6 +87,7 @@ class ChatViewModel: Hashable {
 
     func sendMessage(prompt: String) async {
         await MainActor.run {
+            self.newInstance = false
             if !prompt.isEmpty {
                 self.model.addMessage(prompt, forActor: .user)
                 try! messageRepository.save(self.model.messages.last!)
@@ -81,6 +101,7 @@ class ChatViewModel: Hashable {
     func regenerateMessage(_ message: MessageModel, continueResponse: Bool = false) async {
         let lastIndex = self.model.messages.count - 1
         await MainActor.run {
+            self.newInstance = false
             self.model.messages[lastIndex].loading = true
             self.updateScrollView.toggle()
         }
@@ -111,6 +132,7 @@ class ChatViewModel: Hashable {
     func updateMessage(_ message: MessageModel, newText: String) async {
         let lastIndex = self.model.messages.count - 1
         await MainActor.run {
+            self.newInstance = false
             self.model.messages[lastIndex].text = newText
         }
         try! messageRepository.save(self.model.messages[lastIndex])
@@ -123,6 +145,7 @@ class ChatViewModel: Hashable {
     
     func deleteMessage(_ message: MessageModel) async {
         await MainActor.run {
+            self.newInstance = false
             self.model.messages.removeAll(where: { message == $0 })
         }
         try! chatRepository.save(self.model)
@@ -225,8 +248,10 @@ class ChatViewModel: Hashable {
                             print("ERROR: \(error.localizedDescription)")
                         }
 
+                        // Hatpic debouncer so that we are  not spamming the user. 
+                        // also check if the view is active or not.. this should stop haptics when user navigates away before response is finished.
                         let now = Date()
-                        if self.lastHapticTriggerAt == nil || now.timeIntervalSince(self.lastHapticTriggerAt!) >= 0.1 {
+                        if self.isViewActive && (self.lastHapticTriggerAt == nil || now.timeIntervalSince(self.lastHapticTriggerAt!) >= 0.1) {
                             let generator = UIImpactFeedbackGenerator(style: .soft)
                             generator.impactOccurred()
                             self.lastHapticTriggerAt = now
@@ -234,6 +259,7 @@ class ChatViewModel: Hashable {
                     }
                     
                     // Sometimes the stream can break.. or thinking doesn't provide a closing tag. 
+                    // This should be checked later.. we may not need it now that we are checking if streaming starts and ends up top. 
                     if response.streaming == false, self.isStreaming {
                         print("STREAMING FAILED")
                         self.model.messages[forIndex].loading = false
@@ -329,4 +355,5 @@ class ChatViewModel: Hashable {
 // MARK: - Notification Names
 extension Notification.Name {
     static let chatDataChanged = Notification.Name("chatDataChanged")
+    static let chatStreamingChanged = Notification.Name("chatStreamingChanged")
 }

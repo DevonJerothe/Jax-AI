@@ -149,6 +149,20 @@ struct ChatView: View {
         }
         .onAppear {
             self.viewModel.updateScrollView.toggle()
+            self.viewModel.isViewActive = true
+        }
+        .onDisappear {
+            self.viewModel.isViewActive = false
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(for: .chatDataChanged)
+        ) { notification in
+            if let chat = notification.object as? ChatModel, self.viewModel.newInstance {
+                print("Chat data changed notification received, updating chat view...")
+                self.viewModel.newInstance = false
+                self.viewModel.model = chat
+                self.viewModel.updateScrollView.toggle()
+            }
         }
     }
 

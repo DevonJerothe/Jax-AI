@@ -59,7 +59,9 @@ struct ChatListView: View {
             }
             .onAppear {
                 print("ChatListView onAppear called")
-                viewModel.refreshData()
+                if viewModel.chats.isEmpty {
+                    viewModel.refreshData()
+                }
                 print(
                     "loaded \(viewModel.characterCards.count) character cards")
                 print("loaded \(viewModel.chats.count) chats")
@@ -72,6 +74,15 @@ struct ChatListView: View {
                     "Chat data changed notification received, refreshing chat list..."
                 )
                 viewModel.refreshData()
+            }
+            .onReceive(
+                NotificationCenter.default.publisher(for: .chatStreamingChanged)
+            ) { notification in
+                print("Chat streaming changed notification received, refreshing chat list item...") 
+                if let chat = notification.object as? ChatModel {
+                    print("Chat status changed: \(chat.isLoading), \(chat.isStreaming), \(chat.isThinking)")
+                    viewModel.updateChatInList(chat)
+                }
             }
         }
     }
@@ -169,13 +180,17 @@ struct RecentChatRow: View {
                 Text(chat.chatTitle)
                     .fontWeight(.medium)
 
-                Text(
-                    chat.messages.last?.getRolePlayText(
-                        cardName: chat.chatTitle) ?? "No messages yet"
-                )
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
+                if chat.isLoading || chat.isStreaming {
+                    LoadingIndicator(color: .secondary, size: 15)
+                } else {
+                    if let lastMessage = chat.messages.last {
+                        Text(lastMessage.getRolePlayText(cardName: chat.chatTitle))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+
             }
 
             Spacer()
