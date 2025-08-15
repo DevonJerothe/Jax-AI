@@ -159,7 +159,7 @@ struct ChatView: View {
         }
         .onChange(of: chatListViewModel.chats) { _, newChats in
             if let chat = newChats.first(where: { $0.id == viewModel.model.id }) {
-                self.viewModel.model = chat
+                self.viewModel.updateChatLoadingStatus(model: chat)
             }
         }
     }

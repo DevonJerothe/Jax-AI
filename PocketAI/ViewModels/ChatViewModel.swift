@@ -31,19 +31,13 @@ class ChatViewModel: Hashable {
         didSet {
             self.model.isStreaming = self.isStreaming
             self.model.isLoading = self.isStreaming
-
-            if oldValue != self.isStreaming {
-                triggerChatUpdate()
-            }
+            triggerChatUpdate()
         }
     }
     var isThinking: Bool = false {
         didSet {
             self.model.isThinking = self.isThinking
-
-            if oldValue != self.isThinking {
-                triggerChatUpdate()
-            }
+            triggerChatUpdate()
         }
     }
     var serviceContainer: ServiceContainer = ServiceContainer.shared
@@ -104,6 +98,17 @@ class ChatViewModel: Hashable {
         Task {
             await MainActor.run {
                 chatListViewModel?.updateChatInList(model)
+            }
+        }
+    }
+
+    func updateChatLoadingStatus(model: ChatModel) {
+        Task {
+            await MainActor.run {
+                self.model = model 
+                self.isStreaming = self.model.isStreaming
+                self.isThinking = self.model.isThinking
+                self.updateScrollView.toggle()
             }
         }
     }
