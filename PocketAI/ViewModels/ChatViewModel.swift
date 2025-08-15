@@ -14,7 +14,7 @@ import UIKit
 class ChatViewModel: Hashable {
     var id: UUID = UUID()
 
-    private var languageModelService: LanguageModelService? 
+    private var languageModelService: LanguageModelService 
     private let messageRepository: MessageRepository
     private let chatRepository: ChatRepository
     private let characterRepository: CharacterRepository
@@ -28,6 +28,7 @@ class ChatViewModel: Hashable {
     var updateScrollView: Bool = false
     var showSettings: Bool = false
     var isStreaming: Bool = false
+    var isThinking: Bool = false
     var serviceContainer: ServiceContainer = ServiceContainer.shared
     var editingMessageID: UUID?
     private var lastHapticTriggerAt: Date? = nil
@@ -43,7 +44,7 @@ class ChatViewModel: Hashable {
 
     init(
         chatModel: ChatModel,
-        languageModelService: LanguageModelService? = ServiceContainer.shared.getLanguageModelService(),
+        languageModelService: LanguageModelService = ServiceContainer.shared.getLanguageModelService(),
         messageRepository: MessageRepository = ServiceContainer.shared.getMessageRepository(),
         chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository(),
         characterRepository: CharacterRepository = ServiceContainer.shared.getCharacterRepository()
@@ -63,12 +64,6 @@ class ChatViewModel: Hashable {
             chatModel: chatModel,
             languageModelService: ServiceContainer.shared.getLanguageModelService()
         )
-    }
-
-    func checkConnection() {
-        if languageModelService == nil {
-            self.languageModelService = ServiceContainer.shared.getLanguageModelService()
-        }
     }
 
     func sendMessage(prompt: String) async {
@@ -102,12 +97,12 @@ class ChatViewModel: Hashable {
 
     func updateChatSettings(
         characterCard: CharacterCardModel
-    ) async {
+    ) {
         model.updateCard(characterCard)
         try! chatRepository.save(self.model)
 
         // update the connection settings
-        await serviceContainer.connect()
+        serviceContainer.saveConnectionSettings()
 
         // Post notification that chat data has changed
         NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
@@ -127,25 +122,14 @@ class ChatViewModel: Hashable {
     }
     
     func deleteMessage(_ message: MessageModel) async {
-        print("ChatViewModel: Starting deleteMessage for message ID: \(message.id.uuidString)")
-        print("ChatViewModel: Current message count before delete: \(self.model.messages.count)")
-        
         await MainActor.run {
             self.model.messages.removeAll(where: { message == $0 })
-            print("ChatViewModel: Message count after in-memory delete: \(self.model.messages.count)")
         }
-        
-        do {
-            try chatRepository.save(self.model)
-            print("ChatViewModel: Successfully saved chat to database after delete")
-        } catch {
-            print("ChatViewModel: ERROR saving chat after delete: \(error)")
-        }
+        try! chatRepository.save(self.model)
         
         // Post notification that chat data has changed
         await MainActor.run {
             NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
-            print("ChatViewModel: Posted chatDataChanged notification")
         }
     }
 
@@ -161,9 +145,21 @@ class ChatViewModel: Hashable {
     }
     
     private func generateStreamedResponse(_ forIndex: Int, isContinued: Bool = false, excludeThinking: Bool = true, trimmedPrompt: String) {
+        // Update the connection settings if necessary
+        languageModelService.updateConnection()
         
-        guard let languageModelService = languageModelService else {
-            print("service not loaded")
+        guard languageModelService.isConnected else {
+            print("Language Model Service is not connected")
+            Task {  
+                await MainActor.run {
+                    self.model.messages[forIndex].error = .disconnect
+                    self.model.messages[forIndex].loading = false
+                    self.model.messages[forIndex].text = "Looks like you're not connected to a model. Please check your connection settings."
+                    try! messageRepository.save(self.model.messages[forIndex])
+                    NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+                    self.updateScrollView.toggle()
+                }
+            }
             return
         }
         
@@ -172,12 +168,40 @@ class ChatViewModel: Hashable {
             self.isStreaming = true
             
             for await response in stream {
-                let isThinkingFinished = (response.text?.contains("</think>")) ?? false || isContinued
-                
+
+                // Depending on models, kobold sometimes(most of the time) sucks at including the <think> tag at the start.
+                // To check, we want to find the first non-whitespace character and see if it's '<'.
+                // This way we can stream the response without waiting if not excludeing thinking.. 
+                let firstNonWhitespaceChar = response.text?.first(where: { !$0.isWhitespace })
+                let didThinkingStart = firstNonWhitespaceChar == "<"
+                let didThinkingFinish = (response.text?.contains("</think>")) ?? false || isContinued
+
+                if didThinkingStart && !didThinkingFinish {
+                    self.isThinking = true
+                } else {
+                    self.isThinking = false
+                }
+
                 // Remove everything from the beginning of the string up to and including the first </think> tag.
                 // The opening <think> tag may or may not be present; we only rely on the closing tag.
                 await MainActor.run {
-                    if !excludeThinking || isThinkingFinished {
+                    if response.disconnect {
+                        self.model.messages[forIndex].error = .apiError
+                        self.model.messages[forIndex].text = response.text ?? ""
+                        self.model.messages[forIndex].loading = false
+                        self.updateScrollView.toggle()
+
+                        do {
+                            try messageRepository.save(self.model.messages[forIndex])
+                            // Post notification that chat data has changed
+                            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+                        } catch {
+                            print("ERROR: \(error.localizedDescription)")
+                        }
+                        return
+                    }
+
+                    if !excludeThinking || didThinkingFinish || !didThinkingStart {
                         let responseMessage = response.text ?? ""
                         let sanitizedResponse = responseMessage
                             .replacing(/\A[\s\S]*?<\/think>\s*/, with: "")
@@ -232,9 +256,19 @@ class ChatViewModel: Hashable {
     }
 
     private func generateResponse(_ forIndex: Int, isContinued: Bool = false, streamed: Bool = true) async {
+        // Update the connection settings if necessary
+        languageModelService.updateConnection()
         
-        guard let languageModelService = languageModelService else {
-            print("service not loaded")
+        guard languageModelService.isConnected else {
+            print("Language Model Service is not connected")
+            self.model.messages[forIndex].error = .disconnect
+            self.model.messages[forIndex].loading = false
+            self.model.messages[forIndex].text = "Looks like you're not connected to a model. Please check your connection settings."
+            try! messageRepository.save(self.model.messages[forIndex])
+            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+            self.updateScrollView.toggle()
+            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+
             return
         }
         
@@ -253,6 +287,7 @@ class ChatViewModel: Hashable {
             print("No response check logs")
             await MainActor.run {
                 self.model.messages[forIndex].loading = false
+                self.model.messages[forIndex].error = .apiError
                 self.model.messages[forIndex].text = "There was an error processing your request. Please try again later."
             }
             return
@@ -265,11 +300,17 @@ class ChatViewModel: Hashable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         await MainActor.run {
-            if isContinued {
-                self.model.messages[forIndex].text.append(sanitizedResponse)
-            } else {
+            if response?.disconnect ?? false {
+                self.model.messages[forIndex].error = .apiError
                 self.model.messages[forIndex].text = sanitizedResponse
+            } else {
+                if isContinued {
+                    self.model.messages[forIndex].text.append(sanitizedResponse)
+                } else {
+                    self.model.messages[forIndex].text = sanitizedResponse
+                }
             }
+
             self.model.messages[forIndex].loading = false
             
             do {

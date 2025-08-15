@@ -18,28 +18,56 @@ struct ConnectionSettingsView: View {
     var hostBinding: Binding<String> {
         Binding<String>(
             get: { connectionManager.connectionSettings.host ?? "" },
-            set: { connectionManager.connectionSettings.host = $0.isEmpty ? nil : $0 }
+            set: { newValue in
+                let currentHost = connectionManager.connectionSettings.host ?? ""
+                // Only disconnect if the value actually changed
+                if currentHost != newValue {
+                    connectionManager.getLanguageModelService().isConnected = false
+                }
+                connectionManager.connectionSettings.host = newValue.isEmpty ? nil : newValue
+            }
         )
     }
 
     var portBinding: Binding<Int> {
         Binding<Int>(
             get: { connectionManager.connectionSettings.port ?? 5000 },
-            set: { connectionManager.connectionSettings.port = $0 }
+            set: { newValue in
+                let currentPort = connectionManager.connectionSettings.port ?? 5000
+                // Only disconnect if the value actually changed
+                if currentPort != newValue {
+                    connectionManager.getLanguageModelService().isConnected = false
+                }
+                connectionManager.connectionSettings.port = newValue
+            }
         )
     }
     
     var apiKeyBinding: Binding<String> {
         Binding<String>(
             get: { connectionManager.connectionSettings.apiKey ?? "" },
-            set: { connectionManager.connectionSettings.apiKey = $0.isEmpty ? nil : $0 }
+            set: { newValue in
+                let currentApiKey = connectionManager.connectionSettings.apiKey ?? ""
+                // Only disconnect if the value actually changed
+                if currentApiKey != newValue {
+                    connectionManager.getLanguageModelService().isConnected = false
+                }
+                connectionManager.connectionSettings.apiKey = newValue.isEmpty ? nil : newValue
+            }
         )
     }
     
     var selectedModelBinding: Binding<String> {
         Binding<String>(
             get: { connectionManager.connectionSettings.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free" },
-            set: { connectionManager.connectionSettings.selectedModel = $0 }
+            set: { newValue in
+                let currentModel = connectionManager.connectionSettings.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free"
+                // Only disconnect if the value actually changed
+                if currentModel != newValue {
+                    connectionManager.getLanguageModelService().isConnected = false
+                }
+                connectionManager.connectionSettings.selectedModel = newValue
+            }
         )
     }
 
@@ -47,14 +75,20 @@ struct ConnectionSettingsView: View {
     private var contextLengthBinding: Binding<Double> {
         Binding<Double>(
             get: { Double(connectionManager.connectionSettings.contextLength ?? 4096) },
-            set: { connectionManager.connectionSettings.contextLength = Int($0) }
+            set: {
+                connectionManager.connectionSettings.contextLength = Int($0)
+                connectionManager.saveConnectionSettings()
+            }
         )
     }
     
     private var responseLengthBinding: Binding<Double> {
         Binding<Double>(
             get: { Double(connectionManager.connectionSettings.responseLength ?? 300) },
-            set: { connectionManager.connectionSettings.responseLength = Int($0) }
+            set: {
+                connectionManager.connectionSettings.responseLength = Int($0)
+                connectionManager.saveConnectionSettings()
+            }
         )
     }
     
@@ -250,7 +284,7 @@ struct ConnectionSettingsView: View {
                         .foregroundColor(.secondary)
                         .font(.subheadline)
                 }
-                Slider(value: contextLengthBinding, in: 1024...25600, step: 1024)
+                Slider(value: contextLengthBinding, in: 1024...Double(connectionManager.maxContextLength ?? 25600), step: 1024)
             }
             .padding()
             .background(Color(.systemGray6).opacity(0.6))

@@ -31,7 +31,8 @@ struct ChatBubbleView: View {
             HStack {
                 if message.loading {
                     HStack {
-                        LoadingIndicator(size: 25)
+                        LoadingIndicator(size: 25, thinking: viewModel.isThinking)
+                            .padding(.trailing, 5)
                     }
                     .padding(10)
                     .background(Color(.secondarySystemBackground))

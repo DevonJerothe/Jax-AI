@@ -129,7 +129,7 @@ struct ChatView: View {
                         .font(.system(size: 26))
                         .foregroundColor(viewModel.isConnected ? .accentColor : .gray)
                 }
-                .disabled(viewModel.isConnected == false)
+                .disabled(viewModel.isConnected == false || viewModel.isStreaming == true)
                 .padding(.bottom, 8)
                 .padding(.trailing, 16)
             }
@@ -149,8 +149,6 @@ struct ChatView: View {
         }
         .onAppear {
             self.viewModel.updateScrollView.toggle()
-            // Check if the connection is active. For existing chats, the connection may have been lost.
-            self.viewModel.checkConnection()
         }
     }
 
@@ -158,9 +156,9 @@ struct ChatView: View {
     // ---- Helper function for scrolling ----
     private func scrollToBottom(proxy: ScrollViewProxy, anchor: any Hashable, delay: Double = 0.0) {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-             withAnimation { // Ensure scrolling is animated
-                  proxy.scrollTo(anchor, anchor: .bottom)
-             }
+            withAnimation { // Ensure scrolling is animated
+                proxy.scrollTo(anchor, anchor: .bottom)
+            }
         }
     }
 }

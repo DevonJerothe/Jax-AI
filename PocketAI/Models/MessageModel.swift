@@ -13,6 +13,12 @@ public enum MessageActor: Int, Codable{
     case bot = 1
 }
 
+public enum MessageError: Int, Codable {
+    case none = 0
+    case apiError = 1
+    case disconnect = 2
+}
+
 struct MessageModel: Identifiable, Hashable {
     var id: UUID = UUID()
     var chatId: String = ""
@@ -21,6 +27,7 @@ struct MessageModel: Identifiable, Hashable {
     var loading: Bool = false
     var createdAt: Date = Date()
     var exclude: Bool = false
+    var error: MessageError = .none
     var tokenCount: Int = 0
 
     static let databaseTableName = "messages"
@@ -64,6 +71,7 @@ extension MessageModel: TableRecord, FetchableRecord, PersistableRecord {
         text = row["text"]
         loading = row["loading"]
         exclude = row["exclude"]
+        error = MessageError(rawValue: row["error"]) ?? .none
         createdAt = row["createdAt"]
         tokenCount = row["tokenCount"]
     }
@@ -75,6 +83,7 @@ extension MessageModel: TableRecord, FetchableRecord, PersistableRecord {
         container["text"] = text
         container["loading"] = loading
         container["exclude"] = exclude
+        container["error"] = error.rawValue
         container["createdAt"] = createdAt
         container["tokenCount"] = tokenCount
     }
@@ -89,6 +98,7 @@ extension MessageModel {
             t.column("loading", .boolean).notNull()
             t.column("exclude", .boolean).notNull().defaults(to: false)
             t.column("createdAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
+            t.column("error", .integer).notNull().defaults(to: 0)
         }
     }
 }
