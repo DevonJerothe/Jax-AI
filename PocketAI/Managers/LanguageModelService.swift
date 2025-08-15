@@ -18,6 +18,7 @@ class LanguageModelService {
     var availableModels: [OpenRouterModel] = []
     var isConnected: Bool = false
     var isLoadingConnection: Bool = false
+    var maxContextLength: Int = 26000
 
     init(connectionSettings: ConnectionSettingsModel) {
         self.connectionSettings = connectionSettings
@@ -54,6 +55,8 @@ class LanguageModelService {
     }
 
     func connect() async -> Bool {
+        print("Connecting to \(connectionSettings.connectionType)")
+        print("Current Context Length: \(connectionSettings.contextLength ?? 0)")
         self.isLoadingConnection = true
         switch connectionSettings.connectionType {
         case .KoboldAPI:
@@ -63,7 +66,7 @@ class LanguageModelService {
 
                 // Set Max Context Length 
                 let result = await getMaxContextLength()
-                self.connectionSettings.contextLength = result
+                self.maxContextLength = result ?? 26000
 
                 self.selectedModel = name
                 self.isConnected = true
@@ -93,7 +96,6 @@ class LanguageModelService {
     }
     
     func sendStreamedMessage(chatModel: ChatModel, continued: Bool = false, trimmedPrompt: String) -> AsyncStream<ModelResponse> {
-                
         // Map our internal message model to the request body message
         var requestMessages = chatModel.messages.map { message in
             let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
@@ -164,8 +166,14 @@ class LanguageModelService {
                         modelResponse.text = "\(chatModel.messages.last!.text) \(modelResponse.text ?? "")"
                     }
                     continueation.yield(modelResponse)
-                case .failure(let error):
-                    print("Error: \(error)")
+                case .failure(_):
+                    let errorResponse = ModelResponse(              
+                        role: "assistant",
+                        text: "There was an error processing your request. Please try again later.",
+                        disconnect: true
+                    )
+                    continueation.yield(errorResponse)
+                    continueation.finish()
                 }
             }
         }
@@ -174,7 +182,6 @@ class LanguageModelService {
     
     // Put all context switching of service type in this class and out of the view models.
     func sendMessage(chatModel: ChatModel, continued: Bool = false) async -> ModelResponse? {
-        
         // Map our internal message model to the request body message
         var requestMessages = chatModel.messages.map { message in
             let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
@@ -228,22 +235,40 @@ class LanguageModelService {
         switch serviceResponse {
         case .success(let model):
             return model
-        case .failure(let error):
-            print("ERROR: \(error)")
+        case .failure(_):
+            let errorResponse = ModelResponse(
+                role: "assistant",
+                text: "There was an error processing your request. Please try again later.",
+                disconnect: true
+            )
+            return errorResponse
         default:
-            print("ERROR: Unexpected Error")
+            let errorResponse = ModelResponse(
+                role: "assistant",
+                text: "There was an error processing your request. Please try again later.",
+                disconnect: true
+            )
+            return errorResponse
         }
-        
-        // If we get here then no response was passed. This is ugly... and should be reworked.
-        // honestly this whole app needs to be reworked....
-        return nil
     }
-        
-    func updateConnectionSettings(connectionSettings: ConnectionSettingsModel) {
-        self.isConnected = false
-        self.connectionSettings = connectionSettings
-        setupManagers()
-    }
+
+    // update the connection and refresh managers if necessary
+    // Only refresh manager if host / port / selectedModel / connectionType / APIKey has changed
+    func updateConnection() {
+        let newConnectionSettings = ServiceContainer.shared.connectionSettings
+        if newConnectionSettings.host != connectionSettings.host ||
+            newConnectionSettings.port != connectionSettings.port ||
+            newConnectionSettings.apiKey != connectionSettings.apiKey ||
+            newConnectionSettings.selectedModel != connectionSettings.selectedModel ||
+            newConnectionSettings.connectionType != connectionSettings.connectionType {
+            self.connectionSettings = newConnectionSettings
+
+            self.isConnected = false 
+            setupManagers()
+        } else {
+            self.connectionSettings = newConnectionSettings
+        }
+    } 
 
     // MARK: - Kobold Functions
     func getMaxContextLength() async -> Int? {
@@ -275,7 +300,6 @@ class LanguageModelService {
             return 0
         }
     }
-
 
     // MARK: - OpenRouter Functions
     func getAvailableModels() async {

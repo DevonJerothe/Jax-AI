@@ -12,7 +12,7 @@ class ServiceContainer {
     var connectionSettings: ConnectionSettingsModel = .defaults
     var isLoading: Bool = false
 
-    private var languageModelService: LanguageModelService = LanguageModelService(connectionSettings: .defaults)
+    private var languageModelService: LanguageModelService
     private var databaseManager: DBManager?
     private var userDefaultsManager: UserDefaultsManager = UserDefaultsManager
         .shared
@@ -24,6 +24,10 @@ class ServiceContainer {
     // MARK: - Computed Properties
     var isConnected: Bool {
         self.languageModelService.isConnected
+    }
+
+    var maxContextLength: Int? {
+        self.languageModelService.maxContextLength
     }
     
     var selectedModelName: String? {
@@ -40,12 +44,11 @@ class ServiceContainer {
 
     private init() {
         // Load Connection Settings if any exist
-        if let savedConnectionSettings = UserDefaultsManager.shared
-            .fetchConnectionSettiongs()
-        {
+        if let savedConnectionSettings = UserDefaultsManager.shared.fetchConnectionSettiongs() {
             self.connectionSettings = savedConnectionSettings
-            self.languageModelService.updateConnectionSettings(
-                connectionSettings: savedConnectionSettings)
+            self.languageModelService = LanguageModelService(connectionSettings: savedConnectionSettings)
+        } else {
+            self.languageModelService = LanguageModelService(connectionSettings: .defaults)
         }
     }
 
@@ -68,15 +71,20 @@ class ServiceContainer {
     func saveConnectionSettings() {
         self.userDefaultsManager.saveSettings(
             self.connectionSettings, forKey: .ConnectionSettings)
-        self.languageModelService.updateConnectionSettings(connectionSettings: self.connectionSettings)
+        self.languageModelService.updateConnection()
     }
     
     // MARK: - LanguageModelService Helpers
     // Its better to call the language service methods directly than here.
     func connect() async {
-        self.saveConnectionSettings()
+        self.languageModelService.updateConnection()
         self.isLoading = true
         await _ = self.languageModelService.connect()
+
+        if self.connectionSettings.contextLength ?? 0 > self.languageModelService.maxContextLength {
+            self.connectionSettings.contextLength = self.languageModelService.maxContextLength
+        }
+        self.saveConnectionSettings()
         self.isLoading = false
     }
 
