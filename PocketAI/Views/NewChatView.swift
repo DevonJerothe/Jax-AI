@@ -351,9 +351,7 @@ struct CharHubResultsGrid: View {
                         .onTapGesture {
                             Task {
                                 let success = await viewModel.getCharacter(card: item)
-                                if success {
-                                    navManager.popBack()
-                                }
+                                //
                             }
                         }
                 }
@@ -454,13 +452,9 @@ struct CharHubCardPreview: View {
                     
                     Spacer()
                     
-                    HStack(spacing: 4) {
-                        Image(systemName: "square.stack.3d.up.fill")
-                            .foregroundStyle(.secondary)
-                        Text("\(card.metadata?.totalTokens ?? 0)")
-                            .foregroundStyle(.secondary)
-                    }
-                    .font(.caption)
+                    Text(card.tags?.prefix(3).joined(separator: ", ") ?? "No tags")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding([.leading, .trailing, .bottom], 12)

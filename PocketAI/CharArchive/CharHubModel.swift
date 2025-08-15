@@ -11,6 +11,7 @@ public class CharHubModel: Codable {
     public var type: String?
     public var metadata: CharHubMetaData?
     public var chub: ChubItem?
+    public var tags: [String]?
 
     // manually added fields 
     public var path: String? {
