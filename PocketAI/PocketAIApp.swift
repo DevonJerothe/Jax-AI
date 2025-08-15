@@ -13,6 +13,7 @@ struct PocketAIApp: App {
 
     @State var navManager: NavigationManager = .init()
     @State var serviceContainer: ServiceContainer = .shared
+    @State var chatListViewModel: ChatListViewModel = .init()
 
     init() {
         print("PocketAIApp initializing...")
@@ -70,7 +71,7 @@ struct PocketAIApp: App {
         }
         .environment(navManager)
         .environment(serviceContainer)
-
+        .environment(chatListViewModel)
     }
 
     @ViewBuilder

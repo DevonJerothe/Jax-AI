@@ -10,8 +10,8 @@ import SwiftLLMSDK
 import SwiftUI
 
 struct ChatView: View {
-    // @Environment(\.dismiss) var dismiss
     @Environment(NavigationManager.self) var navManager
+    @Environment(ChatListViewModel.self) var chatListViewModel
 
     @State var viewModel: ChatViewModel
     @State var textPrompt: String = ""
@@ -23,6 +23,8 @@ struct ChatView: View {
     @State private var isKeyboardVisible: Bool = false
 
     init(chatModel: ChatModel) {
+        print("ChatView init called")
+        print("Chat Status: \(chatModel.isLoading), \(chatModel.isStreaming), \(chatModel.isThinking)")
         self.viewModel = ChatViewModel.create(chatModel: chatModel)
     }
 
@@ -150,18 +152,14 @@ struct ChatView: View {
         .onAppear {
             self.viewModel.updateScrollView.toggle()
             self.viewModel.isViewActive = true
+            self.viewModel.chatListViewModel = chatListViewModel 
         }
         .onDisappear {
             self.viewModel.isViewActive = false
         }
-        .onReceive(
-            NotificationCenter.default.publisher(for: .chatDataChanged)
-        ) { notification in
-            if let chat = notification.object as? ChatModel, self.viewModel.newInstance {
-                print("Chat data changed notification received, updating chat view...")
-                self.viewModel.newInstance = false
+        .onChange(of: chatListViewModel.chats) { _, newChats in
+            if let chat = newChats.first(where: { $0.id == viewModel.model.id }) {
                 self.viewModel.model = chat
-                self.viewModel.updateScrollView.toggle()
             }
         }
     }
@@ -175,8 +173,4 @@ struct ChatView: View {
             }
         }
     }
-}
-
-#Preview {
-    ChatView(chatModel: ChatModel(chatTitle: "Test Chat"))
 }

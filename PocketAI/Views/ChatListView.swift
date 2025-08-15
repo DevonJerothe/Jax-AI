@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ChatListView: View {
     @Environment(NavigationManager.self) var navManager
-    @State var viewModel: ChatListViewModel = .init()
+    @Environment(ChatListViewModel.self) var viewModel
 
     private var connectionManager = ServiceContainer.shared
 
@@ -58,31 +58,13 @@ struct ChatListView: View {
                 }
             }
             .onAppear {
-                print("ChatListView onAppear called")
+                // Load data if not already loaded or triggered elsewhere. 
                 if viewModel.chats.isEmpty {
                     viewModel.refreshData()
                 }
                 print(
                     "loaded \(viewModel.characterCards.count) character cards")
                 print("loaded \(viewModel.chats.count) chats")
-            }
-            .onReceive(
-                NotificationCenter.default.publisher(for: .chatDataChanged)
-            ) { notification in
-                // Refresh data when any chat changes
-                print(
-                    "Chat data changed notification received, refreshing chat list..."
-                )
-                viewModel.refreshData()
-            }
-            .onReceive(
-                NotificationCenter.default.publisher(for: .chatStreamingChanged)
-            ) { notification in
-                print("Chat streaming changed notification received, refreshing chat list item...") 
-                if let chat = notification.object as? ChatModel {
-                    print("Chat status changed: \(chat.isLoading), \(chat.isStreaming), \(chat.isThinking)")
-                    viewModel.updateChatInList(chat)
-                }
             }
         }
     }
@@ -99,9 +81,7 @@ struct CharacterCardsListView: View {
                 ForEach(viewModel.characterCards, id: \.id) { character in
                     CharacterCardView(character: character)
                         .onTapGesture {
-                            if let newChat = viewModel.createNewChat(
-                                fromCharacter: character)
-                            {
+                            if let newChat = viewModel.createNewChat(fromCharacter: character) {
                                 navManager.navigateToChat(chat: newChat)
                             }
                         }
@@ -190,7 +170,6 @@ struct RecentChatRow: View {
                             .lineLimit(1)
                     }
                 }
-
             }
 
             Spacer()

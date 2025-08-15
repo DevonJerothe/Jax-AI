@@ -33,7 +33,7 @@ class ChatViewModel: Hashable {
             self.model.isLoading = self.isStreaming
 
             if oldValue != self.isStreaming {
-                NotificationCenter.default.post(name: .chatStreamingChanged, object: self.model)
+                triggerChatUpdate()
             }
         }
     }
@@ -42,7 +42,7 @@ class ChatViewModel: Hashable {
             self.model.isThinking = self.isThinking
 
             if oldValue != self.isThinking {
-                NotificationCenter.default.post(name: .chatStreamingChanged, object: self.model)
+                triggerChatUpdate()
             }
         }
     }
@@ -51,6 +51,7 @@ class ChatViewModel: Hashable {
     private var lastHapticTriggerAt: Date? = nil
     var newInstance: Bool = true
     var isViewActive: Bool = false
+    var chatListViewModel: ChatListViewModel? 
 
     // MARK: - Hashable conformance
     func hash(into hasher: inout Hasher) {
@@ -74,6 +75,10 @@ class ChatViewModel: Hashable {
         self.chatRepository = chatRepository
         self.connectionSettings = ServiceContainer.shared.connectionSettings
         self.characterRepository = characterRepository
+
+        // update booleans based on the chat model 
+        self.isStreaming = self.model.isStreaming
+        self.isThinking = self.model.isThinking
     }
 
     static func create(
@@ -83,6 +88,24 @@ class ChatViewModel: Hashable {
             chatModel: chatModel,
             languageModelService: ServiceContainer.shared.getLanguageModelService()
         )
+    }
+
+    /// trigger the chatListViewModel to refresh all data 
+    private func triggerListRefresh() {
+        Task {
+            await MainActor.run {
+                chatListViewModel?.refreshData()
+            }
+        }
+    }
+
+    /// Trigger the ChatListViewModel to update the chat in the list. This will allow us to update list items based on chat status changes. 
+    private func triggerChatUpdate() {
+        Task {
+            await MainActor.run {
+                chatListViewModel?.updateChatInList(model)
+            }
+        }
     }
 
     func sendMessage(prompt: String) async {
@@ -112,8 +135,7 @@ class ChatViewModel: Hashable {
         self.model.resetChat()
         try! chatRepository.save(self.model)
         
-        // Post notification that chat data has changed
-        NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+        triggerListRefresh()
     }
 
     func updateChatSettings(
@@ -125,8 +147,7 @@ class ChatViewModel: Hashable {
         // update the connection settings
         serviceContainer.saveConnectionSettings()
 
-        // Post notification that chat data has changed
-        NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+        triggerListRefresh()
     }
 
     func updateMessage(_ message: MessageModel, newText: String) async {
@@ -136,11 +157,8 @@ class ChatViewModel: Hashable {
             self.model.messages[lastIndex].text = newText
         }
         try! messageRepository.save(self.model.messages[lastIndex])
-        
-        // Post notification that chat data has changed
-        await MainActor.run {
-            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
-        }
+
+        triggerListRefresh()
     }
     
     func deleteMessage(_ message: MessageModel) async {
@@ -150,10 +168,7 @@ class ChatViewModel: Hashable {
         }
         try! chatRepository.save(self.model)
         
-        // Post notification that chat data has changed
-        await MainActor.run {
-            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
-        }
+        triggerListRefresh()
     }
 
     func shouldShowToolbar(_ message: MessageModel) -> Bool {
@@ -161,10 +176,6 @@ class ChatViewModel: Hashable {
             return true
         }
         return false
-    }
-
-    private func isBelowContextLimit() -> Bool {
-        return true
     }
     
     private func generateStreamedResponse(_ forIndex: Int, isContinued: Bool = false, excludeThinking: Bool = true, trimmedPrompt: String) {
@@ -179,7 +190,7 @@ class ChatViewModel: Hashable {
                     self.model.messages[forIndex].loading = false
                     self.model.messages[forIndex].text = "Looks like you're not connected to a model. Please check your connection settings."
                     try! messageRepository.save(self.model.messages[forIndex])
-                    NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+                    triggerListRefresh()
                     self.updateScrollView.toggle()
                 }
             }
@@ -205,8 +216,6 @@ class ChatViewModel: Hashable {
                     self.isThinking = false
                 }
 
-                // Remove everything from the beginning of the string up to and including the first </think> tag.
-                // The opening <think> tag may or may not be present; we only rely on the closing tag.
                 await MainActor.run {
                     if response.disconnect {
                         self.model.messages[forIndex].error = .apiError
@@ -217,13 +226,15 @@ class ChatViewModel: Hashable {
                         do {
                             try messageRepository.save(self.model.messages[forIndex])
                             // Post notification that chat data has changed
-                            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+                            triggerListRefresh()
                         } catch {
                             print("ERROR: \(error.localizedDescription)")
                         }
                         return
                     }
 
+                    // Remove everything from the beginning of the string up to and including the first </think> tag.
+                    // The opening <think> tag may or may not be present; we only rely on the closing tag.
                     if !excludeThinking || didThinkingFinish || !didThinkingStart {
                         let responseMessage = response.text ?? ""
                         let sanitizedResponse = responseMessage
@@ -241,8 +252,7 @@ class ChatViewModel: Hashable {
                                 print("STREAMING FINISHED SUCCESSFULLY")
                                 self.isStreaming = false
                                 try messageRepository.save(self.model.messages[forIndex])
-                                // Post notification that chat data has changed
-                                NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+                                triggerListRefresh()
                             }
                         } catch (let error) {
                             print("ERROR: \(error.localizedDescription)")
@@ -269,7 +279,7 @@ class ChatViewModel: Hashable {
                         do {
                             try messageRepository.save(self.model.messages[forIndex])
                             // Post notification that chat data has changed
-                            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+                            triggerListRefresh()
                             self.updateScrollView.toggle()
 
                         } catch {
@@ -291,9 +301,8 @@ class ChatViewModel: Hashable {
             self.model.messages[forIndex].loading = false
             self.model.messages[forIndex].text = "Looks like you're not connected to a model. Please check your connection settings."
             try! messageRepository.save(self.model.messages[forIndex])
-            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+            triggerListRefresh()
             self.updateScrollView.toggle()
-            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
 
             return
         }
@@ -346,14 +355,7 @@ class ChatViewModel: Hashable {
             }
             self.updateScrollView.toggle()
             
-            // Post notification that chat data has changed
-            NotificationCenter.default.post(name: .chatDataChanged, object: self.model)
+            triggerChatUpdate()
         }
     }
-}
-
-// MARK: - Notification Names
-extension Notification.Name {
-    static let chatDataChanged = Notification.Name("chatDataChanged")
-    static let chatStreamingChanged = Notification.Name("chatStreamingChanged")
 }
