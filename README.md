@@ -15,9 +15,9 @@ This repository contains the iOS app source. A separate Swift Package, SwiftLLMS
 ### Screenshots
 <div>
   
-![Chat list](Jax-AI-Site/assets/screenshots/Shot1.png)
+![Chat list](Screenshots/Shot1.png)
 
-![Screenshots collage](Jax-AI-Site/assets/screenshots/Shot3.png)
+![Screenshots collage](Screenshots/Shot3.png)
 
 </div>
 
