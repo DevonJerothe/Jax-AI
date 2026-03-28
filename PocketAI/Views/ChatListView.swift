@@ -9,7 +9,8 @@ import SwiftUI
 
 struct ChatListView: View {
     @Environment(NavigationManager.self) var navManager
-    @Environment(ChatListViewModel.self) var viewModel
+
+    @State private var viewModel: ChatListViewModel = ServiceContainer.shared.getChatListViewModel()
 
     private var connectionManager = ServiceContainer.shared
 
@@ -28,6 +29,7 @@ struct ChatListView: View {
                         header: Text("Characters").font(.title2).fontWeight(.bold)
                     ) {
                         CharacterCardsListView(viewModel: viewModel)
+                            .padding(.top, 12)
                             .listRowInsets(EdgeInsets())
                     }
                     .listSectionSeparator(.hidden)
@@ -51,7 +53,7 @@ struct ChatListView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        navManager.navigateToNewChat()
+                        navManager.navigateToCharacterCards()
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -141,7 +143,7 @@ struct AddCharacterButton: View {
         }
         .onTapGesture {
             // Navigate to add character
-            navManager.navigateToNewChat()
+            navManager.navigateToCharacterCards()
         }
     }
 }

@@ -55,6 +55,7 @@ class ChatListViewModel {
         do {
             let newChat = ChatModel(fromCard: fromCharacter)
             try chatRepository.save(newChat)
+            refreshData()
             return newChat
         } catch {
             print("Failed to save chat: \(error)")

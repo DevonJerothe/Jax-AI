@@ -13,13 +13,15 @@ struct PocketAIApp: App {
 
     @State var navManager: NavigationManager = .init()
     @State var serviceContainer: ServiceContainer = .shared
-    @State var chatListViewModel: ChatListViewModel = .init()
 
     init() {
         print("PocketAIApp initializing...")
         // Initialize database
         let _ = DBManager.shared
         print("Database initialized successfully")
+
+        // init chatListViewModel 
+        serviceContainer.setChatListViewModel()
     }
 
     var body: some Scene {
@@ -66,12 +68,14 @@ struct PocketAIApp: App {
             }
             .sheet(item: $navManager.presentedSheet) { sheet in
                 sheetView(for: sheet)
+                    .presentationDetents([.fraction(0.65)])
+                    .presentationBackground(.ultraThinMaterial)
+                    .ignoresSafeArea()
             }
             .tint(.primary)
         }
         .environment(navManager)
         .environment(serviceContainer)
-        .environment(chatListViewModel)
     }
 
     @ViewBuilder
@@ -80,16 +84,21 @@ struct PocketAIApp: App {
         case .chatView(let chat):
             ChatView(chatModel: chat)
                 .toolbar(.hidden, for: .tabBar)
-        case .characterView(_):
-            Text("Character View")
+        case .characterView(let character):
+            CharacterCardSettingsView(characterCard: character)
         case .characterCardsView:
             CharacterCardsView()
         case .settingsView:
             ConnectionSettingsView()
         case .newChatView(let createChar):
-            NewChatView(createCharacterCard: createChar)
+            // NewChatView(createCharacterCard: createChar)
+            CharacterCardSettingsView(isNew: createChar)
         case .chatSettings(let chat):
             ChatSettingsView(viewModel: chat)
+        case .hubArchiveView:
+            HubArchiveView()
+        case .chubImportView:
+            ChubImportView()
         }
     }
 
@@ -100,6 +109,8 @@ struct PocketAIApp: App {
             ChatSettingsView(viewModel: chat)
         case .newChat:
             NewChatView()
+        case .newTemplateView(let templateKey):
+            NewTemplateView(templateKey: templateKey)
         default:
             Text("TODO: Sheet View")
         }

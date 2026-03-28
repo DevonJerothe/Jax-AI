@@ -96,15 +96,15 @@ struct ChatModel: Hashable {
         characterCard = [newCard]
     }
 
-    func getFullPrompt(continueResponse: Bool = false, enableThinking: Bool = false) -> String {
+    func getFullPrompt(continueResponse: Bool = false, forceThinking: Bool = false) -> String {
         var prompt = "\nAssistant: "
         for message in messages {
             switch message.actor {
             case .user:
                 prompt += "\(message.text)\nAssistant: "
-                // if enableThinking {
-                //     prompt += "<think>\nOk, first we need to consider who we are and not to speak for the user."
-                // }
+                if forceThinking {
+                    prompt += "<think>\nOk, first we need to consider who we are and not to speak for the user."
+                }
             case .bot:
                 if !message.loading || continueResponse {
                     prompt += "\(message.text)"
@@ -118,7 +118,7 @@ struct ChatModel: Hashable {
         return prompt
     }
 
-    func autoTrimFullPrompt(continueResponse: Bool = false) async -> String {
+    func autoTrimFullPrompt(continueResponse: Bool = false, forceThinking: Bool = false) async -> String {
         let languageModelService = ServiceContainer.shared.getLanguageModelService()
         let settings = ServiceContainer.shared.connectionSettings
 
@@ -130,15 +130,22 @@ struct ChatModel: Hashable {
         let memoryTokens = await languageModelService.getTokenCount(string: memory)
 
         // Include the prompt template used with Kobold
-        let systemTemplate = TemplatePrompts().defaultRolePlayPrompt + TemplateInstructions().reasoningInstructions
+        let userTemplates = ServiceContainer.shared.connectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n")
+        let systemTemplate = userTemplates
         let systemTokens = await languageModelService.getTokenCount(string: systemTemplate)
 
         // Initial prefix token cost ("\nAssistant: ")
-        let prefix = "\nAssistant: "
+        var prefix = "\nAssistant: "
+        if forceThinking {
+            prefix += "<think>\nOk, first we need to consider who we are and not to speak for the user."
+        }
         let prefixTokens = await languageModelService.getTokenCount(string: prefix)
 
         // If fixed overhead already exhausts context, return just the prefix. Memory is supplied separately.
-        let fixedOverhead = memoryTokens + systemTokens + prefixTokens + reservedResponseTokens
+        var fixedOverhead = memoryTokens + prefixTokens + reservedResponseTokens
+        if continueResponse {
+            fixedOverhead += systemTokens
+        }
         print("Fixed Tokens: \(fixedOverhead)")
         if fixedOverhead >= maxContextTokens {
             return prefix
@@ -151,7 +158,10 @@ struct ChatModel: Hashable {
         for message in messages {
             switch message.actor {
             case .user:
-                let text = "\(message.text)\nAssistant: "
+                var text = "\(message.text)\nAssistant: "
+                if forceThinking {
+                    text += "<think>\nOk, first we need to consider who we are and not to speak for the user."
+                }
                 let tokens = await languageModelService.getTokenCount(string: text)
                 blocks.append(Block(text: text, tokens: tokens))
             case .bot:

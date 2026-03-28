@@ -11,7 +11,6 @@ import SwiftUI
 
 struct ChatView: View {
     @Environment(NavigationManager.self) var navManager
-    @Environment(ChatListViewModel.self) var chatListViewModel
 
     @State var viewModel: ChatViewModel
     @State var textPrompt: String = ""
@@ -152,13 +151,14 @@ struct ChatView: View {
         .onAppear {
             self.viewModel.updateScrollView.toggle()
             self.viewModel.isViewActive = true
-            self.viewModel.chatListViewModel = chatListViewModel 
         }
         .onDisappear {
             self.viewModel.isViewActive = false
         }
-        .onChange(of: chatListViewModel.chats) { _, newChats in
-            if let chat = newChats.first(where: { $0.id == viewModel.model.id }) {
+        .onChange(of: ServiceContainer.shared.getChatListViewModel().chats) { _, newChats in
+            // If the viewModel that is responsible for the streamed response is not the active viewModel we should update the status to sync the stream. 
+            // without this if the user stays on the chat view and the chat is streaming.. we are triggering the update twice - this is causing the update to freeze. 
+            if let chat = newChats.first(where: { $0.id == viewModel.model.id }), viewModel.isViewInSync == false {
                 self.viewModel.updateChatLoadingStatus(model: chat)
             }
         }

@@ -22,6 +22,8 @@ class NavigationManager {
         case chatSettings(ChatViewModel)
         case settingsView
         case newChatView(Bool)
+        case hubArchiveView
+        case chubImportView
     }
 
     enum SheetType: Identifiable {
@@ -29,6 +31,8 @@ class NavigationManager {
         case connectionSettings
         case characterDetails(CharacterCardModel)
         case chatSettings(ChatViewModel)
+        case newTemplateView(String?)
+        case hubArchiveView
 
         var id: String {
             switch self {
@@ -40,6 +44,10 @@ class NavigationManager {
                 return "characterDetails_\(character.id)"
             case .chatSettings(let chat):
                 return "chatDetails_\(chat.model.id)"
+            case .newTemplateView(let templateKey):
+                return "newTemplateView_\(templateKey ?? "new")"
+            case .hubArchiveView:
+                return "hubArchiveView"
             }
         }
     }
@@ -159,7 +167,6 @@ class NavigationManager {
         } else {
             currentTab = .characterList
             clearPath(for: .characterList)
-            characterListPath.append(Destination.characterCardsView)
         }
     }
 
@@ -189,6 +196,31 @@ class NavigationManager {
             clearPath(for: .chatList)
             chatListPath.append(Destination.newChatView(createCharacterCard))
         }
+    }
+
+    func navigateToHubArchive(keepCurrentPath: Bool = false) {
+        presentedSheet = nil
+        if keepCurrentPath {
+            appendToCurrentPath(Destination.hubArchiveView)
+        } else {
+            currentTab = .characterList
+            clearPath(for: .characterList)
+            characterListPath.append(Destination.hubArchiveView)
+        }
+    }
+
+    func navigateToChubImport(keepCurrentPath: Bool = false) {
+        if keepCurrentPath {
+            appendToCurrentPath(Destination.chubImportView)
+        } else {
+            currentTab = .characterList
+            clearPath(for: .characterList)
+            characterListPath.append(Destination.chubImportView)
+        }
+    }
+
+    func showNewTemplateView(templateKey: String? = nil) {
+        presentedSheet = .newTemplateView(templateKey)
     }
 
     /// Navigates to a specified destination within the current tab's navigation stack

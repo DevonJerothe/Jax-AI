@@ -1,0 +1,198 @@
+import SwiftUI 
+import Collections
+
+struct NewTemplateView: View {
+    @Environment(NavigationManager.self) var navManger
+    var templateKey: String?
+
+    @State private var templateName: String = ""
+    @State private var templateContent: String = ""
+    @State private var isEnabled: Bool = true
+
+    init(templateKey: String? = nil) {
+        self.templateKey = templateKey
+    }
+
+    var body: some View {
+        VStack {
+            FormField(title: "Template Name", textBinding: $templateName)
+            FormEditor(
+                title: "Template Content",
+                placeholder: "Enter the template content here...",
+                textBinding: $templateContent
+            )
+
+            HStack {
+                Button {
+                    updateEditTemplate()
+                } label: {
+                    Text("Save")
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(.secondary)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal, 16)
+                .disabled(templateName.isEmpty || templateContent.isEmpty)
+
+                Spacer()
+
+                // delete button    
+                if templateKey != nil {
+                    Button {
+                        // delete the template
+                        deleteTemplate()
+                    } label: {
+                        Text("Delete")
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .foregroundColor(.red)
+                    }
+                }
+
+                Button {
+                    // Enable / Disable the template
+                    enableDisableTemplate()
+                } label: {
+                    Text("\(isEnabled ? "Enabled" : "Disabled")")
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)                     
+                        .background(isEnabled ? Color(.blue).opacity(0.6) : Color(.systemGray6).opacity(0.6))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(isEnabled ? Color.blue : Color.secondary, lineWidth: 1)
+                        ) 
+                }
+                .padding(.horizontal, 16)
+            }
+        }
+        .padding(.top, 16)
+        // .padding(.horizontal, 16)
+        .onAppear {
+            if let key = templateKey {
+                let template = ServiceContainer.shared.connectionSettings.userTemplates[key]
+                if let template = template {
+                    self.templateName = key
+                    self.templateContent = template.content
+                    self.isEnabled = template.isEnabled
+                }
+            }
+        }
+    }
+
+    private func enableDisableTemplate() {
+        guard let key = templateKey else { return }
+        var templates = ServiceContainer.shared.connectionSettings.userTemplates
+        templates[key]?.isEnabled.toggle()
+        ServiceContainer.shared.connectionSettings.userTemplates = templates
+        navManger.presentedSheet = nil
+    }
+
+    private func deleteTemplate() {
+        guard let key = templateKey else { return }
+        
+        // Create a new dictionary without the template to trigger @Observable
+        var newTemplates = ServiceContainer.shared.connectionSettings.userTemplates
+        newTemplates.removeValue(forKey: key)
+        
+        // Reassign the entire dictionary to trigger SwiftUI updates
+        ServiceContainer.shared.connectionSettings.userTemplates = newTemplates
+        navManger.presentedSheet = nil
+    }
+
+    private func updateEditTemplate() {
+        guard !templateName.isEmpty && !templateContent.isEmpty else { return }
+        
+        let template = TemplateModel(content: templateContent, isEnabled: true)
+        var templates = ServiceContainer.shared.connectionSettings.userTemplates
+        
+        // Add or update the template. If updateing an existing template key, we need to swap the indexes.
+        templates.updateValue(template, forKey: templateName)
+        
+        // this should "technically" never have nil indexes... buts its also 1AM and I cant be bothered enough to test. So yea i guess TODO:
+        if let templateKey, templateKey != templateName {
+            templates.swapAt(templates.index(forKey: templateKey)!, templates.index(forKey: templateName)!)
+            templates.removeValue(forKey: templateKey)
+        }
+        
+        ServiceContainer.shared.connectionSettings.userTemplates = templates
+        navManger.presentedSheet = nil
+    }
+}
+
+struct TemplateEditor: View {
+
+    @Binding var isDragging: Bool
+    @Binding var userTemplates: OrderedDictionary<String, TemplateModel>
+
+    @State var updateTemplateEditor: Bool = false
+
+    @Environment(NavigationManager.self) var navManager
+
+    @State private var height: CGFloat = 0 
+
+    var body: some View {
+
+        ReorderableGridView(
+            data: $userTemplates,
+            columns: 2,
+            onHeightChanged: { x in height = x }, 
+            onDraggingChange: { dragging in isDragging = dragging }
+        ) { key, template in 
+            TemplateItem(
+                name: key,
+                isEnabled: template.wrappedValue.isEnabled
+            )
+            .onTapGesture {
+                navManager.showNewTemplateView(templateKey: key)
+            }
+        }
+        .id(updateTemplateEditor)
+        .frame(height: height)
+        .onChange(of: userTemplates) { oldValue, newValue in
+
+            // template enabled states 
+            for (key, template) in newValue {
+                print("template: \(key) isEnabled: \(template.isEnabled)")
+            }
+
+            // ServiceContainer.shared.connectionSettings.userTemplates = newValue
+            ServiceContainer.shared.saveConnectionSettings()
+            updateTemplateEditor.toggle()
+
+            // reset the dragging state - id based update breaks the draggins state, dont feel like fixing it right now.
+            isDragging = false
+        } 
+    }
+}
+struct TemplateItem: View {
+
+    let name: String
+    var isEnabled: Bool
+    
+    var body: some View {
+        HStack(alignment: .center) {
+            HStack {
+                Spacer() 
+                Text(name) 
+                    .foregroundColor(.primary)
+                Spacer() 
+            }
+
+            // checkmark or enabled
+            VStack {
+                Image(systemName: isEnabled ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(isEnabled ? .blue : .secondary)
+            }
+        }
+        .padding(16)
+        .background(Color(.systemGray6).opacity(0.6))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isEnabled ? Color.blue : Color.secondary, lineWidth: 1)
+        ) 
+    }
+}

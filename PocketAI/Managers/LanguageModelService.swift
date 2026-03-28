@@ -96,6 +96,9 @@ class LanguageModelService {
     }
     
     func sendStreamedMessage(chatModel: ChatModel, continued: Bool = false, trimmedPrompt: String) -> AsyncStream<ModelResponse> {
+        // fetch the latest connection settings 
+        self.updateConnection()
+
         // Map our internal message model to the request body message
         var requestMessages = chatModel.messages.map { message in
             let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
@@ -128,13 +131,16 @@ class LanguageModelService {
             guard let koboldManager = koboldManager else {
                 fatalError("KoboldManager not connected")
             }
+
+            print("Templates used: \(connectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"))") 
             
             let promptBuilder = KoboldRequestBuilder(
                 prompt: trimmedPrompt,
                 memory: chatModel.getFullMemory(),
                 maxContextLength: connectionSettings.contextLength ?? 4096,
                 maxLength: connectionSettings.responseLength ?? 240,
-                promptTemplate: TemplatePrompts().defaultRolePlayPrompt + TemplateInstructions().reasoningInstructions
+                temperature: connectionSettings.temperature ?? 1.15,
+                promptTemplate: continued ? "" : connectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n")
             )
             
             streamResponse = koboldManager.streamMessage(builder: promptBuilder)
@@ -182,6 +188,9 @@ class LanguageModelService {
     
     // Put all context switching of service type in this class and out of the view models.
     func sendMessage(chatModel: ChatModel, continued: Bool = false) async -> ModelResponse? {
+        // fetch the latest connection settings 
+        self.updateConnection()
+
         // Map our internal message model to the request body message
         var requestMessages = chatModel.messages.map { message in
             let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
@@ -208,12 +217,15 @@ class LanguageModelService {
         
         switch connectionSettings.connectionType {
         case .KoboldAPI:
+            print("Templates used: \(connectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"))")        
+
             let promptBuilder = KoboldRequestBuilder(
-                prompt: await chatModel.autoTrimFullPrompt(continueResponse: continued),
+                prompt: await chatModel.autoTrimFullPrompt(continueResponse: continued, forceThinking: connectionSettings.forceThinking),
                 memory: chatModel.getFullMemory(),
                 maxContextLength: connectionSettings.contextLength ?? 4096,
                 maxLength: connectionSettings.responseLength ?? 240,
-                promptTemplate: TemplatePrompts().defaultRolePlayPrompt + TemplateInstructions().reasoningInstructions
+                temperature: connectionSettings.temperature ?? 1.15,
+                promptTemplate: connectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n")
             )
             
             serviceResponse = await koboldManager?.sendMessage(builder: promptBuilder)
