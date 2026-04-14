@@ -165,20 +165,20 @@ struct RepresentableTextView: UIViewRepresentable {
         // but often gestureRecognizerShouldBegin is sufficient for priority.
         // Test if removing this causes issues. If scrolling works fine without it, remove it.
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-             // Generally, we don't want our discrete swipes to interfere with the continuous pan gesture for scrolling.
-             // Let's be more specific: only allow simultaneous recognition if *neither* is our swipe down.
-             // Or simply return false if gestureRecognizerShouldBegin handles the priority correctly.
-             // Let's try returning false initially. If it breaks something, we can refine.
+            // Generally, we don't want our discrete swipes to interfere with the continuous pan gesture for scrolling.
+            // Let's be more specific: only allow simultaneous recognition if *neither* is our swipe down.
+            // Or simply return false if gestureRecognizerShouldBegin handles the priority correctly.
+            // Let's try returning false initially. If it breaks something, we can refine.
 
-             // Check if it's the text view's internal pan gesture
-             guard let textView = gestureRecognizer.view as? UITextView else { return false }
-             if otherGestureRecognizer == textView.panGestureRecognizer {
-                 // Don't recognize our swipes simultaneously with the scroll pan gesture.
-                 return false
-             }
-             // Allow simultaneous recognition for other potential gesture combinations if needed.
-             return true // Reverted: Let's allow simultaneous and let UIKit figure it out based on shouldBegin.
-         }
+            // Check if it's the text view's internal pan gesture
+            guard let textView = gestureRecognizer.view as? UITextView else { return false }
+            if otherGestureRecognizer == textView.panGestureRecognizer {
+                // Don't recognize our swipes simultaneously with the scroll pan gesture.
+                return false
+            }
+            // Allow simultaneous recognition for other potential gesture combinations if needed.
+            return true // Reverted: Let's allow simultaneous and let UIKit figure it out based on shouldBegin.
+        }
     }
 }
 

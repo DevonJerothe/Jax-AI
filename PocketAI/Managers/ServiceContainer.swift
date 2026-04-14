@@ -20,6 +20,8 @@ class ServiceContainer {
     private var messageRepository: MessageRepository = MessageRepository()
     private var chatRepository: ChatRepository = ChatRepository()
     private var characterRepository: CharacterRepository = CharacterRepository()
+
+    private var chatListViewModel: ChatListViewModel?
     
     // MARK: - Computed Properties
     var isConnected: Bool {
@@ -50,6 +52,24 @@ class ServiceContainer {
         } else {
             self.languageModelService = LanguageModelService(connectionSettings: .defaults)
         }
+    }
+
+    func setChatListViewModel(viewModel: ChatListViewModel = ChatListViewModel()) {
+        self.chatListViewModel = viewModel
+    }
+
+    func getChatListViewModel() -> ChatListViewModel {
+        return self.chatListViewModel!
+    }
+
+    @MainActor
+    func refreshChatListViewModel() {
+        self.chatListViewModel?.refreshData()
+    }
+
+    @MainActor
+    func updateChatInListViewModel(_ updatedChat: ChatModel) {
+        self.chatListViewModel?.updateChatInList(updatedChat)
     }
 
     func getLanguageModelService() -> LanguageModelService {

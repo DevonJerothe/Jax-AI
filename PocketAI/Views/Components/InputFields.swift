@@ -49,7 +49,7 @@ public struct FormEditor: View {
                 }
 
                 TextEditor(text: textBinding)
-                    .frame(minHeight: 75, maxHeight: 300)
+                    .frame(height: 275)
                     .scrollContentBackground(.hidden)  
             }
             .styledFormField()

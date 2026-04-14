@@ -32,7 +32,7 @@ struct CharacterCardModel: Hashable {
     var imageData: Data?
     
     init(
-        name: String,
+        name: String? = nil,
         description: String? = nil,
         cardTagline: String? = nil,
         personality: String? = nil,

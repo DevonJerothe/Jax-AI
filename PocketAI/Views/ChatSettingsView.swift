@@ -6,12 +6,15 @@
 //
 
 import SwiftUI
+import Collections
 
 struct ChatSettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(NavigationManager.self) var navManager
     var viewModel: ChatViewModel
 
     @State private var characterCard: CharacterCardModel
+    @State private var isDragging: Bool = false 
 
     init(viewModel: ChatViewModel) {
         self.viewModel = viewModel
@@ -26,10 +29,23 @@ struct ChatSettingsView: View {
         )
     }
 
+    private var temperatureBinding: Binding<Double> {
+        Binding<Double>(
+            get: { ServiceContainer.shared.connectionSettings.temperature ?? 0.6 },
+            set: { ServiceContainer.shared.connectionSettings.temperature = $0 }
+        )
+    }
+
+    private var userTemplatesBinding: Binding<OrderedDictionary<String, TemplateModel>> {
+        Binding<OrderedDictionary<String, TemplateModel>>(
+            get: { ServiceContainer.shared.connectionSettings.userTemplates },
+            set: { ServiceContainer.shared.connectionSettings.userTemplates = $0 }
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack {
-
                 // MARK: - Connection Related Settings
                 // this will change the connections settings for the app and all chats
                 // potentially we could have a per chat connection settings option
@@ -61,9 +77,45 @@ struct ChatSettingsView: View {
                 .cornerRadius(12)
                 .padding(.horizontal, 16)
 
+                // Sampler Settings
+                VStack(alignment: .leading) {
+                    HStack {
+                        Text("Temperature")
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text("\(temperatureBinding.wrappedValue)")
+                            .foregroundColor(.secondary)
+                            .font(.subheadline)
+                    }
+                    Slider(value: temperatureBinding, in: 0.1...2.0, step: 0.05)
+                }
+                .padding()
+                .background(Color(.systemGray6).opacity(0.6))
+                .cornerRadius(12)
+                .padding(.horizontal, 16)
+
+                VStack{
+                    // Force Thinking Toggle
+                    Toggle(isOn: Binding(
+                        get: { ServiceContainer.shared.connectionSettings.forceThinking },
+                        set: { ServiceContainer.shared.connectionSettings.forceThinking = $0 }
+                    )) {
+                        Text("Force Thinking")
+                            .foregroundColor(.primary)
+                    }
+                    .padding()
+                    .background(Color(.systemGray6).opacity(0.6))
+                    .cornerRadius(12)
+
+                    Text("You may find if the model does not close the </think> tag, the response does not stream. It should still load when complete.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 16)
+
                 // MARK: - Chat Settings which really is just the character card
                 HStack {
-                    Text("Instructions")
+                    Text("Card Settings")
                         .font(.title2)
                         .fontWeight(.semibold)
                         .foregroundColor(.primary) 
@@ -72,28 +124,75 @@ struct ChatSettingsView: View {
                 .padding(.top, 24)
                 .padding(.horizontal, 16)
 
-                FormField(title: "Chat Name", textBinding: Binding(
-                    get: { characterCard.name ?? "" },
-                    set: { characterCard.name = $0 }
-                ))
+                HStack {
+                    AvatarImage(image: characterCard.getAvatarImg(), size: 50)
+                        .padding(.trailing, 12)
 
-                FormEditor(
-                    title: "Description",
-                    placeholder: "A brief description of the character...",
-                    textBinding: Binding(
-                        get: { characterCard.description ?? "" },
-                        set: { characterCard.description = $0 }
-                    )
-                )
+                    VStack(alignment: .leading) {
+                        Text(characterCard.name ?? "")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary) 
 
-                FormEditor(
-                    title: "First Message",
-                    placeholder: "The first message to send to the AI...",
-                    textBinding: Binding(
-                        get: { characterCard.firstMessage ?? "" },
-                        set: { characterCard.firstMessage = $0 }
+                        Text(characterCard.cardTagline ?? "")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(Color(.systemGray6).opacity(0.6))
+                .cornerRadius(12)
+                .padding(.horizontal, 16)
+                .onTapGesture {
+                    navManager.navigateToCharacter(character: characterCard, keepCurrentPath: true)
+                }
+
+                VStack(alignment: .leading) {
+                    HStack {
+                        Text("Template Settings")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary) 
+                        Spacer()
+
+                        Button(action: {
+                            navManager.showNewTemplateView()
+                        }) {
+                            Image(systemName: "plus.circle")
+                                .foregroundColor(.primary)
+                                .font(.title2)
+                        }
+                    }
+
+                    Text("Templates can be used to set instructions on how the model should responed and in what format / style. This will be added to the memory and used for every message.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                }
+                .padding(.top, 24)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+
+                if userTemplatesBinding.wrappedValue.count > 0 {
+                    TemplateEditor(
+                        isDragging: $isDragging,
+                        userTemplates: userTemplatesBinding
                     )
-                )
+                } else {
+                    HStack {
+                        Spacer() 
+                        Text("No templates added.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Spacer() 
+                    }
+                    .padding(.vertical, 24)
+                }
 
                 // Mark: - Clear Chat Button 
                 HStack {
@@ -127,7 +226,13 @@ struct ChatSettingsView: View {
                 }
             }
         }
+        .onAppear {
+            if let card = viewModel.fetchCharacterCard() {
+                self.characterCard = card
+            }
+        }
         .scrollDismissesKeyboard(.immediately)
         .scrollIndicators(.hidden)
+        .scrollDisabled(isDragging)
     }
 }

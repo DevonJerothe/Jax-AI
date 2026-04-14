@@ -16,6 +16,9 @@ struct CharacterCardsView: View {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(viewModel.characterCards, id: \.self) { card in
                             CharacterCardPreview(card: card)
+                                .onTapGesture {
+                                    navManager.navigateToCharacter(character: card, keepCurrentPath: true)
+                                }
                                 .withBottomContextMenu {
                                     Button(role: .destructive) {
                                         viewModel.deleteCharacterCard(card: card)
@@ -32,13 +35,22 @@ struct CharacterCardsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        navManager.navigateToNewChat(keepCurrentPath: true, createCharacterCard: true)
-                    }) {
-                        Image(systemName: "plus")
+                    Menu {
+                        Button("Create From Scratch") {
+                            navManager.navigateToNewChat(keepCurrentPath: true, createCharacterCard: true)
+                        }
+                        Button("Import from ChubAI") {
+                            navManager.navigateToChubImport(keepCurrentPath: true)
+                        }
+                        Button("Browse the Hub") {
+                            navManager.navigateToHubArchive(keepCurrentPath: true) 
+                        }
+                    } label: {
+                        Image(systemName: "plus") 
                     }
                 }
             }
+            .toolbar(.visible, for: .navigationBar)
         }
         .onAppear {
             viewModel.loadCharacterCards()

@@ -18,6 +18,7 @@ class ChatViewModel: Hashable {
     private let messageRepository: MessageRepository
     private let chatRepository: ChatRepository
     private let characterRepository: CharacterRepository
+    private let chatListViewModel: ChatListViewModel 
 
     var model: ChatModel
     var connectionSettings: ConnectionSettingsModel
@@ -45,7 +46,7 @@ class ChatViewModel: Hashable {
     private var lastHapticTriggerAt: Date? = nil
     var newInstance: Bool = true
     var isViewActive: Bool = false
-    var chatListViewModel: ChatListViewModel? 
+    var isViewInSync: Bool = false
 
     // MARK: - Hashable conformance
     func hash(into hasher: inout Hasher) {
@@ -61,7 +62,8 @@ class ChatViewModel: Hashable {
         languageModelService: LanguageModelService = ServiceContainer.shared.getLanguageModelService(),
         messageRepository: MessageRepository = ServiceContainer.shared.getMessageRepository(),
         chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository(),
-        characterRepository: CharacterRepository = ServiceContainer.shared.getCharacterRepository()
+        characterRepository: CharacterRepository = ServiceContainer.shared.getCharacterRepository(),
+        chatListViewModel: ChatListViewModel = ServiceContainer.shared.getChatListViewModel()
     ) {
         self.model = chatModel
         self.languageModelService = languageModelService
@@ -69,6 +71,7 @@ class ChatViewModel: Hashable {
         self.chatRepository = chatRepository
         self.connectionSettings = ServiceContainer.shared.connectionSettings
         self.characterRepository = characterRepository
+        self.chatListViewModel = chatListViewModel
 
         // update booleans based on the chat model 
         self.isStreaming = self.model.isStreaming
@@ -86,23 +89,30 @@ class ChatViewModel: Hashable {
 
     /// trigger the chatListViewModel to refresh all data 
     private func triggerListRefresh() {
+        print("triggerListRefresh() called")
         Task {
             await MainActor.run {
-                chatListViewModel?.refreshData()
+                chatListViewModel.refreshData()
             }
         }
     }
 
     /// Trigger the ChatListViewModel to update the chat in the list. This will allow us to update list items based on chat status changes. 
     private func triggerChatUpdate() {
+        print("triggerChatUpdate() called")
         Task {
             await MainActor.run {
-                chatListViewModel?.updateChatInList(model)
+                chatListViewModel.updateChatInList(model)
             }
         }
     }
 
+    func fetchCharacterCard() -> CharacterCardModel? {
+        return try! characterRepository.get(id: model.characterCard.first?.id ?? UUID())
+    }
+
     func updateChatLoadingStatus(model: ChatModel) {
+        print("updateChatLoadingStatus() called")
         Task {
             await MainActor.run {
                 self.model = model 
@@ -123,6 +133,7 @@ class ChatViewModel: Hashable {
             self.model.addMessage(forActor: .bot, isLoading: true)
             self.updateScrollView.toggle()
         }
+        isViewInSync = true 
         await generateResponse(model.messages.count - 1)
     }
 
@@ -133,6 +144,7 @@ class ChatViewModel: Hashable {
             self.model.messages[lastIndex].loading = true
             self.updateScrollView.toggle()
         }
+        isViewInSync = true 
         await generateResponse(lastIndex, isContinued: continueResponse)
     }
 
@@ -162,7 +174,6 @@ class ChatViewModel: Hashable {
             self.model.messages[lastIndex].text = newText
         }
         try! messageRepository.save(self.model.messages[lastIndex])
-
         triggerListRefresh()
     }
     
@@ -212,13 +223,13 @@ class ChatViewModel: Hashable {
                 // To check, we want to find the first non-whitespace character and see if it's '<'.
                 // This way we can stream the response without waiting if not excludeing thinking.. 
                 let firstNonWhitespaceChar = response.text?.first(where: { !$0.isWhitespace })
-                let didThinkingStart = firstNonWhitespaceChar == "<"
+                let didThinkingStart = firstNonWhitespaceChar == "<" || ServiceContainer.shared.connectionSettings.forceThinking
                 let didThinkingFinish = (response.text?.contains("</think>")) ?? false || isContinued
 
-                if didThinkingStart && !didThinkingFinish {
-                    self.isThinking = true
-                } else {
-                    self.isThinking = false
+                // Only update isThinking if its value is changing, to avoid unnecessary state updates.
+                let shouldBeThinking = didThinkingStart && !didThinkingFinish
+                if self.isThinking != shouldBeThinking {
+                    self.isThinking = shouldBeThinking
                 }
 
                 await MainActor.run {
@@ -226,6 +237,8 @@ class ChatViewModel: Hashable {
                         self.model.messages[forIndex].error = .apiError
                         self.model.messages[forIndex].text = response.text ?? ""
                         self.model.messages[forIndex].loading = false
+                        self.isStreaming = false 
+                        self.isThinking = false 
                         self.updateScrollView.toggle()
 
                         do {
@@ -251,6 +264,8 @@ class ChatViewModel: Hashable {
                         self.model.messages[forIndex].text = sanitizedResponse
 
                         self.updateScrollView.toggle()
+
+                        self.triggerChatUpdate()
 
                         do {
                             if response.streaming == false {
@@ -279,6 +294,7 @@ class ChatViewModel: Hashable {
                         print("STREAMING FAILED")
                         self.model.messages[forIndex].loading = false
                         self.isStreaming = false
+                        self.isThinking = false 
                         self.model.messages[forIndex].text = response.text ?? ""
                         
                         do {
@@ -317,7 +333,7 @@ class ChatViewModel: Hashable {
             ///Right now only kobold needs to filter out the thinking manually. OpenRouter does this at the API level.
             //Also auto trimmed prompts require await.. so have to do it here. We really need to keep tokens on the message model.
             let excludeThinking: Bool = connectionSettings.connectionType == .KoboldAPI
-            let trimmedPrompt = await model.autoTrimFullPrompt(continueResponse: isContinued)
+            let trimmedPrompt = await model.autoTrimFullPrompt(continueResponse: isContinued, forceThinking: ServiceContainer.shared.connectionSettings.forceThinking)
             return generateStreamedResponse(forIndex, isContinued: isContinued, excludeThinking: excludeThinking, trimmedPrompt: trimmedPrompt)
         }
         

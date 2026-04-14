@@ -34,6 +34,12 @@ class CharacterRepository: Repository {
         }
     }
 
+    func get(id: UUID) throws -> CharacterCardModel? {
+        try dbManager.read { db in
+            return try CharacterCardModel.filter(Column("id") == id.uuidString).fetchOne(db)
+        }
+    }
+
     func save(_ item: CharacterCardModel) throws {
         _ = try dbManager.write { db in 
             try item.save(db)
