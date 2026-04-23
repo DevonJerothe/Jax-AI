@@ -155,9 +155,9 @@ class LanguageModelService {
                 maxTokens: connectionSettings.responseLength ?? 240,
                 stream: true,
                 systemPromptTemplate: TemplatePrompts().defaultRolePlayPrompt,
-                characterDescription: chatModel.characterCard.first?.description,
-                characterPersonality: chatModel.characterCard.first?.personality,
-                characterScenario: chatModel.characterCard.first?.scenario
+                characterDescription: chatModel.characterCards.first?.description,
+                characterPersonality: chatModel.characterCards.first?.personality,
+                characterScenario: chatModel.characterCards.first?.scenario
             )
             
             streamResponse = openRouterManager.streamMessage(builder: promptBuilder)
@@ -236,9 +236,9 @@ class LanguageModelService {
                 maxTokens: connectionSettings.responseLength ?? 240,
                 stream: false,
                 systemPromptTemplate: TemplatePrompts().defaultRolePlayPrompt,
-                characterDescription: chatModel.characterCard.first?.description,
-                characterPersonality: chatModel.characterCard.first?.personality,
-                characterScenario: chatModel.characterCard.first?.scenario
+                characterDescription: chatModel.characterCards.first?.description,
+                characterPersonality: chatModel.characterCards.first?.personality,
+                characterScenario: chatModel.characterCards.first?.scenario
             )
             
             serviceResponse = await openRouterManager?.sendMessage(builder: promptBuilder)

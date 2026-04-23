@@ -65,7 +65,7 @@ struct ChatBubbleView: View {
                         } else {
                             Markdown(
                                 message.getRolePlayText(
-                                    cardName: viewModel.model.characterCard.first?.name
+                                    cardName: viewModel.model.characterCards.first?.name
                                         ?? "")
                             )
                             .markdownCodeSyntaxHighlighter(
@@ -179,7 +179,7 @@ struct ChatBubbleView: View {
                                         // Enter editing mode
                                         editedText = message.getRolePlayText(
                                             cardName: viewModel.model
-                                                .characterCard.first?.name ?? "")  // Initialize editor text
+                                                .characterCards.first?.name ?? "")  // Initialize editor text
                                         isEditing = true
                                         viewModel.editingMessageID = message.id
                                     }
@@ -267,7 +267,7 @@ struct ChatBubbleView: View {
                         VStack(alignment: .trailing) {
                             Markdown(
                                 message.getRolePlayText(
-                                    cardName: viewModel.model.characterCard.first?.name
+                                    cardName: viewModel.model.characterCards.first?.name
                                         ?? "")
                             )
                             .foregroundStyle(.black)
@@ -332,7 +332,7 @@ struct ChatBubbleView: View {
                                     // Enter editing mode
                                     editedText = message.getRolePlayText(
                                         cardName: viewModel.model
-                                            .characterCard.first?.name ?? "")  // Initialize editor text
+                                            .characterCards.first?.name ?? "")  // Initialize editor text
                                     isEditing = true
                                     viewModel.editingMessageID = message.id
                                 }

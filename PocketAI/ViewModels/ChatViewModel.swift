@@ -10,38 +10,22 @@ import SwiftUI
 import SwiftLLMSDK
 import UIKit
 
+@MainActor
 @Observable
-class ChatViewModel: Hashable {
+class ChatViewModel {
     var id: UUID = UUID()
 
-    private var languageModelService: LanguageModelService 
-    private let messageRepository: MessageRepository
-    private let chatRepository: ChatRepository
-    private let characterRepository: CharacterRepository
-    private let chatListViewModel: ChatListViewModel 
+    private var languageModelService: LanguageModelService
+    private var chatStore: ChatStore
+    private var chatId: UUID
 
-    var model: ChatModel
-    var connectionSettings: ConnectionSettingsModel
-    var isConnected: Bool {
-        return serviceContainer.isConnected
+    var model: ChatModel? {
+        chatStore.chats.first(where: { $0.id == chatId })
     }
 
     var updateScrollView: Bool = false
     var showSettings: Bool = false
-    var isStreaming: Bool = false {
-        didSet {
-            self.model.isStreaming = self.isStreaming
-            self.model.isLoading = self.isStreaming
-            triggerChatUpdate()
-        }
-    }
-    var isThinking: Bool = false {
-        didSet {
-            self.model.isThinking = self.isThinking
-            triggerChatUpdate()
-        }
-    }
-    var serviceContainer: ServiceContainer = ServiceContainer.shared
+    
     var editingMessageID: UUID?
     private var lastHapticTriggerAt: Date? = nil
     var newInstance: Bool = true
@@ -108,7 +92,7 @@ class ChatViewModel: Hashable {
     }
 
     func fetchCharacterCard() -> CharacterCardModel? {
-        return try! characterRepository.get(id: model.characterCard.first?.id ?? UUID())
+        return try! characterRepository.get(id: model.characterCards.first?.id ?? UUID())
     }
 
     func updateChatLoadingStatus(model: ChatModel) {

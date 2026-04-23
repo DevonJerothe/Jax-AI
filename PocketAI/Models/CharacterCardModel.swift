@@ -24,10 +24,9 @@ struct CharacterCardModel: Hashable {
     var altGreetings: [String]?
     var tags: [String]?
     var createdAt: Date = Date()
+    var isPrivate: Bool = false
 
-    // IDs of chats that use this character card
-    var chats: [String] = []
-
+    var chats: [ChatModel] = []
     var imageURL: URL?
     var imageData: Data?
     
@@ -43,7 +42,7 @@ struct CharacterCardModel: Hashable {
         altGreetings: [String] = [],
         tags: [String] = [],
         imageData: Data? = nil,
-        chats: [String] = []
+        chats: [ChatModel] = []
     ) {
         self.name = name
         self.description = description
@@ -81,48 +80,6 @@ struct CharacterCardModel: Hashable {
         self.imageData = fromChub.pngData
     }
 
-    // MARK: - Hashable conformance
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-        hasher.combine(name)
-        hasher.combine(description)
-        hasher.combine(cardTagline)
-        hasher.combine(personality)
-        hasher.combine(firstMessage)
-        hasher.combine(imagePath)
-        hasher.combine(messageExample)
-        hasher.combine(scenario)
-        hasher.combine(systemPrompt)
-        hasher.combine(altGreetings)
-        hasher.combine(tags)
-        hasher.combine(createdAt)
-        hasher.combine(chats)
-        hasher.combine(imageData)
-    }
-    
-    static func == (lhs: CharacterCardModel, rhs: CharacterCardModel) -> Bool {
-        // Break up the long comparison into multiple lines for better readability and performance
-        guard lhs.id == rhs.id,
-            lhs.name == rhs.name,
-            lhs.description == rhs.description,
-            lhs.cardTagline == rhs.cardTagline,
-            lhs.personality == rhs.personality,
-            lhs.firstMessage == rhs.firstMessage,
-            lhs.imagePath == rhs.imagePath,
-            lhs.messageExample == rhs.messageExample,
-            lhs.scenario == rhs.scenario,
-            lhs.systemPrompt == rhs.systemPrompt,
-            lhs.altGreetings == rhs.altGreetings,
-            lhs.tags == rhs.tags,
-            lhs.createdAt == rhs.createdAt,
-            lhs.chats == rhs.chats,
-            lhs.imageData == rhs.imageData else 
-        {
-            return false
-        }
-        return true
-    }
-
     // MARK: - Helping functions
     func getAvatarImg() -> Image? {
         if let imgData = imageData, let uiImage = UIImage(data: imgData) {
@@ -132,67 +89,75 @@ struct CharacterCardModel: Hashable {
     }
 }
 
-extension CharacterCardModel: TableRecord, FetchableRecord, PersistableRecord {
-    static let databaseTableName = "char_cards"
+extension CharacterCardModel {
+    init(record: CharacterCardRecord) {
+        self.id = UUID(uuidString: record.id) ?? UUID() 
+        self.name = record.name
+        self.description = record.description
+        self.cardTagline = record.cardTagline
+        self.personality = record.personality
+        self.firstMessage = record.firstMessage
+        self.imagePath = record.imagePath
+        self.messageExample = record.messageExample
+        self.scenario = record.scenario
+        self.systemPrompt = record.systemPrompt
+        self.createdAt = record.createdAt
+        self.imageData = record.imageData
+        self.isPrivate = record.isPrivate
 
-    init(row: GRDB.Row) throws {
-        id = UUID(uuidString: row["id"]!)!
-        name = row["name"]
-        description = row["description"]
-        cardTagline = row["cardTagline"]
-        personality = row["personality"]
-        firstMessage = row["firstMessage"]
-        imagePath = row["imagePath"]
-        messageExample = row["messageExample"]
-        scenario = row["scenario"]
-        systemPrompt = row["systemPrompt"]
-        createdAt = row["createdAt"]
-        imageData = row["imageData"]
+        self.altGreetings = try? record.altGreetings?.decodeStringArray() ?? []
+        self.tags = try? record.tags?.decodeStringArray() ?? []
 
-        if let urlString = row["imagePath"] as? String {
-            imageURL = URL(string: urlString)
-        }
-
-        // Decode JSON strings to arrays
-        if let altGreetingsString = row["altGreetings"] as? String,
-           let altGreetingsData = altGreetingsString.data(using: .utf8) {
-            altGreetings = try JSONDecoder().decode([String].self, from: altGreetingsData)
-        }
-        
-        if let tagsString = row["tags"] as? String,
-           let tagsData = tagsString.data(using: .utf8) {
-            tags = try JSONDecoder().decode([String].self, from: tagsData)
-        }
+        self.chats = []
+        self.imageURL = record.imagePath.flatMap(URL.init(string:))
     }
 
-    func encode(to container: inout GRDB.PersistenceContainer) throws {
-        container["id"] = id.uuidString
-        container["name"] = name
-        container["description"] = description
-        container["cardTagline"] = cardTagline
-        container["personality"] = personality
-        container["firstMessage"] = firstMessage
-        container["imagePath"] = imagePath
-        container["messageExample"] = messageExample
-        container["scenario"] = scenario
-        container["systemPrompt"] = systemPrompt
-        container["createdAt"] = createdAt
-        container["imageData"] = imageData
-
-        // Encode arrays to JSON strings
-        if let altGreetings = altGreetings {
-            let altGreetingsData = try JSONEncoder().encode(altGreetings)
-            container["altGreetings"] = String(data: altGreetingsData, encoding: .utf8)
-        }
-        
-        if let tags = tags {
-            let tagsData = try JSONEncoder().encode(tags)
-            container["tags"] = String(data: tagsData, encoding: .utf8)
-        }
+    var record: CharacterCardRecord {
+        CharacterCardRecord(
+            id: id.uuidString,
+            name: name,
+            description: description,
+            cardTagline: cardTagline,
+            personality: personality,
+            firstMessage: firstMessage,
+            imagePath: imagePath,
+            messageExample: messageExample,
+            scenario: scenario,
+            systemPrompt: systemPrompt,
+            altGreetings: altGreetings?.encodeStringArray() ?? "",
+            tags: tags?.encodeStringArray() ?? "",
+            createdAt: createdAt,
+            imageData: imageData,
+            isPrivate: isPrivate
+        )
     }
 }
 
-extension CharacterCardModel {
+struct CharacterCardRecord: Codable, FetchableRecord, MutablePersistableRecord, Sendable {
+    static let databaseTableName = "char_cards"
+    static let chatCharacterJoins = hasMany(ChatCharacterJoinRecord.self, using: ForeignKey([Column("charCardId")]))
+    static let chats = hasMany(
+        ChatRecord.self, 
+        through: chatCharacterJoins, 
+        using: ChatCharacterJoinRecord.chat
+    ) 
+
+    var id: String 
+    var name: String?
+    var description: String?
+    var cardTagline: String?
+    var personality: String?
+    var firstMessage: String?
+    var imagePath: String?
+    var messageExample: String?
+    var scenario: String?
+    var systemPrompt: String?
+    var altGreetings: String? 
+    var tags: String? 
+    var createdAt: Date 
+    var imageData: Data? 
+    var isPrivate: Bool = false
+    
     public static func migrateTable(_ db: Database) throws {
         try db.create(table: "char_cards", ifNotExists: true) { t in
             t.column("id", .text).primaryKey().notNull()
@@ -211,5 +176,10 @@ extension CharacterCardModel {
             t.column("imageData", .blob)
         }
     }
+}
+
+struct CharacterCardWithChats: Decodable, FetchableRecord {
+    let characterCard: CharacterCardRecord
+    let chats: [ChatRecord]
 }
 

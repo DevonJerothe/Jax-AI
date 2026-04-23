@@ -6,7 +6,24 @@
 //
 
 import Foundation
-import GRDB 
+import GRDB
+
+enum AppDBError: LocalizedError {
+    case unavailable
+    case startupFailed(String)
+    case recordNotFound(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .unavailable:
+            "Database is unavailable."
+        case .startupFailed(let message):
+            "Database startup failed: \(message)"
+        case .recordNotFound(let record):
+            "Record not found: \(record)"
+        }
+    }
+}
 
 protocol Repository {
     associatedtype T
@@ -20,8 +37,10 @@ protocol Repository {
 class DBManager {
     static let shared = DBManager() 
 
-    private var dbQueue: DatabaseQueue!
+    var dbQueue: DatabaseQueue?
     private var migrator: DatabaseMigrator = DatabaseMigrator()
+    
+    var startUpError: AppDBError?
 
     private init() {
         setup()
@@ -55,17 +74,25 @@ class DBManager {
             print("DB Opened Successfully with WAL mode enabled")
         } catch {
             print("Database setup error: \(error)")
-            fatalError("Failed to setup database: \(error)")
+            startUpError = .startupFailed(error.localizedDescription)
         }
     }
 
     private func migrateTables() throws {
+        
+        guard let dbQueue else {
+            throw startUpError ?? .unavailable
+        }
 
         migrator.registerMigration("v1") { db in
-            try ChatModel.migrateTable(db)
-            try MessageModel.migrateTable(db)
-            try CharacterCardModel.migrateTable(db)
-            try ChatCharacterJoin.migrateTable(db)
+//            try ChatModel.migrateTable(db)
+//            try MessageModel.migrateTable(db)
+//            try CharacterCardModel.migrateTable(db)
+//            try ChatCharacterJoin.migrateTable(db)
+            try MessageRecord.migrateTable(db)
+            try CharacterCardRecord.migrateTable(db)
+            try ChatRecord.migrateTable(db)
+            try ChatCharacterJoinRecord.migrateTable(db)
         }
 
         migrator.registerMigration("v2") { db in
@@ -78,10 +105,18 @@ class DBManager {
     }
 
     func write<T>(_ block: (Database) throws -> T) throws -> T {
+        guard let dbQueue else {
+            throw startUpError ?? .unavailable
+        }
+        
         return try dbQueue.write(block)
     }
 
     func read<T>(_ block: (Database) throws -> T) throws -> T {
+        guard let dbQueue else {
+            throw startUpError ?? .unavailable
+        }
+        
         return try dbQueue.read(block)
     }
 }

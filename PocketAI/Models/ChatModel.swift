@@ -9,46 +9,42 @@ import Foundation
 import SwiftUI
 import GRDB
 
+enum ChatStatus: Int, Codable {
+    case loading = 0 
+    case thinking = 1
+    case streaming = 2 
+    case idle = 3 
+}
+
 struct ChatModel: Hashable {
     var id: UUID = UUID()
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
     var messages: [MessageModel] = []
     var memory: String
-    var characterCard: [CharacterCardModel] = []
+    var characterCards: [CharacterCardModel] = []
+    var chatNotes: [String] = []
+    var isPrivate: Bool = false
     
     var error: String?
     var chatTitle: String {
-        get { characterCard.first?.name ??  "Jax AI" }
+        get { characterCards.first?.name ??  "Jax AI" }
     }
 
-    var isLoading: Bool = false 
-    var isStreaming: Bool = false
-    var isThinking: Bool = false
+//    var isLoading: Bool = false 
+//    var isStreaming: Bool = false
+//    var isThinking: Bool = false
+    var status: ChatStatus = .idle
 
     // Computed property that changes when content changes
     var contentIdentifier: String {
         return "\(id.uuidString)-\(messages.count)-\(messages.last?.id.uuidString ?? "")"
     }
 
-    // MARK: - Hashable conformance
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-        hasher.combine(messages)
-        hasher.combine(characterCard)
-        hasher.combine(isLoading)
-        hasher.combine(isStreaming)
-        hasher.combine(isThinking)
-    }
-    
-    static func == (lhs: ChatModel, rhs: ChatModel) -> Bool {
-        return lhs.id == rhs.id && lhs.messages == rhs.messages && lhs.characterCard == rhs.characterCard && lhs.isLoading == rhs.isLoading && lhs.isStreaming == rhs.isStreaming && lhs.isThinking == rhs.isThinking
-    }
-
     init(fromCard: CharacterCardModel) {
-        self.characterCard = [fromCard]
+        self.characterCards = [fromCard]
         self.memory = fromCard.description ?? ""
-        // self.characterCard.first?.chatId = self.id.uuidString
+        self.isPrivate = fromCard.isPrivate
     
         self.addMessage(fromCard.firstMessage, forActor: .bot)
     }
@@ -64,20 +60,19 @@ struct ChatModel: Hashable {
         self.memory = description
 
         let newCard = CharacterCardModel(
-            // chatId: self.id.uuidString,
             name: chatTitle,
             description: description,
             firstMessage: firstMessage,
             imageData: avatarImg
         )
-        self.characterCard = [newCard]
+        self.characterCards = [newCard]
 
         self.addMessage(firstMessage, forActor: .bot)
     }
 
     mutating func resetChat() {
         self.messages.removeAll()
-        self.addMessage(characterCard.first?.firstMessage ?? "", forActor: .bot)
+        self.addMessage(characterCards.first?.firstMessage ?? "", forActor: .bot)
     }
 
     mutating func addMessage(_ message: String? = "", forActor: MessageActor, isLoading: Bool = false) {
@@ -93,29 +88,7 @@ struct ChatModel: Hashable {
     }
     
     mutating func updateCard(_ newCard: CharacterCardModel) {        
-        characterCard = [newCard]
-    }
-
-    func getFullPrompt(continueResponse: Bool = false, forceThinking: Bool = false) -> String {
-        var prompt = "\nAssistant: "
-        for message in messages {
-            switch message.actor {
-            case .user:
-                prompt += "\(message.text)\nAssistant: "
-                if forceThinking {
-                    prompt += "<think>\nOk, first we need to consider who we are and not to speak for the user."
-                }
-            case .bot:
-                if !message.loading || continueResponse {
-                    prompt += "\(message.text)"
-                    if !continueResponse {
-                        prompt += "\nUser:"
-                    }
-                }
-            }
-        }
-        print(prompt)
-        return prompt
+        characterCards = [newCard]
     }
 
     func autoTrimFullPrompt(continueResponse: Bool = false, forceThinking: Bool = false) async -> String {
@@ -198,15 +171,15 @@ struct ChatModel: Hashable {
     }
     
     func getFullMemory() -> String {
-        guard var fullMemory = characterCard.first?.description else {
+        guard var fullMemory = characterCards.first?.description else {
             return self.memory
         }
         fullMemory = "\nDescription: \(fullMemory)"
         // Build out the memory object from characterCard
-        if let personality = characterCard.first?.personality {
-            fullMemory += "\n\(characterCard.first?.name ?? "")'s personality: \(personality)\n"
+        if let personality = characterCards.first?.personality {
+            fullMemory += "\n\(characterCards.first?.name ?? "")'s personality: \(personality)\n"
         }
-        if let scenario = characterCard.first?.scenario {
+        if let scenario = characterCards.first?.scenario {
             fullMemory += "\nScenario: \(scenario)\n"
         }
         
@@ -215,45 +188,72 @@ struct ChatModel: Hashable {
     }
 
     func getAvatarImg() -> Image? {
-        if let imgData = characterCard.first?.imageData, let uiImage = UIImage(data: imgData) {
+        if let imgData = characterCards.first?.imageData, let uiImage = UIImage(data: imgData) {
             return Image(uiImage: uiImage)
         }
         return nil
     }
 
     func getCharacterCard() -> CharacterCardModel {
-        return characterCard.first ?? CharacterCardModel(name: "Jax AI")
-    }
-}
-
-extension ChatModel: TableRecord, FetchableRecord, PersistableRecord {
-    static let databaseTableName = "chats"
-    
-    init(row: GRDB.Row) throws {
-        id = UUID(uuidString: row["id"]!)!
-        createdAt = row["createdAt"]
-        updatedAt = row["updatedAt"]
-        memory = row["memory"]
-        messages = []
-        characterCard = []
-    }
-
-    func encode(to container: inout PersistenceContainer) {
-        container["id"] = id.uuidString
-        container["createdAt"] = createdAt
-        container["updatedAt"] = updatedAt
-        container["memory"] = memory
+        return characterCards.first ?? CharacterCardModel(name: "Jax AI")
     }
 }
 
 extension ChatModel {
-    static public func migrateTable(_ db: Database) throws {
+    init(record: ChatRecord) {
+        self.id = UUID(uuidString: record.id) ?? UUID()
+        self.createdAt = record.createdAt
+        self.updatedAt = record.updatedAt
+        self.memory = record.memory
+        self.chatNotes = (try? record.chatNotes.decodeStringArray()) ?? []
+        self.isPrivate = record.isPrivate
+    }
+
+    var record: ChatRecord {
+        ChatRecord(
+            id: id.uuidString, 
+            createdAt: createdAt, 
+            updatedAt: updatedAt, 
+            memory: memory, 
+            chatNotes: chatNotes.encodeStringArray(), 
+            isPrivate: isPrivate 
+        ) 
+    }
+}
+
+struct ChatRecord: Codable, FetchableRecord, MutablePersistableRecord, Sendable {
+    static let databaseTableName = "chats"
+
+    static let messages = hasMany(MessageRecord.self, using: ForeignKey([Column("chatId")]))
+    static let chatCharacterJoins = hasMany(ChatCharacterJoinRecord.self, using: ForeignKey([Column("chatId")]))
+    
+    static let characterCards = hasMany(
+        CharacterCardRecord.self, 
+        through: chatCharacterJoins, 
+        using: ChatCharacterJoinRecord.characterCard
+    ).forKey("characterCards")
+
+    var id: String 
+    var createdAt: Date 
+    var updatedAt: Date 
+    var memory: String 
+    var chatNotes: String 
+    var isPrivate: Bool = false 
+
+    public static func migrateTable(_ db: Database) throws {
         try db.create(table: "chats", ifNotExists: true) { t in
             t.column("id", .text).primaryKey().notNull()
             t.column("createdAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
             t.column("updatedAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
             t.column("memory", .text).notNull()
+            t.column("chatNotes", .text).notNull().defaults(to: "")
+            t.column("isPrivate", .boolean).notNull().defaults(to: false)
         }
     }
 }
 
+struct ChatWithCharacterCards: Decodable, FetchableRecord {
+    let chat: ChatRecord
+    let messages: [MessageRecord]
+    let characterCards: [CharacterCardRecord]
+}

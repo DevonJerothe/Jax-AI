@@ -4,6 +4,7 @@ import SwiftLLMSDK
 ///
 /// This service container is responsible for all dependency injection and shared services such as userDefaults and connection status
 ///
+@MainActor
 @Observable
 class ServiceContainer {
 
@@ -17,11 +18,14 @@ class ServiceContainer {
     private var userDefaultsManager: UserDefaultsManager = UserDefaultsManager
         .shared
 
-    private var messageRepository: MessageRepository = MessageRepository()
-    private var chatRepository: ChatRepository = ChatRepository()
-    private var characterRepository: CharacterRepository = CharacterRepository()
-
-    private var chatListViewModel: ChatListViewModel?
+//    private var messageRepository: MessageRepository
+//    private var chatRepository: ChatRepository
+//    private var characterRepository: CharacterRepository
+    
+    private var chatStore: ChatStore
+    private var characterStore: CharacterStore
+    
+//    private var chatListViewModel: ChatListViewModel?
     
     // MARK: - Computed Properties
     var isConnected: Bool {
@@ -52,71 +56,85 @@ class ServiceContainer {
         } else {
             self.languageModelService = LanguageModelService(connectionSettings: .defaults)
         }
+
+        self.chatStore = ChatStore(
+            chatRepository: ChatRepository(),
+            messageRepository: MessageRepository()
+        )
+        self.characterStore = CharacterStore(
+            characterRepository: CharacterRepository()
+        )
+    }
+    
+    func getChatStore() -> ChatStore {
+        return self.chatStore
+    }
+    
+    func getCharacterStore() -> CharacterStore {
+        return self.characterStore
     }
 
-    func setChatListViewModel(viewModel: ChatListViewModel = ChatListViewModel()) {
-        self.chatListViewModel = viewModel
-    }
-
-    func getChatListViewModel() -> ChatListViewModel {
-        return self.chatListViewModel!
-    }
-
-    @MainActor
-    func refreshChatListViewModel() {
-        self.chatListViewModel?.refreshData()
-    }
-
-    @MainActor
-    func updateChatInListViewModel(_ updatedChat: ChatModel) {
-        self.chatListViewModel?.updateChatInList(updatedChat)
-    }
+//    func setChatListViewModel(viewModel: ChatListViewModel = ChatListViewModel()) {
+//        self.chatListViewModel = viewModel
+//    }
+//
+//    func getChatListViewModel() -> ChatListViewModel {
+//        return self.chatListViewModel!
+//    }
+//
+//    func refreshChatListViewModel() {
+//        self.chatListViewModel?.refreshData()
+//    }
+//
+//    func updateChatInListViewModel(_ updatedChat: ChatModel) {
+//        self.chatListViewModel?.updateChatInList(updatedChat)
+//    }
 
     func getLanguageModelService() -> LanguageModelService {
         return self.languageModelService
     }
 
-    func getMessageRepository() -> MessageRepository {
-        return self.messageRepository
-    }
+//    func getMessageRepository() -> MessageRepository {
+//        return self.messageRepository
+//    }
+//
+//    func getChatRepository() -> ChatRepository {
+//        return self.chatRepository
+//    }
+//
+//    func getCharacterRepository() -> CharacterRepository {
+//        return self.characterRepository
+//    }
 
-    func getChatRepository() -> ChatRepository {
-        return self.chatRepository
-    }
-
-    func getCharacterRepository() -> CharacterRepository {
-        return self.characterRepository
-    }
-
-    func saveConnectionSettings() {
-        self.userDefaultsManager.saveSettings(
-            self.connectionSettings, forKey: .ConnectionSettings)
-        self.languageModelService.updateConnection()
-    }
+//    func saveConnectionSettings() {
+//        self.userDefaultsManager.saveSettings(
+//            self.connectionSettings, forKey: .ConnectionSettings)
+//        self.languageModelService.updateConnection()
+//    }
     
     // MARK: - LanguageModelService Helpers
     // Its better to call the language service methods directly than here.
-    func connect() async {
-        self.languageModelService.updateConnection()
-        self.isLoading = true
-        await _ = self.languageModelService.connect()
-
-        if self.connectionSettings.contextLength ?? 0 > self.languageModelService.maxContextLength {
-            self.connectionSettings.contextLength = self.languageModelService.maxContextLength
-        }
-        self.saveConnectionSettings()
-        self.isLoading = false
-    }
-
-    func waitForConnection() async -> Bool {
-        self.saveConnectionSettings()
-        self.isLoading = true
-        let connectionStatus = await self.languageModelService.connect()
-        self.isLoading = false
-        return connectionStatus
-    }
-
-    func getAvailableModels() async {
-        await self.languageModelService.getAvailableModels()
-    }
+//    func connect() async {
+//        self.languageModelService.updateConnection()
+//        self.isLoading = true
+//        await _ = self.languageModelService.connect()
+//
+//        if self.connectionSettings.contextLength ?? 0 > self.languageModelService.maxContextLength {
+//            self.connectionSettings.contextLength = self.languageModelService.maxContextLength
+//        }
+//        self.saveConnectionSettings()
+//        self.isLoading = false
+//    }
+//
+//    func waitForConnection() async -> Bool {
+//        self.saveConnectionSettings()
+//        self.isLoading = true
+//        let connectionStatus = await self.languageModelService.connect()
+//        self.isLoading = false
+//        return connectionStatus
+//    }
+//
+//    func getAvailableModels() async {
+//        await self.languageModelService.getAvailableModels()
+//    }
 }
