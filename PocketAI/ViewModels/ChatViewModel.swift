@@ -6,361 +6,469 @@
 //
 
 import Foundation
-import SwiftUI
 import SwiftLLMSDK
+import SwiftUI
 import UIKit
 
 @MainActor
 @Observable
-class ChatViewModel {
-    var id: UUID = UUID()
+final class ChatViewModel {
+    private let languageModelService: LanguageModelService
+    private let connectionManager: ConnectionStatusManager
+    private let chatStore: ChatStore
+    private let characterStore: CharacterStore
 
-    private var languageModelService: LanguageModelService
-    private var chatStore: ChatStore
-    private var chatId: UUID
+    let chatID: UUID
 
     var model: ChatModel? {
-        chatStore.chats.first(where: { $0.id == chatId })
+        chatStore.chat(withID: chatID)
+    }
+
+    var isConnected: Bool {
+        connectionManager.connectionStatus == .connected
+    }
+
+    var isStreaming: Bool {
+        guard let status = model?.status else {
+            return false
+        }
+
+        return status == .loading || status == .thinking || status == .streaming
+    }
+
+    var isThinking: Bool {
+        model?.status == .thinking
     }
 
     var updateScrollView: Bool = false
     var showSettings: Bool = false
-    
     var editingMessageID: UUID?
-    private var lastHapticTriggerAt: Date? = nil
     var newInstance: Bool = true
     var isViewActive: Bool = false
-    var isViewInSync: Bool = false
 
-    // MARK: - Hashable conformance
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-    
-    static func == (lhs: ChatViewModel, rhs: ChatViewModel) -> Bool {
-        return lhs.id == rhs.id
-    }
+    private var lastHapticTriggerAt: Date?
 
     init(
-        chatModel: ChatModel,
-        languageModelService: LanguageModelService = ServiceContainer.shared.getLanguageModelService(),
-        messageRepository: MessageRepository = ServiceContainer.shared.getMessageRepository(),
-        chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository(),
-        characterRepository: CharacterRepository = ServiceContainer.shared.getCharacterRepository(),
-        chatListViewModel: ChatListViewModel = ServiceContainer.shared.getChatListViewModel()
+        chatID: UUID,
+        languageModelService: LanguageModelService? = nil,
+        connectionManager: ConnectionStatusManager? = nil,
+        chatStore: ChatStore? = nil,
+        characterStore: CharacterStore? = nil
     ) {
-        self.model = chatModel
-        self.languageModelService = languageModelService
-        self.messageRepository = messageRepository
-        self.chatRepository = chatRepository
-        self.connectionSettings = ServiceContainer.shared.connectionSettings
-        self.characterRepository = characterRepository
-        self.chatListViewModel = chatListViewModel
-
-        // update booleans based on the chat model 
-        self.isStreaming = self.model.isStreaming
-        self.isThinking = self.model.isThinking
-    }
-
-    static func create(
-        chatModel: ChatModel
-    ) -> ChatViewModel {
-        return ChatViewModel(
-            chatModel: chatModel,
-            languageModelService: ServiceContainer.shared.getLanguageModelService()
-        )
-    }
-
-    /// trigger the chatListViewModel to refresh all data 
-    private func triggerListRefresh() {
-        print("triggerListRefresh() called")
-        Task {
-            await MainActor.run {
-                chatListViewModel.refreshData()
-            }
-        }
-    }
-
-    /// Trigger the ChatListViewModel to update the chat in the list. This will allow us to update list items based on chat status changes. 
-    private func triggerChatUpdate() {
-        print("triggerChatUpdate() called")
-        Task {
-            await MainActor.run {
-                chatListViewModel.updateChatInList(model)
-            }
-        }
+        self.chatID = chatID
+        self.languageModelService = languageModelService ?? ServiceContainer.shared.getLanguageModelService()
+        self.connectionManager = connectionManager ?? ServiceContainer.shared.getConnectionStatusManager()
+        self.chatStore = chatStore ?? ServiceContainer.shared.getChatStore()
+        self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
     }
 
     func fetchCharacterCard() -> CharacterCardModel? {
-        return try! characterRepository.get(id: model.characterCards.first?.id ?? UUID())
-    }
-
-    func updateChatLoadingStatus(model: ChatModel) {
-        print("updateChatLoadingStatus() called")
-        Task {
-            await MainActor.run {
-                self.model = model 
-                self.isStreaming = self.model.isStreaming
-                self.isThinking = self.model.isThinking
-                self.updateScrollView.toggle()
-            }
+        guard let characterID = model?.characterCards.first?.id else {
+            return nil
         }
+
+        return characterStore.character(withID: characterID)
     }
 
     func sendMessage(prompt: String) async {
-        await MainActor.run {
-            self.newInstance = false
-            if !prompt.isEmpty {
-                self.model.addMessage(prompt, forActor: .user)
-                try! messageRepository.save(self.model.messages.last!)
-            }
-            self.model.addMessage(forActor: .bot, isLoading: true)
-            self.updateScrollView.toggle()
+        guard let chat = model else {
+            return
         }
-        isViewInSync = true 
-        await generateResponse(model.messages.count - 1)
+
+        newInstance = false
+
+        let userMessage = MessageModel(
+            chatId: chat.id.uuidString,
+            actor: .user,
+            text: prompt
+        )
+
+        let placeholder = MessageModel(
+            chatId: chat.id.uuidString,
+            actor: .bot,
+            text: "",
+            status: .loading
+        )
+
+        do {
+            if prompt.isEmpty == false {
+                try await chatStore.addMessage(userMessage, to: chat.id)
+            }
+            try await chatStore.addMessage(placeholder, to: chat.id)
+            updateScrollView.toggle()
+            await generateResponse(for: placeholder.id)
+        } catch {
+            print("Failed to queue message: \(error)")
+        }
     }
 
     func regenerateMessage(_ message: MessageModel, continueResponse: Bool = false) async {
-        let lastIndex = self.model.messages.count - 1
-        await MainActor.run {
-            self.newInstance = false
-            self.model.messages[lastIndex].loading = true
-            self.updateScrollView.toggle()
+        guard let chat = model else {
+            return
         }
-        isViewInSync = true 
-        await generateResponse(lastIndex, isContinued: continueResponse)
+
+        var updatedMessage = message
+        updatedMessage.error = .none
+        updatedMessage.status = .loading
+
+        if continueResponse == false {
+            updatedMessage.text = ""
+        }
+
+        do {
+            try await chatStore.updateMessage(updatedMessage, in: chat.id, save: false)
+            updateScrollView.toggle()
+            await generateResponse(for: updatedMessage.id, isContinued: continueResponse)
+        } catch {
+            print("Failed to regenerate message: \(error)")
+        }
     }
 
-    func clearChat() {
-        self.model.resetChat()
-        try! chatRepository.save(self.model)
-        
-        triggerListRefresh()
+    func clearChat() async {
+        guard var chat = model else {
+            return
+        }
+
+        chat.messages.removeAll()
+        chat.addMessage(chat.characterCards.first?.firstMessage ?? "", forActor: .bot)
+
+        do {
+            try await chatStore.saveChat(chat)
+        } catch {
+            print("Failed to clear chat: \(error)")
+        }
     }
 
-    func updateChatSettings(
-        characterCard: CharacterCardModel
-    ) {
-        model.updateCard(characterCard)
-        try! chatRepository.save(self.model)
+    func updateChatSettings(characterCard: CharacterCardModel) async {
+        guard var chat = model else {
+            return
+        }
 
-        // update the connection settings
-        serviceContainer.saveConnectionSettings()
+        chat.characterCards = [characterCard]
+        chat.memory = characterCard.description ?? chat.memory
+        chat.isPrivate = characterCard.isPrivate
 
-        triggerListRefresh()
+        do {
+            try await chatStore.saveChat(chat)
+        } catch {
+            print("Failed to update chat settings: \(error)")
+        }
     }
 
     func updateMessage(_ message: MessageModel, newText: String) async {
-        let lastIndex = self.model.messages.count - 1
-        await MainActor.run {
-            self.newInstance = false
-            self.model.messages[lastIndex].text = newText
+        guard let chat = model else {
+            return
         }
-        try! messageRepository.save(self.model.messages[lastIndex])
-        triggerListRefresh()
+
+        var updatedMessage = message
+        updatedMessage.text = newText
+
+        do {
+            try await chatStore.updateMessage(updatedMessage, in: chat.id)
+        } catch {
+            print("Failed to update message: \(error)")
+        }
     }
-    
+
     func deleteMessage(_ message: MessageModel) async {
-        await MainActor.run {
-            self.newInstance = false
-            self.model.messages.removeAll(where: { message == $0 })
+        guard let chat = model else {
+            return
         }
-        try! chatRepository.save(self.model)
-        
-        triggerListRefresh()
+
+        do {
+            try await chatStore.deleteMessage(message, from: chat.id)
+        } catch {
+            print("Failed to delete message: \(error)")
+        }
     }
 
     func shouldShowToolbar(_ message: MessageModel) -> Bool {
-        if model.messages.count > 1, model.messages.last?.id == message.id, isStreaming == false {
-            return true
+        guard let chat = model else {
+            return false
         }
-        return false
-    }
-    
-    private func generateStreamedResponse(_ forIndex: Int, isContinued: Bool = false, excludeThinking: Bool = true, trimmedPrompt: String) {
-        // Update the connection settings if necessary
-        languageModelService.updateConnection()
-        
-        guard languageModelService.isConnected else {
-            print("Language Model Service is not connected")
-            Task {  
-                await MainActor.run {
-                    self.model.messages[forIndex].error = .disconnect
-                    self.model.messages[forIndex].loading = false
-                    self.model.messages[forIndex].text = "Looks like you're not connected to a model. Please check your connection settings."
-                    try! messageRepository.save(self.model.messages[forIndex])
-                    triggerListRefresh()
-                    self.updateScrollView.toggle()
-                }
-            }
-            return
-        }
-        
-        Task {
-            let stream = languageModelService.sendStreamedMessage(chatModel: self.model, continued: isContinued, trimmedPrompt: trimmedPrompt)
-            self.isStreaming = true
-            
-            for await response in stream {
 
-                // Depending on models, kobold sometimes(most of the time) sucks at including the <think> tag at the start.
-                // To check, we want to find the first non-whitespace character and see if it's '<'.
-                // This way we can stream the response without waiting if not excludeing thinking.. 
-                let firstNonWhitespaceChar = response.text?.first(where: { !$0.isWhitespace })
-                let didThinkingStart = firstNonWhitespaceChar == "<" || ServiceContainer.shared.connectionSettings.forceThinking
-                let didThinkingFinish = (response.text?.contains("</think>")) ?? false || isContinued
-
-                // Only update isThinking if its value is changing, to avoid unnecessary state updates.
-                let shouldBeThinking = didThinkingStart && !didThinkingFinish
-                if self.isThinking != shouldBeThinking {
-                    self.isThinking = shouldBeThinking
-                }
-
-                await MainActor.run {
-                    if response.disconnect {
-                        self.model.messages[forIndex].error = .apiError
-                        self.model.messages[forIndex].text = response.text ?? ""
-                        self.model.messages[forIndex].loading = false
-                        self.isStreaming = false 
-                        self.isThinking = false 
-                        self.updateScrollView.toggle()
-
-                        do {
-                            try messageRepository.save(self.model.messages[forIndex])
-                            // Post notification that chat data has changed
-                            triggerListRefresh()
-                        } catch {
-                            print("ERROR: \(error.localizedDescription)")
-                        }
-                        return
-                    }
-
-                    // Remove everything from the beginning of the string up to and including the first </think> tag.
-                    // The opening <think> tag may or may not be present; we only rely on the closing tag.
-                    if !excludeThinking || didThinkingFinish || !didThinkingStart {
-                        let responseMessage = response.text ?? ""
-                        let sanitizedResponse = responseMessage
-                            .replacing(/\A[\s\S]*?<\/think>\s*/, with: "")
-                            .trimmingCharacters(in: .whitespacesAndNewlines)
-                        
-                        self.model.messages[forIndex].loading = false
-                        
-                        self.model.messages[forIndex].text = sanitizedResponse
-
-                        self.updateScrollView.toggle()
-
-                        self.triggerChatUpdate()
-
-                        do {
-                            if response.streaming == false {
-                                print("STREAMING FINISHED SUCCESSFULLY")
-                                self.isStreaming = false
-                                try messageRepository.save(self.model.messages[forIndex])
-                                triggerListRefresh()
-                            }
-                        } catch (let error) {
-                            print("ERROR: \(error.localizedDescription)")
-                        }
-
-                        // Hatpic debouncer so that we are  not spamming the user. 
-                        // also check if the view is active or not.. this should stop haptics when user navigates away before response is finished.
-                        let now = Date()
-                        if self.isViewActive && (self.lastHapticTriggerAt == nil || now.timeIntervalSince(self.lastHapticTriggerAt!) >= 0.1) {
-                            let generator = UIImpactFeedbackGenerator(style: .soft)
-                            generator.impactOccurred()
-                            self.lastHapticTriggerAt = now
-                        }
-                    }
-                    
-                    // Sometimes the stream can break.. or thinking doesn't provide a closing tag. 
-                    // This should be checked later.. we may not need it now that we are checking if streaming starts and ends up top. 
-                    if response.streaming == false, self.isStreaming {
-                        print("STREAMING FAILED")
-                        self.model.messages[forIndex].loading = false
-                        self.isStreaming = false
-                        self.isThinking = false 
-                        self.model.messages[forIndex].text = response.text ?? ""
-                        
-                        do {
-                            try messageRepository.save(self.model.messages[forIndex])
-                            // Post notification that chat data has changed
-                            triggerListRefresh()
-                            self.updateScrollView.toggle()
-
-                        } catch {
-                            print("ERROR: \(error.localizedDescription)")
-                        }
-                    }
-                }
-            }
-        }
+        return chat.messages.count > 1 &&
+            chat.messages.last?.id == message.id &&
+        chat.status == .idle && message.status == .done
     }
 
-    private func generateResponse(_ forIndex: Int, isContinued: Bool = false, streamed: Bool = true) async {
-        // Update the connection settings if necessary
-        languageModelService.updateConnection()
-        
-        guard languageModelService.isConnected else {
-            print("Language Model Service is not connected")
-            self.model.messages[forIndex].error = .disconnect
-            self.model.messages[forIndex].loading = false
-            self.model.messages[forIndex].text = "Looks like you're not connected to a model. Please check your connection settings."
-            try! messageRepository.save(self.model.messages[forIndex])
-            triggerListRefresh()
-            self.updateScrollView.toggle()
-
+    private func generateResponse(for messageID: UUID, isContinued: Bool = false, streamed: Bool = true) async {
+        guard let chat = model,
+              let messageIndex = chat.messages.firstIndex(where: { $0.id == messageID }) else {
             return
         }
-        
+
+        guard isConnected else {
+            await finalizeDisconnectedMessage(at: messageIndex, in: chat)
+            return
+        }
+
         if streamed {
-            ///TODO: once thinking becomes a settings we need to handle this cleanly.
-            ///Right now only kobold needs to filter out the thinking manually. OpenRouter does this at the API level.
-            //Also auto trimmed prompts require await.. so have to do it here. We really need to keep tokens on the message model.
-            let excludeThinking: Bool = connectionSettings.connectionType == .KoboldAPI
-            let trimmedPrompt = await model.autoTrimFullPrompt(continueResponse: isContinued, forceThinking: ServiceContainer.shared.connectionSettings.forceThinking)
-            return generateStreamedResponse(forIndex, isContinued: isContinued, excludeThinking: excludeThinking, trimmedPrompt: trimmedPrompt)
-        }
-        
-        // right now if no response is returned or the API returns an error we return nil. Not sure I like this.
-        let response = await languageModelService.sendMessage(chatModel: self.model, continued: isContinued)
-        guard let responseMessage = response?.text else{
-            print("No response check logs")
-            await MainActor.run {
-                self.model.messages[forIndex].loading = false
-                self.model.messages[forIndex].error = .apiError
-                self.model.messages[forIndex].text = "There was an error processing your request. Please try again later."
-            }
+            let excludeThinking = connectionManager.connectionSettings.connectionType == .KoboldAPI
+            let trimmedPrompt = await autoTrimPrompt(
+                for: chat,
+                continueResponse: isContinued,
+                forceThinking: connectionManager.connectionSettings.forceThinking
+            )
+
+            generateStreamedResponse(
+                for: messageID,
+                chat: chat,
+                isContinued: isContinued,
+                excludeThinking: excludeThinking,
+                trimmedPrompt: trimmedPrompt
+            )
             return
         }
 
-        // Remove everything from the beginning of the string up to and including the first </think> tag.
-        // The opening <think> tag may or may not be present; we only rely on the closing tag.
-        let sanitizedResponse = responseMessage
+        let response = await languageModelService.sendMessage(chatModel: chat, continued: isContinued)
+        let responseText = response?.text ?? "There was an error processing your request. Please try again later."
+        let sanitizedResponse = sanitizeThinking(from: responseText)
+
+        await applyResponseUpdate(
+            for: messageID,
+            isContinued: isContinued,
+            responseText: sanitizedResponse,
+            disconnect: response?.disconnect ?? true,
+            isFinal: true,
+            shouldShowThinking: false
+        )
+    }
+
+    private func generateStreamedResponse(
+        for messageID: UUID,
+        chat: ChatModel,
+        isContinued: Bool,
+        excludeThinking: Bool,
+        trimmedPrompt: String
+    ) {
+        Task {
+            do {
+                try chatStore.setChatStatus(for: chatID, to: .loading)
+            } catch {
+                print("Failed to set chat status: \(error)")
+            }
+
+            let stream = languageModelService.sendStreamedMessage(
+                chatModel: chat,
+                continued: isContinued,
+                trimmedPrompt: trimmedPrompt
+            )
+
+            for await response in stream {
+                let responseText = response.text ?? ""
+                let firstNonWhitespaceChar = responseText.first(where: { !$0.isWhitespace })
+                let didThinkingStart = firstNonWhitespaceChar == "<" || connectionManager.connectionSettings.forceThinking
+                let didThinkingFinish = responseText.contains("</think>") || isContinued
+                let shouldShowThinking = didThinkingStart && !didThinkingFinish
+                let visibleResponse = (!excludeThinking || didThinkingFinish || !didThinkingStart)
+                    ? sanitizeThinking(from: responseText)
+                    : ""
+
+                await applyResponseUpdate(
+                    for: messageID,
+                    isContinued: isContinued,
+                    responseText: visibleResponse,
+                    disconnect: response.disconnect,
+                    isFinal: response.streaming == false,
+                    shouldShowThinking: shouldShowThinking
+                )
+            }
+        }
+    }
+
+    private func applyResponseUpdate(
+        for messageID: UUID,
+        isContinued: Bool,
+        responseText: String,
+        disconnect: Bool,
+        isFinal: Bool,
+        shouldShowThinking: Bool
+    ) async {
+        guard let chat = model,
+              let message = chat.messages.first(where: { $0.id == messageID }) else {
+            return
+        }
+
+        var updatedMessage = message
+        updatedMessage.error = disconnect ? .apiError : .none
+
+        if responseText.isEmpty == false {
+            updatedMessage.text = mergedResponseText(
+                currentText: updatedMessage.text,
+                incomingText: responseText,
+                isContinued: isContinued
+            )
+        }
+
+        if disconnect {
+            updatedMessage.text = responseText.isEmpty
+                ? "There was an error processing your request. Please try again later."
+                : responseText
+        }
+
+        updatedMessage.status = isFinal
+            ? .done
+            : (shouldShowThinking ? .thinking : .streaming)
+
+        do {
+            try await chatStore.updateMessage(updatedMessage, in: chat.id, save: isFinal)
+            try chatStore.setChatStatus(
+                for: chatID,
+                to: isFinal ? .idle : (shouldShowThinking ? .thinking : .streaming)
+            )
+        } catch {
+            print("Failed to update streamed response: \(error)")
+        }
+
+        if responseText.isEmpty == false || isFinal {
+            updateScrollView.toggle()
+        }
+
+        if updatedMessage.status == .streaming {
+            triggerHapticIfNeeded()
+        }
+    }
+
+    private func mergedResponseText(
+        currentText: String,
+        incomingText: String,
+        isContinued: Bool
+    ) -> String {
+        guard incomingText.isEmpty == false else {
+            return currentText
+        }
+
+        if isContinued || currentText.isEmpty {
+            return incomingText
+        }
+
+        // Some providers stream deltas while others resend the full partial text.
+        // Prefer the incoming value when it already contains what we have, otherwise
+        // append the new chunk so text visibly streams into the bubble.
+        if incomingText.hasPrefix(currentText) {
+            return incomingText
+        }
+
+        return currentText + incomingText
+    }
+
+    private func finalizeDisconnectedMessage(at messageIndex: Int, in chat: ChatModel) async {
+        guard chat.messages.indices.contains(messageIndex) else {
+            return
+        }
+
+        var updatedMessage = chat.messages[messageIndex]
+        updatedMessage.error = .disconnect
+        updatedMessage.status = .done
+        updatedMessage.text = "Looks like you're not connected to a model. Please check your connection settings."
+
+        do {
+            try await chatStore.updateMessage(updatedMessage, in: chat.id)
+            try chatStore.setChatStatus(for: chatID, to: .idle)
+            updateScrollView.toggle()
+        } catch {
+            print("Failed to finalize disconnected message: \(error)")
+        }
+    }
+
+    private func autoTrimPrompt(
+        for chat: ChatModel,
+        continueResponse: Bool,
+        forceThinking: Bool
+    ) async -> String {
+        let settings = connectionManager.connectionSettings
+        
+        // We only handle context for KoboldAPI until we can include a token counter in app.
+        guard settings.connectionType == .KoboldAPI else {
+            return ""
+        }
+        
+        let maxContextTokens = settings.contextLength ?? 4096
+        let reservedResponseTokens = settings.responseLength ?? 240
+        let memory = chat.getFullMemory()
+        let memoryTokens = await languageModelService.getTokenCount(string: memory)
+        let userTemplates = settings.userTemplates.values
+            .filter(\.isEnabled)
+            .map(\.content)
+            .joined(separator: "\n")
+        let systemTokens = await languageModelService.getTokenCount(string: userTemplates)
+
+        var prefix = "\nAssistant: "
+        if forceThinking {
+            prefix += "<think>\nOk, first we need to consider who we are and not to speak for the user."
+        }
+
+        let prefixTokens = await languageModelService.getTokenCount(string: prefix)
+        var fixedOverhead = memoryTokens + prefixTokens + reservedResponseTokens
+        if continueResponse {
+            fixedOverhead += systemTokens
+        }
+
+        if fixedOverhead >= maxContextTokens {
+            return prefix
+        }
+
+        struct Block {
+            let text: String
+            let tokens: Int
+        }
+
+        var blocks: [Block] = []
+        for message in chat.messages {
+            switch message.actor {
+            case .user:
+                var text = "\(message.text)\nAssistant: "
+                if forceThinking {
+                    text += "<think>\nOk, first we need to consider who we are and not to speak for the user."
+                }
+
+                let tokens = await languageModelService.getTokenCount(string: text)
+                blocks.append(Block(text: text, tokens: tokens))
+            case .bot:
+                if message.status == .done || continueResponse {
+                    let suffix = continueResponse ? "" : "\nUser:"
+                    let text = "\(message.text)\(suffix)"
+                    let tokens = await languageModelService.getTokenCount(string: text)
+                    blocks.append(Block(text: text, tokens: tokens))
+                }
+            }
+        }
+
+        var remaining = maxContextTokens - fixedOverhead
+        var selectedReversed: [Block] = []
+
+        for block in blocks.reversed() {
+            if block.tokens <= remaining {
+                selectedReversed.append(block)
+                remaining -= block.tokens
+            } else {
+                break
+            }
+        }
+
+        return selectedReversed
+            .reversed()
+            .reduce(prefix) { partialResult, block in
+                partialResult + block.text
+            }
+    }
+
+    private func sanitizeThinking(from responseText: String) -> String {
+        responseText
             .replacing(/\A[\s\S]*?<\/think>\s*/, with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
-        await MainActor.run {
-            if response?.disconnect ?? false {
-                self.model.messages[forIndex].error = .apiError
-                self.model.messages[forIndex].text = sanitizedResponse
-            } else {
-                if isContinued {
-                    self.model.messages[forIndex].text.append(sanitizedResponse)
-                } else {
-                    self.model.messages[forIndex].text = sanitizedResponse
-                }
-            }
-
-            self.model.messages[forIndex].loading = false
-            
-            do {
-                try messageRepository.save(self.model.messages[forIndex])
-            } catch(let error) {
-                print("ERROR: \(error.localizedDescription)")
-            }
-            self.updateScrollView.toggle()
-            
-            triggerChatUpdate()
+    private func triggerHapticIfNeeded() {
+        let now = Date()
+        guard isViewActive,
+              lastHapticTriggerAt == nil || now.timeIntervalSince(lastHapticTriggerAt!) >= 0.1 else {
+            return
         }
+
+        let generator = UIImpactFeedbackGenerator(style: .soft)
+        generator.impactOccurred()
+        lastHapticTriggerAt = now
     }
 }

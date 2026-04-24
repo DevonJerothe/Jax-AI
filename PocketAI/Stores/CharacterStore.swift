@@ -42,20 +42,27 @@ final class CharacterStore {
         }
     }
     
-    func deleteCharacterCard(_ characterCard: CharacterCardModel) throws {
+    func character(withID characterID: UUID) -> CharacterCardModel? {
+        characters.first(where: { $0.id == characterID })
+    }
+
+    func deleteCharacterCard(_ characterCard: CharacterCardModel) async throws {
         try characterRepository.delete(characterCard)
+        await waitForObserver()
     }
 
-    func addCharacterCard(_ characterCard: CharacterCardModel) throws {
+    func saveCharacterCard(_ characterCard: CharacterCardModel) async throws {
         try characterRepository.save(characterCard)
+        await waitForObserver()
     }
 
-    func updatePrivacy(for characterID: UUID, isPrivate: Bool) throws {
+    func updatePrivacy(for characterID: UUID, isPrivate: Bool) async throws {
         guard let index = characters.firstIndex(where: { $0.id == characterID }) else {
             throw AppDBError.recordNotFound("character: \(characterID.uuidString)")
         }
 
         characters[index].isPrivate = isPrivate
         try characterRepository.save(characters[index])
+        await waitForObserver()
     }
 }

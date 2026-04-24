@@ -15,9 +15,14 @@ final class ChatStore {
     
     // Used to block requests before an operation is complete when observing the DB
     private var observerQueue: [CheckedContinuation<Void, Never>] = []
+    // Message status/text is transient UI state. The DB observer rebuilds models from
+    // rows that do not include those fields, so we overlay the latest in-memory value
+    // back onto observed chats until the message returns to a persisted `.done` state.
+    private var transientMessages: [UUID: MessageModel] = [:]
+    private var transientChatStatuses: [UUID: ChatStatus] = [:]
     
     private(set) var chats: [ChatModel] = []
-    var lastChat: ChatModel? { chats.last }
+    var lastChat: ChatModel? { chats.first }
     
     init(
         chatRepository: ChatRepository,
@@ -55,30 +60,13 @@ final class ChatStore {
     /// Chat status is in memory. We need to make sure when the observer queries the db
     /// that we keep status values accurate.
     private func mergeChats(_ updatedChats: [ChatModel]) {
-        let chatStatus = Dictionary(
-            uniqueKeysWithValues: chats
-                .filter { $0.status != .idle }
-                .map { ($0.id, $0.status) }
-        )
-        
-        let messageStatus = Dictionary(
-            uniqueKeysWithValues: chats
-                .flatMap(\.messages)
-                .filter { $0.status != .done }
-                .map { ($0.id, $0.status) }
-        )
-        
         self.chats = updatedChats.map { chat in
             var mergedChat = chat
-            if let status = chatStatus[chat.id] {
+            if let status = transientChatStatuses[chat.id] {
                 mergedChat.status = status
             }
             mergedChat.messages = chat.messages.map { message in
-                var mergedMessage = message
-                if let status = messageStatus[message.id] {
-                    mergedMessage.status = status
-                }
-                return mergedMessage
+                transientMessages[message.id] ?? message
             }
             return mergedChat
         }
@@ -104,15 +92,27 @@ final class ChatStore {
         await waitForObserver()
     }
     
-    func setChatStatus(for chatId: UUID, to status: ChatStatus) async throws {
+    func chat(withID chatId: UUID) -> ChatModel? {
+        chats.first(where: { $0.id == chatId })
+    }
+
+    func saveChat(_ chat: ChatModel) async throws {
+        try chatRepository.save(chat)
+        await waitForObserver()
+    }
+
+    func setChatStatus(for chatId: UUID, to status: ChatStatus) throws {
         guard let index = chats.firstIndex(where: { $0.id == chatId }) else {
             throw AppDBError.recordNotFound(chatId.uuidString)
         }
         
         chats[index].status = status
-        
-        try chatRepository.save(chats[index])
-        await waitForObserver()
+
+        if status == .idle {
+            transientChatStatuses.removeValue(forKey: chatId)
+        } else {
+            transientChatStatuses[chatId] = status
+        }
     }
     
     func updateChatNotes() {}
@@ -131,11 +131,17 @@ final class ChatStore {
         
         do {
             chats[chatIndex].messages.append(message)
+            chats[chatIndex].updatedAt = Date()
+            if message.status != .done {
+                transientMessages[message.id] = message
+            }
             try messageRepository.save(message)
             await waitForObserver()
         } catch {
             chats[chatIndex].messages = messages
             chats[chatIndex].updatedAt = timeStamp
+            transientMessages.removeValue(forKey: message.id)
+            throw error
         }
     }
     
@@ -151,6 +157,12 @@ final class ChatStore {
         
         chats[chatIndex].messages[messageIndex] = message
         chats[chatIndex].updatedAt = Date()
+
+        if save == false || message.status != .done {
+            transientMessages[message.id] = message
+        } else {
+            transientMessages.removeValue(forKey: message.id)
+        }
         
         if save {
             try messageRepository.save(message)
@@ -164,6 +176,7 @@ final class ChatStore {
             throw AppDBError.recordNotFound("Chat: \(chatId.uuidString)")
         }
         
+        transientMessages.removeValue(forKey: message.id)
         try messageRepository.delete(message)
         try chatRepository.save(chats[chatIndex])
         await waitForObserver()

@@ -36,7 +36,7 @@ struct MessageModel: Identifiable, Hashable {
     var error: MessageError = .none
     var tokenCount: Int = 0
     
-    var status: MessageStatus = .loading
+    var status: MessageStatus = .done
 
     func getRolePlayText(cardName: String) -> String {
         // First handle straight quotes

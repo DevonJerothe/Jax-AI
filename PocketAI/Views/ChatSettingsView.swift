@@ -11,35 +11,43 @@ import Collections
 struct ChatSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(NavigationManager.self) var navManager
-    var viewModel: ChatViewModel
+    @Environment(ServiceContainer.self) private var serviceContainer
 
+    @State private var viewModel: ChatViewModel
     @State private var characterCard: CharacterCardModel
     @State private var isDragging: Bool = false 
 
-    init(viewModel: ChatViewModel) {
-        self.viewModel = viewModel
+    private var connectionManager: ConnectionStatusManager {
+        serviceContainer.getConnectionStatusManager()
+    }
 
-        _characterCard = State(initialValue: viewModel.model.getCharacterCard())
+    init(chatID: UUID) {
+        let viewModel = ChatViewModel(chatID: chatID)
+        _viewModel = State(initialValue: viewModel)
+
+        /// TODO: we need to make sure that if we cant load the character card, we hide the section that uses it. 
+        /// We should never be on this screen with no active character card. 
+        _characterCard = State(initialValue: viewModel.model?.getCharacterCard() ?? CharacterCardModel())
     }
 
     private var responseLengthBinding: Binding<Double> {
         Binding<Double>(
-            get: { Double(ServiceContainer.shared.connectionSettings.responseLength ?? 300) },
-            set: { ServiceContainer.shared.connectionSettings.responseLength = Int($0) }
+            get: { Double(connectionManager.connectionSettings.responseLength ?? 300) },
+            set: { connectionManager.update(\.responseLength, to: Int($0)) }
         )
     }
 
     private var temperatureBinding: Binding<Double> {
         Binding<Double>(
-            get: { ServiceContainer.shared.connectionSettings.temperature ?? 0.6 },
-            set: { ServiceContainer.shared.connectionSettings.temperature = $0 }
+            get: { connectionManager.connectionSettings.temperature ?? 0.6 },
+            set: { connectionManager.update(\.temperature, to: $0) }
         )
     }
 
     private var userTemplatesBinding: Binding<OrderedDictionary<String, TemplateModel>> {
         Binding<OrderedDictionary<String, TemplateModel>>(
-            get: { ServiceContainer.shared.connectionSettings.userTemplates },
-            set: { ServiceContainer.shared.connectionSettings.userTemplates = $0 }
+            get: { connectionManager.connectionSettings.userTemplates },
+            set: { connectionManager.update(\.userTemplates, to: $0) }
         )
     }
 
@@ -97,8 +105,8 @@ struct ChatSettingsView: View {
                 VStack{
                     // Force Thinking Toggle
                     Toggle(isOn: Binding(
-                        get: { ServiceContainer.shared.connectionSettings.forceThinking },
-                        set: { ServiceContainer.shared.connectionSettings.forceThinking = $0 }
+                        get: { connectionManager.connectionSettings.forceThinking },
+                        set: { connectionManager.update(\.forceThinking, to: $0) }
                     )) {
                         Text("Force Thinking")
                             .foregroundColor(.primary)
@@ -149,7 +157,7 @@ struct ChatSettingsView: View {
                 .cornerRadius(12)
                 .padding(.horizontal, 16)
                 .onTapGesture {
-                    navManager.navigateToCharacter(character: characterCard, keepCurrentPath: true)
+                    navManager.navigateToCharacter(characterID: characterCard.id, keepCurrentPath: true)
                 }
 
                 VStack(alignment: .leading) {
@@ -197,7 +205,9 @@ struct ChatSettingsView: View {
                 // Mark: - Clear Chat Button 
                 HStack {
                     Button(action: {
-                        viewModel.clearChat()
+                        Task {
+                            await viewModel.clearChat()
+                        }
                     }) {
                         HStack {
                             Image(systemName: "trash")
@@ -217,10 +227,12 @@ struct ChatSettingsView: View {
                 // Save Button 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
-                        viewModel.updateChatSettings(
-                            characterCard: characterCard
-                        )
-                        dismiss()
+                        Task {
+                            await viewModel.updateChatSettings(
+                                characterCard: characterCard
+                            )
+                            dismiss()
+                        }
                     }
                     .fontWeight(.bold)
                 }

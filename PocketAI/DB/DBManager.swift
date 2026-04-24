@@ -85,20 +85,10 @@ class DBManager {
         }
 
         migrator.registerMigration("v1") { db in
-//            try ChatModel.migrateTable(db)
-//            try MessageModel.migrateTable(db)
-//            try CharacterCardModel.migrateTable(db)
-//            try ChatCharacterJoin.migrateTable(db)
-            try MessageRecord.migrateTable(db)
-            try CharacterCardRecord.migrateTable(db)
             try ChatRecord.migrateTable(db)
+            try CharacterCardRecord.migrateTable(db)
+            try MessageRecord.migrateTable(db)
             try ChatCharacterJoinRecord.migrateTable(db)
-        }
-
-        migrator.registerMigration("v2") { db in
-            try db.alter(table: "messages") { t in
-                t.add(column: "tokenCount", .integer).notNull().defaults(to: 0)
-            }
         }
 
         try migrator.migrate(dbQueue)

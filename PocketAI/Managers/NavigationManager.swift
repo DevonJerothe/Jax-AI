@@ -16,10 +16,10 @@ class NavigationManager {
     }
 
     enum Destination: Hashable {
-        case chatView(ChatModel)
-        case characterView(CharacterCardModel)
+        case chatView(UUID)
+        case characterView(UUID)
         case characterCardsView
-        case chatSettings(ChatViewModel)
+        case chatSettings(UUID)
         case settingsView
         case newChatView(Bool)
         case hubArchiveView
@@ -29,8 +29,8 @@ class NavigationManager {
     enum SheetType: Identifiable {
         case newChat
         case connectionSettings
-        case characterDetails(CharacterCardModel)
-        case chatSettings(ChatViewModel)
+        case characterDetails(UUID)
+        case chatSettings(UUID)
         case newTemplateView(String?)
         case hubArchiveView
 
@@ -40,10 +40,10 @@ class NavigationManager {
                 return "newChat"
             case .connectionSettings:
                 return "connectionSettings"
-            case .characterDetails(let character):
-                return "characterDetails_\(character.id)"
-            case .chatSettings(let chat):
-                return "chatDetails_\(chat.model.id)"
+            case .characterDetails(let characterID):
+                return "characterDetails_\(characterID.uuidString)"
+            case .chatSettings(let chatID):
+                return "chatDetails_\(chatID.uuidString)"
             case .newTemplateView(let templateKey):
                 return "newTemplateView_\(templateKey ?? "new")"
             case .hubArchiveView:
@@ -126,37 +126,37 @@ class NavigationManager {
     // Navigates to specific chat, optionally preserving the current path
     // - Parameter chat: The chat to navigate to
     // - Parameter keepCurrentPath: Whether to preserve the current path (default is false)
-    func navigateToChat(chat: ChatModel, keepCurrentPath: Bool = false) {
+    func navigateToChat(chatID: UUID, keepCurrentPath: Bool = false) {
         presentedSheet = nil
         if keepCurrentPath {
-            appendToCurrentPath(Destination.chatView(chat))
+            appendToCurrentPath(Destination.chatView(chatID))
         } else {
             currentTab = .chatList
             clearPath(for: .chatList)
-            chatListPath.append(Destination.chatView(chat))
+            chatListPath.append(Destination.chatView(chatID))
         }
     }
 
-    func navigateToChatSettings(chat: ChatViewModel, sheet: Bool = false) {
+    func navigateToChatSettings(chatID: UUID, sheet: Bool = false) {
         if sheet {
-            presentedSheet = .chatSettings(chat)
+            presentedSheet = .chatSettings(chatID)
         } else {
             presentedSheet = nil
-            appendToCurrentPath(Destination.chatSettings(chat))
+            appendToCurrentPath(Destination.chatSettings(chatID))
         }
     }
 
     // Navigates to specific character, optionally preserving the current path
     // - Parameter character: The character to navigate to
     // - Parameter keepCurrentPath: Whether to preserve the current path (default is false)
-    func navigateToCharacter(character: CharacterCardModel, keepCurrentPath: Bool = false) {
+    func navigateToCharacter(characterID: UUID, keepCurrentPath: Bool = false) {
         presentedSheet = nil
         if keepCurrentPath {
-            appendToCurrentPath(Destination.characterView(character))
+            appendToCurrentPath(Destination.characterView(characterID))
         } else {
             currentTab = .characterList
             clearPath(for: .characterList)
-            characterListPath.append(Destination.characterView(character))
+            characterListPath.append(Destination.characterView(characterID))
         }
     }
 

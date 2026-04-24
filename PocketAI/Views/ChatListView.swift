@@ -9,64 +9,53 @@ import SwiftUI
 
 struct ChatListView: View {
     @Environment(NavigationManager.self) var navManager
+    @Environment(ServiceContainer.self) var serviceContainer
 
-    @State private var viewModel: ChatListViewModel = ServiceContainer.shared.getChatListViewModel()
-
-    private var connectionManager = ServiceContainer.shared
+    @State private var viewModel: ChatListViewModel = .init()
 
     var body: some View {
-        NavigationView {
-            VStack {
-                if connectionManager.isConnected == false {
-                    // API Banner
-                    APIStatusBanner()
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
+        VStack {
+            if serviceContainer.isConnected == false {
+                APIStatusBanner()
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+            }
+            List {
+                Section(
+                    header: Text("Characters").font(.title2).fontWeight(.bold)
+                ) {
+                    CharacterCardsListView(viewModel: viewModel)
+                        .padding(.top, 12)
+                        .listRowInsets(EdgeInsets())
                 }
-                List {
-                    // Character Cards as a Section Header
-                    Section(
-                        header: Text("Characters").font(.title2).fontWeight(.bold)
-                    ) {
-                        CharacterCardsListView(viewModel: viewModel)
-                            .padding(.top, 12)
+                .listSectionSeparator(.hidden)
+
+                Section(
+                    header: Text("Recent Chats").font(.title2).fontWeight(.bold)
+                ) {
+                    ForEach(viewModel.chats, id: \.id) { chat in
+                        RecentChatRow(chat: chat)
                             .listRowInsets(EdgeInsets())
                     }
-                    .listSectionSeparator(.hidden)
-
-                    // Recent Chats
-                    Section(
-                        header: Text("Recent Chats").font(.title2).fontWeight(.bold)
-                    ) {
-                        ForEach(viewModel.chats, id: \.id) { chat in
-                            RecentChatRow(chat: chat)
-                                .listRowInsets(EdgeInsets())
+                    .onDelete { indexSet in
+                        Task {
+                            await viewModel.deleteChat(at: indexSet)
                         }
-                        .onDelete(perform: viewModel.deleteChat)
-                    }
-                    .listSectionSeparator(.hidden)
-                }
-                .listStyle(.plain)
-            }
-            .navigationTitle("Jax AI")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        navManager.navigateToCharacterCards()
-                    } label: {
-                        Image(systemName: "plus")
                     }
                 }
+                .listSectionSeparator(.hidden)
             }
-            .onAppear {
-                // Load data if not already loaded or triggered elsewhere. 
-                if viewModel.chats.isEmpty {
-                    viewModel.refreshData()
+            .listStyle(.plain)
+        }
+        .navigationTitle("Jax AI")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    navManager.navigateToCharacterCards()
+                } label: {
+                    Image(systemName: "plus")
                 }
-                print(
-                    "loaded \(viewModel.characterCards.count) character cards")
-                print("loaded \(viewModel.chats.count) chats")
             }
         }
     }
@@ -83,8 +72,10 @@ struct CharacterCardsListView: View {
                 ForEach(viewModel.characterCards, id: \.id) { character in
                     CharacterCardView(character: character)
                         .onTapGesture {
-                            if let newChat = viewModel.createNewChat(fromCharacter: character) {
-                                navManager.navigateToChat(chat: newChat)
+                            Task {
+                                if let newChat = await viewModel.createNewChat(fromCharacter: character) {
+                                    navManager.navigateToChat(chatID: newChat.id)
+                                }
                             }
                         }
                 }
@@ -162,7 +153,7 @@ struct RecentChatRow: View {
                 Text(chat.chatTitle)
                     .fontWeight(.medium)
 
-                if chat.isLoading || chat.isStreaming {
+                if chat.status != .idle {
                     LoadingIndicator(color: .secondary, size: 15)
                 } else {
                     if let lastMessage = chat.messages.last {
@@ -185,8 +176,7 @@ struct RecentChatRow: View {
         .padding(.vertical, 12)
         .contentShape(Rectangle())
         .onTapGesture {
-            // Navigate to this chat
-            navManager.navigateToChat(chat: chat)
+            navManager.navigateToChat(chatID: chat.id)
         }
     }
 

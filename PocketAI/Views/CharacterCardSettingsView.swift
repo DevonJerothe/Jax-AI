@@ -3,15 +3,16 @@ import PhotosUI
 
 struct CharacterCardSettingsView: View {
     @Environment(NavigationManager.self) var navManager
-    @State private var characterCard: CharacterCardModel 
-    @State private var viewModel: NewChatViewModel = .init()
+    @State private var characterCard: CharacterCardModel
 
     @State private var selectedImage: PhotosPickerItem?
 
+    private let characterID: UUID?
     var isNew: Bool = false
 
-    init(characterCard: CharacterCardModel = CharacterCardModel(), isNew: Bool = false) {
-        self.characterCard = characterCard
+    init(characterID: UUID? = nil, characterCard: CharacterCardModel = CharacterCardModel(), isNew: Bool = false) {
+        self.characterID = characterID
+        _characterCard = State(initialValue: characterCard)
         self.isNew = isNew
     }
 
@@ -93,19 +94,29 @@ struct CharacterCardSettingsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") {
-
-                    let characterRepository = ServiceContainer.shared.getCharacterRepository()
-
-                    do {
-                        try characterRepository.save(characterCard)
-                        if isNew == false{
-                            ServiceContainer.shared.refreshChatListViewModel()
+                    Task {
+                        do {
+                            try await ServiceContainer.shared.getCharacterStore().saveCharacterCard(characterCard)
+                            navManager.popBack()
+                        } catch {
+                            print("Failed to save character card: \(error)")
                         }
-                    } catch {
-                        print("Failed to save character card: \(error)")
                     }
+                }
+            }
+        }
+        .onAppear {
+            guard let characterID,
+                  let storedCharacter = ServiceContainer.shared.getCharacterStore().character(withID: characterID) else {
+                return
+            }
 
-                    navManager.popBack()
+            characterCard = storedCharacter
+        }
+        .onChange(of: selectedImage) {
+            Task {
+                if let data = try? await selectedImage?.loadTransferable(type: Data.self) {
+                    characterCard.imageData = data
                 }
             }
         }

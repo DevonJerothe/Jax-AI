@@ -1,12 +1,11 @@
 import SwiftLLMSDK
 import SwiftUI 
 
+@MainActor
 @Observable
-class CharHubViewModel {
-    private let characterRepository: CharacterRepository
-    private let chatRepository: ChatRepository
+final class CharHubViewModel {
+    private let characterStore: CharacterStore
     private let charArchiveService: CharArchiveService = CharArchiveService()
-    private let serviceContainer: ServiceContainer = .shared
     private var lastLoadTime: Date = .distantPast
     private var currentQuery: String = ""
     private var loadedUpToPage: Int = 0
@@ -20,13 +19,8 @@ class CharHubViewModel {
     var searchTotalPages: Int = 1
     var isLoading: Bool = false
 
-
-    init(
-        characterRepository: CharacterRepository = ServiceContainer.shared.getCharacterRepository(),
-        chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository()
-    ) {
-        self.characterRepository = characterRepository
-        self.chatRepository = chatRepository
+    init(characterStore: CharacterStore? = nil) {
+        self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
     }
 
     func getRandomCharacters() async {
@@ -55,7 +49,6 @@ class CharHubViewModel {
         isLoading = false 
     }
 
-    @MainActor
     func getCharacter(card: CharHubModel) async -> Bool{
         guard let path = card.path, let source = card.source else { return false }
 
@@ -71,7 +64,7 @@ class CharHubViewModel {
                         character.imageData = imgData
                     }
 
-                    try characterRepository.save(character)
+                    try await characterStore.saveCharacterCard(character)
                     return true
                 } catch {
                     print("Error saving character: \(error)")
@@ -83,7 +76,6 @@ class CharHubViewModel {
         }
     }
 
-    @MainActor
     func searchCharacters(query: String, page: Int, count: Int) async {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedQuery.isEmpty else { return }
@@ -128,12 +120,10 @@ class CharHubViewModel {
         isLoading = false
     }
 
-    @MainActor
     func canLoadMore() -> Bool {
         return !isLoading && !searchQuery.isEmpty && loadedUpToPage < searchTotalPages
     }
 
-    @MainActor
     func loadNextPageIfPossible() async {
         guard canLoadMore(), Date().timeIntervalSince(lastLoadTime) > 0.5 else { return }
         

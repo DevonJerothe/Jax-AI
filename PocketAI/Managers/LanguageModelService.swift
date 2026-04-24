@@ -9,25 +9,23 @@ import Foundation
 import SwiftLLMSDK
 
 @Observable
-class LanguageModelService {
-    var connectionSettings: ConnectionSettingsModel
+final class LanguageModelService {
+    private var runtimeConnectionSettings: ConnectionSettingsModel
     var koboldManager: APIManager<KoboldAPI>?
     var openRouterManager: APIManager<OpenRouterAPI>?
     
     var selectedModel: String?
     var availableModels: [OpenRouterModel] = []
-    var isConnected: Bool = false
-    var isLoadingConnection: Bool = false
     var maxContextLength: Int = 26000
 
-    init(connectionSettings: ConnectionSettingsModel) {
-        self.connectionSettings = connectionSettings
+    init(initialConnectionSettings: ConnectionSettingsModel) {
+        self.runtimeConnectionSettings = initialConnectionSettings
 
         setupManagers()
     }
 
     private func setupManagers() {
-        guard let host = connectionSettings.host, let port = connectionSettings.port else {
+        guard let host = runtimeConnectionSettings.host, let port = runtimeConnectionSettings.port else {
             print("No Connection Settings")
             return
         }
@@ -40,25 +38,24 @@ class LanguageModelService {
             )
         )
         
-        let openRouterModel = connectionSettings.selectedModel
+        let openRouterModel = runtimeConnectionSettings.selectedModel
         self.openRouterManager = .init(
             forService: OpenRouterAPI(
                 urlSession: URLSession.shared,
                 selectedModel: openRouterModel,
-                apiKey: connectionSettings.apiKey
+                apiKey: runtimeConnectionSettings.apiKey
             )
         )
         
-        if connectionSettings.connectionType == .OpenRouter {
+        if runtimeConnectionSettings.connectionType == .OpenRouter {
             self.selectedModel = openRouterModel
         }
     }
 
     func connect() async -> Bool {
-        print("Connecting to \(connectionSettings.connectionType)")
-        print("Current Context Length: \(connectionSettings.contextLength ?? 0)")
-        self.isLoadingConnection = true
-        switch connectionSettings.connectionType {
+        print("Connecting to \(runtimeConnectionSettings.connectionType)")
+        print("Current Context Length: \(runtimeConnectionSettings.contextLength ?? 0)")
+        switch runtimeConnectionSettings.connectionType {
         case .KoboldAPI:
             let result = await koboldManager?.connect()
             switch result {
@@ -69,8 +66,6 @@ class LanguageModelService {
                 self.maxContextLength = result ?? 26000
 
                 self.selectedModel = name
-                self.isConnected = true
-                self.isLoadingConnection = false
                 return true
             case .failure(let error):
                 print("Error: \(error)")
@@ -81,8 +76,6 @@ class LanguageModelService {
             let result = await openRouterManager?.connect()
             switch result {
             case .success(_):
-                self.isConnected = true
-                self.isLoadingConnection = false
                 return true
             case .failure(let error):
                 print("Error: \(error)")
@@ -90,15 +83,14 @@ class LanguageModelService {
                 print("ERROR: Unexpected Error")
             }
         }
-        self.isConnected = false
-        self.isLoadingConnection = false
         return false
+    }
+
+    func disconnect() {
+        selectedModel = nil
     }
     
     func sendStreamedMessage(chatModel: ChatModel, continued: Bool = false, trimmedPrompt: String) -> AsyncStream<ModelResponse> {
-        // fetch the latest connection settings 
-        self.updateConnection()
-
         // Map our internal message model to the request body message
         var requestMessages = chatModel.messages.map { message in
             let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
@@ -108,7 +100,7 @@ class LanguageModelService {
         // If we are continueing a message, we need to add special instructions to the system message.
         // If we are not continuing but the message is loading, we can assume we are regenerating the same message.
         // Pulled this instruction from SillyTavern.
-        if connectionSettings.connectionType == .OpenRouter {
+        if runtimeConnectionSettings.connectionType == .OpenRouter {
             if continued {
                 guard let lastMessage = requestMessages.last?.message else {
                     print("No last message")
@@ -118,7 +110,7 @@ class LanguageModelService {
                 }
                 let continueMessage = TemplateInstructions().continueMessage(lastMessage)
                 requestMessages.append(RequestBodyMessages(role: .system, message: continueMessage))
-            } else if chatModel.messages.last?.loading ?? false {
+            } else if chatModel.messages.last?.status != .done {
                 requestMessages.removeLast()
             }
         }
@@ -126,21 +118,21 @@ class LanguageModelService {
         let (stream, continueation) = AsyncStream<ModelResponse>.makeStream()
         var streamResponse: AsyncStream<Result<ModelResponse, APIError>>
         
-        switch connectionSettings.connectionType {
+        switch runtimeConnectionSettings.connectionType {
         case .KoboldAPI:
             guard let koboldManager = koboldManager else {
                 fatalError("KoboldManager not connected")
             }
 
-            print("Templates used: \(connectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"))") 
+            print("Templates used: \(runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"))") 
             
             let promptBuilder = KoboldRequestBuilder(
                 prompt: trimmedPrompt,
                 memory: chatModel.getFullMemory(),
-                maxContextLength: connectionSettings.contextLength ?? 4096,
-                maxLength: connectionSettings.responseLength ?? 240,
-                temperature: connectionSettings.temperature ?? 1.15,
-                promptTemplate: continued ? "" : connectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n")
+                maxContextLength: runtimeConnectionSettings.contextLength ?? 4096,
+                maxLength: runtimeConnectionSettings.responseLength ?? 240,
+                temperature: runtimeConnectionSettings.temperature ?? 1.15,
+                promptTemplate: continued ? "" : runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n")
             )
             
             streamResponse = koboldManager.streamMessage(builder: promptBuilder)
@@ -152,7 +144,7 @@ class LanguageModelService {
             let promptBuilder = OpenRouterRequestBuilder(
                 model: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
                 messages: requestMessages,
-                maxTokens: connectionSettings.responseLength ?? 240,
+                maxTokens: runtimeConnectionSettings.responseLength ?? 240,
                 stream: true,
                 systemPromptTemplate: TemplatePrompts().defaultRolePlayPrompt,
                 characterDescription: chatModel.characterCards.first?.description,
@@ -188,9 +180,6 @@ class LanguageModelService {
     
     // Put all context switching of service type in this class and out of the view models.
     func sendMessage(chatModel: ChatModel, continued: Bool = false) async -> ModelResponse? {
-        // fetch the latest connection settings 
-        self.updateConnection()
-
         // Map our internal message model to the request body message
         var requestMessages = chatModel.messages.map { message in
             let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
@@ -200,7 +189,7 @@ class LanguageModelService {
         // If we are continueing a message, we need to add special instructions to the system message.
         // If we are not continuing but the message is loading, we can assume we are regenerating the same message.
         // Pulled this instruction from SillyTavern.
-        if connectionSettings.connectionType == .OpenRouter {
+        if runtimeConnectionSettings.connectionType == .OpenRouter {
             if continued {
                 guard let lastMessage = requestMessages.last?.message else {
                     print("No last message")
@@ -208,24 +197,28 @@ class LanguageModelService {
                 }
                 let continueMessage = TemplateInstructions().continueMessage(lastMessage)
                 requestMessages.append(RequestBodyMessages(role: .system, message: continueMessage))
-            } else if chatModel.messages.last?.loading ?? false {
+            } else if chatModel.messages.last?.status != .done {
                 requestMessages.removeLast()
             }
         }
         
         var serviceResponse: Result<ModelResponse, APIError>?
         
-        switch connectionSettings.connectionType {
+        switch runtimeConnectionSettings.connectionType {
         case .KoboldAPI:
-            print("Templates used: \(connectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"))")        
+            print("Templates used: \(runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"))")        
 
             let promptBuilder = KoboldRequestBuilder(
-                prompt: await chatModel.autoTrimFullPrompt(continueResponse: continued, forceThinking: connectionSettings.forceThinking),
+                prompt: await autoTrimFullPrompt(
+                    for: chatModel,
+                    continueResponse: continued,
+                    forceThinking: runtimeConnectionSettings.forceThinking
+                ),
                 memory: chatModel.getFullMemory(),
-                maxContextLength: connectionSettings.contextLength ?? 4096,
-                maxLength: connectionSettings.responseLength ?? 240,
-                temperature: connectionSettings.temperature ?? 1.15,
-                promptTemplate: connectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n")
+                maxContextLength: runtimeConnectionSettings.contextLength ?? 4096,
+                maxLength: runtimeConnectionSettings.responseLength ?? 240,
+                temperature: runtimeConnectionSettings.temperature ?? 1.15,
+                promptTemplate: runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n")
             )
             
             serviceResponse = await koboldManager?.sendMessage(builder: promptBuilder)
@@ -233,7 +226,7 @@ class LanguageModelService {
             let promptBuilder = OpenRouterRequestBuilder(
                 model: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
                 messages: requestMessages,
-                maxTokens: connectionSettings.responseLength ?? 240,
+                maxTokens: runtimeConnectionSettings.responseLength ?? 240,
                 stream: false,
                 systemPromptTemplate: TemplatePrompts().defaultRolePlayPrompt,
                 characterDescription: chatModel.characterCards.first?.description,
@@ -264,21 +257,18 @@ class LanguageModelService {
         }
     }
 
-    // update the connection and refresh managers if necessary
-    // Only refresh manager if host / port / selectedModel / connectionType / APIKey has changed
-    func updateConnection() {
-        let newConnectionSettings = ServiceContainer.shared.connectionSettings
-        if newConnectionSettings.host != connectionSettings.host ||
-            newConnectionSettings.port != connectionSettings.port ||
-            newConnectionSettings.apiKey != connectionSettings.apiKey ||
-            newConnectionSettings.selectedModel != connectionSettings.selectedModel ||
-            newConnectionSettings.connectionType != connectionSettings.connectionType {
-            self.connectionSettings = newConnectionSettings
-
-            self.isConnected = false 
+    /// Updates the service's runtime settings and refreshes API managers when the
+    /// connection identity changes.
+    func updateConnectionSettings(_ newConnectionSettings: ConnectionSettingsModel) {
+        if newConnectionSettings.host != runtimeConnectionSettings.host ||
+            newConnectionSettings.port != runtimeConnectionSettings.port ||
+            newConnectionSettings.apiKey != runtimeConnectionSettings.apiKey ||
+            newConnectionSettings.selectedModel != runtimeConnectionSettings.selectedModel ||
+            newConnectionSettings.connectionType != runtimeConnectionSettings.connectionType {
+            self.runtimeConnectionSettings = newConnectionSettings
             setupManagers()
         } else {
-            self.connectionSettings = newConnectionSettings
+            self.runtimeConnectionSettings = newConnectionSettings
         }
     } 
 
@@ -326,5 +316,80 @@ class LanguageModelService {
         case .failure(let error):
             print("Error: \(error)")
         }
+    }
+
+    private func autoTrimFullPrompt(
+        for chatModel: ChatModel,
+        continueResponse: Bool = false,
+        forceThinking: Bool = false
+    ) async -> String {
+        let maxContextTokens = runtimeConnectionSettings.contextLength ?? 4096
+        let reservedResponseTokens = runtimeConnectionSettings.responseLength ?? 240
+        let memory = chatModel.getFullMemory()
+        let memoryTokens = await getTokenCount(string: memory)
+        let userTemplates = runtimeConnectionSettings.userTemplates.values
+            .filter(\.isEnabled)
+            .map(\.content)
+            .joined(separator: "\n")
+        let systemTokens = await getTokenCount(string: userTemplates)
+
+        var prefix = "\nAssistant: "
+        if forceThinking {
+            prefix += "<think>\nOk, first we need to consider who we are and not to speak for the user."
+        }
+
+        let prefixTokens = await getTokenCount(string: prefix)
+        var fixedOverhead = memoryTokens + prefixTokens + reservedResponseTokens
+        if continueResponse {
+            fixedOverhead += systemTokens
+        }
+
+        if fixedOverhead >= maxContextTokens {
+            return prefix
+        }
+
+        struct Block {
+            let text: String
+            let tokens: Int
+        }
+
+        var blocks: [Block] = []
+        for message in chatModel.messages {
+            switch message.actor {
+            case .user:
+                var text = "\(message.text)\nAssistant: "
+                if forceThinking {
+                    text += "<think>\nOk, first we need to consider who we are and not to speak for the user."
+                }
+
+                let tokens = await getTokenCount(string: text)
+                blocks.append(Block(text: text, tokens: tokens))
+            case .bot:
+                if message.status == .done || continueResponse {
+                    let suffix = continueResponse ? "" : "\nUser:"
+                    let text = "\(message.text)\(suffix)"
+                    let tokens = await getTokenCount(string: text)
+                    blocks.append(Block(text: text, tokens: tokens))
+                }
+            }
+        }
+
+        var remaining = maxContextTokens - fixedOverhead
+        var selectedReversed: [Block] = []
+
+        for block in blocks.reversed() {
+            if block.tokens <= remaining {
+                selectedReversed.append(block)
+                remaining -= block.tokens
+            } else {
+                break
+            }
+        }
+
+        return selectedReversed
+            .reversed()
+            .reduce(prefix) { partialResult, block in
+                partialResult + block.text
+            }
     }
 }

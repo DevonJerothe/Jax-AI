@@ -167,8 +167,10 @@ public struct ChubImportView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") {
-                    if let _ = viewModel.createCharacterCard(type: .importCard) {
-                        navManager.popBack()
+                    Task {
+                        if let _ = await viewModel.createCharacterCard(type: .importCard) {
+                            navManager.popBack()
+                        }
                     }
                 }
                 .disabled(viewModel.isCreateDisabled(type: .importCard))

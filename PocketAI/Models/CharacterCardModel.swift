@@ -135,7 +135,7 @@ extension CharacterCardModel {
 
 struct CharacterCardRecord: Codable, FetchableRecord, MutablePersistableRecord, Sendable {
     static let databaseTableName = "char_cards"
-    static let chatCharacterJoins = hasMany(ChatCharacterJoinRecord.self, using: ForeignKey([Column("charCardId")]))
+    static let chatCharacterJoins = hasMany(ChatCharacterJoinRecord.self, using: ForeignKey([Column("characterCardId")]))
     static let chats = hasMany(
         ChatRecord.self, 
         through: chatCharacterJoins, 
@@ -174,6 +174,7 @@ struct CharacterCardRecord: Codable, FetchableRecord, MutablePersistableRecord, 
             t.column("tags", .text)
             t.column("createdAt", .datetime).notNull().defaults(to: "CURRENT_TIMESTAMP")
             t.column("imageData", .blob)
+            t.column("isPrivate", .boolean).notNull().defaults(to: false)
         }
     }
 }
@@ -182,4 +183,3 @@ struct CharacterCardWithChats: Decodable, FetchableRecord {
     let characterCard: CharacterCardRecord
     let chats: [ChatRecord]
 }
-

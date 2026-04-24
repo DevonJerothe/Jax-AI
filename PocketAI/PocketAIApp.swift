@@ -19,9 +19,6 @@ struct PocketAIApp: App {
         // Initialize database
         let _ = DBManager.shared
         print("Database initialized successfully")
-
-        // init chatListViewModel 
-        serviceContainer.setChatListViewModel()
     }
 
     var body: some Scene {
@@ -73,6 +70,9 @@ struct PocketAIApp: App {
                     .ignoresSafeArea()
             }
             .tint(.primary)
+            .task {
+                serviceContainer.bootstrap()
+            }
         }
         .environment(navManager)
         .environment(serviceContainer)
@@ -81,20 +81,23 @@ struct PocketAIApp: App {
     @ViewBuilder
     private func destinationView(for destination: NavigationManager.Destination) -> some View {
         switch destination {
-        case .chatView(let chat):
-            ChatView(chatModel: chat)
+        case .chatView(let chatID):
+            ChatView(chatID: chatID)
                 .toolbar(.hidden, for: .tabBar)
-        case .characterView(let character):
-            CharacterCardSettingsView(characterCard: character)
+        case .characterView(let characterID):
+            CharacterCardSettingsView(characterID: characterID)
         case .characterCardsView:
             CharacterCardsView()
         case .settingsView:
             ConnectionSettingsView()
         case .newChatView(let createChar):
-            // NewChatView(createCharacterCard: createChar)
-            CharacterCardSettingsView(isNew: createChar)
-        case .chatSettings(let chat):
-            ChatSettingsView(viewModel: chat)
+            if createChar {
+                CharacterCardSettingsView(isNew: true)
+            } else {
+                NewChatView()
+            }
+        case .chatSettings(let chatID):
+            ChatSettingsView(chatID: chatID)
         case .hubArchiveView:
             HubArchiveView()
         case .chubImportView:
@@ -105,8 +108,8 @@ struct PocketAIApp: App {
     @ViewBuilder
     private func sheetView(for sheet: NavigationManager.SheetType) -> some View {
         switch sheet {
-        case .chatSettings(let chat):
-            ChatSettingsView(viewModel: chat)
+        case .chatSettings(let chatID):
+            ChatSettingsView(chatID: chatID)
         case .newChat:
             NewChatView()
         case .newTemplateView(let templateKey):
