@@ -44,5 +44,9 @@ struct APIStatusBanner: View {
             // Navigate to settings
             navManager.navigateToSettings(keepCurrentPath: self.stayOnPath)
         }
+        .glassEffect(
+            .regular.interactive(),
+            in: RoundedRectangle(cornerRadius: 12)
+        )
     }
 }

@@ -24,8 +24,8 @@ This repository contains the iOS app source. A separate Swift Package, SwiftLLMS
 ---
 
 ## Requirements
-- Xcode 16 or newer
-- iOS 17.0+
+- Xcode 26 or newer
+- iOS 26.0+
 - Swift 5
 
 ---

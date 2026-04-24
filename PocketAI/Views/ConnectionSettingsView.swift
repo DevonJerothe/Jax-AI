@@ -151,6 +151,10 @@ struct ConnectionSettingsView: View {
                         .cornerRadius(20)
                         .animation(.easeInOut, value: serviceContainer.isLoading)
                 }
+                .glassEffect(
+                    .regular.interactive(), 
+                    in: Capsule()
+                )
                 .disabled(serviceContainer.isLoading)
             }
             .padding()

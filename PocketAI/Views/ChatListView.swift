@@ -15,11 +15,6 @@ struct ChatListView: View {
 
     var body: some View {
         VStack {
-            if serviceContainer.isConnected == false {
-                APIStatusBanner()
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-            }
             List {
                 Section(
                     header: Text("Characters").font(.title2).fontWeight(.bold)
@@ -46,6 +41,13 @@ struct ChatListView: View {
                 .listSectionSeparator(.hidden)
             }
             .listStyle(.plain)
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if serviceContainer.isConnected == false {
+                APIStatusBanner()
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+            }
         }
         .navigationTitle("Jax AI")
         .navigationBarTitleDisplayMode(.inline)
