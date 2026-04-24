@@ -44,9 +44,13 @@ public struct NewChatView: View {
                 if selectedTab == .manual {
                     buildManualChatView
                 } else if selectedTab == .charHub {
-                    // buildCharHubView
+                    Text("Character Hub import is available from the Characters tab.")
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 32)
                 } else {
-                    // buildImporterView
+                    Text("Import cards from the Characters tab.")
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 32)
                 }
             }
         }
@@ -57,11 +61,11 @@ public struct NewChatView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Create") {
-                    if createCharacterCard, let _ = viewModel.createCharacterCard(type: selectedTab) {
-                        navManager.popBack()
-                    } else {
-                        if let newChat = viewModel.createChat(type: selectedTab) {
-                            navManager.navigateToChat(chat: newChat)
+                    Task {
+                        if createCharacterCard, let _ = await viewModel.createCharacterCard(type: selectedTab) {
+                            navManager.popBack()
+                        } else if let newChat = await viewModel.createChat(type: selectedTab) {
+                            navManager.navigateToChat(chatID: newChat.id)
                         }
                     }
                 }

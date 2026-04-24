@@ -3,6 +3,7 @@ import Collections
 
 struct NewTemplateView: View {
     @Environment(NavigationManager.self) var navManger
+    @Environment(ServiceContainer.self) private var serviceContainer
     var templateKey: String?
 
     @State private var templateName: String = ""
@@ -11,6 +12,10 @@ struct NewTemplateView: View {
 
     init(templateKey: String? = nil) {
         self.templateKey = templateKey
+    }
+
+    private var connectionManager: ConnectionStatusManager {
+        serviceContainer.getConnectionStatusManager()
     }
 
     var body: some View {
@@ -72,7 +77,7 @@ struct NewTemplateView: View {
         // .padding(.horizontal, 16)
         .onAppear {
             if let key = templateKey {
-                let template = ServiceContainer.shared.connectionSettings.userTemplates[key]
+                let template = connectionManager.connectionSettings.userTemplates[key]
                 if let template = template {
                     self.templateName = key
                     self.templateContent = template.content
@@ -84,9 +89,9 @@ struct NewTemplateView: View {
 
     private func enableDisableTemplate() {
         guard let key = templateKey else { return }
-        var templates = ServiceContainer.shared.connectionSettings.userTemplates
+        var templates = connectionManager.connectionSettings.userTemplates
         templates[key]?.isEnabled.toggle()
-        ServiceContainer.shared.connectionSettings.userTemplates = templates
+        connectionManager.update(\.userTemplates, to: templates)
         navManger.presentedSheet = nil
     }
 
@@ -94,11 +99,11 @@ struct NewTemplateView: View {
         guard let key = templateKey else { return }
         
         // Create a new dictionary without the template to trigger @Observable
-        var newTemplates = ServiceContainer.shared.connectionSettings.userTemplates
+        var newTemplates = connectionManager.connectionSettings.userTemplates
         newTemplates.removeValue(forKey: key)
         
         // Reassign the entire dictionary to trigger SwiftUI updates
-        ServiceContainer.shared.connectionSettings.userTemplates = newTemplates
+        connectionManager.update(\.userTemplates, to: newTemplates)
         navManger.presentedSheet = nil
     }
 
@@ -106,7 +111,7 @@ struct NewTemplateView: View {
         guard !templateName.isEmpty && !templateContent.isEmpty else { return }
         
         let template = TemplateModel(content: templateContent, isEnabled: true)
-        var templates = ServiceContainer.shared.connectionSettings.userTemplates
+        var templates = connectionManager.connectionSettings.userTemplates
         
         // Add or update the template. If updateing an existing template key, we need to swap the indexes.
         templates.updateValue(template, forKey: templateName)
@@ -117,7 +122,7 @@ struct NewTemplateView: View {
             templates.removeValue(forKey: templateKey)
         }
         
-        ServiceContainer.shared.connectionSettings.userTemplates = templates
+        connectionManager.update(\.userTemplates, to: templates)
         navManger.presentedSheet = nil
     }
 }
@@ -158,8 +163,6 @@ struct TemplateEditor: View {
                 print("template: \(key) isEnabled: \(template.isEnabled)")
             }
 
-            // ServiceContainer.shared.connectionSettings.userTemplates = newValue
-            ServiceContainer.shared.saveConnectionSettings()
             updateTemplateEditor.toggle()
 
             // reset the dragging state - id based update breaks the draggins state, dont feel like fixing it right now.

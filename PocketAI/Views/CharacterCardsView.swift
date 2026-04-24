@@ -10,51 +10,48 @@ struct CharacterCardsView: View {
     ]
     
     var body: some View {
-        NavigationStack {
-            ZStack {              
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(viewModel.characterCards, id: \.self) { card in
-                            CharacterCardPreview(card: card)
-                                .onTapGesture {
-                                    navManager.navigateToCharacter(character: card, keepCurrentPath: true)
-                                }
-                                .withBottomContextMenu {
-                                    Button(role: .destructive) {
-                                        viewModel.deleteCharacterCard(card: card)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
+        ZStack {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(viewModel.characterCards, id: \.self) { card in
+                        CharacterCardPreview(card: card)
+                            .onTapGesture {
+                                navManager.navigateToCharacter(characterID: card.id, keepCurrentPath: true)
+                            }
+                            .withBottomContextMenu {
+                                Button(role: .destructive) {
+                                    Task {
+                                        await viewModel.deleteCharacterCard(card: card)
                                     }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
                                 }
-                        }
-                    }
-                    .padding()
-                }
-            }
-            .navigationTitle("My Characters")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button("Create From Scratch") {
-                            navManager.navigateToNewChat(keepCurrentPath: true, createCharacterCard: true)
-                        }
-                        Button("Import from ChubAI") {
-                            navManager.navigateToChubImport(keepCurrentPath: true)
-                        }
-                        Button("Browse the Hub") {
-                            navManager.navigateToHubArchive(keepCurrentPath: true) 
-                        }
-                    } label: {
-                        Image(systemName: "plus") 
+                            }
                     }
                 }
+                .padding()
             }
-            .toolbar(.visible, for: .navigationBar)
         }
-        .onAppear {
-            viewModel.loadCharacterCards()
+        .navigationTitle("My Characters")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button("Create From Scratch") {
+                        navManager.navigateToNewChat(keepCurrentPath: true, createCharacterCard: true)
+                    }
+                    Button("Import from ChubAI") {
+                        navManager.navigateToChubImport(keepCurrentPath: true)
+                    }
+                    Button("Browse the Hub") {
+                        navManager.navigateToHubArchive(keepCurrentPath: true) 
+                    }
+                } label: {
+                    Image(systemName: "plus") 
+                }
+            }
         }
+        .toolbar(.visible, for: .navigationBar)
     }
 }
 
@@ -119,4 +116,3 @@ struct CharacterCardPreview: View {
         .cornerRadius(12)
     }
 }
-

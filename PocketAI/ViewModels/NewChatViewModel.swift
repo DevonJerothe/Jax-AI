@@ -8,11 +8,11 @@
 import SwiftLLMSDK
 import SwiftUI
 
+@MainActor
 @Observable
-class NewChatViewModel {
-    private let characterRepository: CharacterRepository
-    private let chatRepository: ChatRepository
-    private let serviceContainer: ServiceContainer = .shared
+final class NewChatViewModel {
+    private let characterStore: CharacterStore
+    private let chatStore: ChatStore
     private let characterImporter: CharacterImporterService
     
     var urlEntry: String = ""
@@ -25,12 +25,9 @@ class NewChatViewModel {
 
     var characterCard: CharacterCardModel?
 
-    init(
-        characterRepository: CharacterRepository = ServiceContainer.shared.getCharacterRepository(),
-        chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository()
-    ) {
-        self.characterRepository = characterRepository
-        self.chatRepository = chatRepository
+    init(characterStore: CharacterStore? = nil, chatStore: ChatStore? = nil) {
+        self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
+        self.chatStore = chatStore ?? ServiceContainer.shared.getChatStore()
 
         // For now only support chub AI cards.. tbh not even sure other sources
         self.characterImporter = ChubImporter(urlSession: URLSession.shared)
@@ -83,7 +80,7 @@ class NewChatViewModel {
         }
     }
 
-    func createCharacterCard(type: NewChatTab) -> CharacterCardModel? {
+    func createCharacterCard(type: NewChatTab) async -> CharacterCardModel? {
         if type == .manual {
             self.characterCard = CharacterCardModel(
                 name: self.chatName,
@@ -99,7 +96,7 @@ class NewChatViewModel {
         }
 
         do {
-            try self.characterRepository.save(characterCard)
+            try await self.characterStore.saveCharacterCard(characterCard)
         } catch {
             print("Failed to save character card: \(error)")
             return nil
@@ -108,8 +105,8 @@ class NewChatViewModel {
         return characterCard
     }
     
-    func createChat(type: NewChatTab) -> ChatModel?{
-        let _ = createCharacterCard(type: type)
+    func createChat(type: NewChatTab) async -> ChatModel? {
+        let _ = await createCharacterCard(type: type)
 
         guard let characterCard else {
             fatalError("Failed to add new chat")
@@ -117,7 +114,7 @@ class NewChatViewModel {
 
         let newChat = ChatModel(fromCard: characterCard)
         do {
-            try self.chatRepository.save(newChat)
+            try await self.chatStore.addChat(newChat)
             
             return newChat
         } catch {

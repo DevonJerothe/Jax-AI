@@ -1,36 +1,24 @@
 import Foundation 
 import SwiftUI 
-import GRDB 
 
+@MainActor
 @Observable
-class CharacterCardsViewModel {
-    private let characterRepository: CharacterRepository
-    private let serviceContainer = ServiceContainer.shared
+final class CharacterCardsViewModel {
+    private let characterStore: CharacterStore
 
-    var characterCards: [CharacterCardModel] = []
-
-    init(
-        characterRepository: CharacterRepository = ServiceContainer.shared.getCharacterRepository(),
-        characterCards: [CharacterCardModel] = []
-    ) {
-        self.characterRepository = characterRepository
-        self.characterCards = characterCards
+    init(characterStore: CharacterStore? = nil) {
+        // Swift evaluates default arguments outside actor isolation, so the
+        // shared container fallback needs to happen inside the main-actor init.
+        self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
     }
 
-    func loadCharacterCards() {
-        do {
-            print("CharacterCardsViewModel: Loading character cards from database...")
-            self.characterCards = try characterRepository.getAll()
-            print("CharacterCardsViewModel: Loaded \(self.characterCards.count) character cards")
-        } catch {
-            print("CharacterCardsViewModel: Failed to load character cards: \(error)")
-        }
+    var characterCards: [CharacterCardModel] {
+        characterStore.characters
     }
 
-    func deleteCharacterCard(card: CharacterCardModel) {
+    func deleteCharacterCard(card: CharacterCardModel) async {
         do {
-            try characterRepository.delete(card)
-            self.loadCharacterCards()
+            try await characterStore.deleteCharacterCard(card)
         } catch {
             print("CharacterCardsViewModel: Failed to delete character card: \(error)")
         }

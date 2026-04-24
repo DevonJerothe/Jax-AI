@@ -7,124 +7,88 @@
 
 import SwiftUI
 
-
 struct ConnectionSettingsView: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    private var connectionManager: ServiceContainer = .shared
-    @State private var connectionTest: Bool? = nil
+    @Environment(ServiceContainer.self) private var serviceContainer
+
     @State private var isLoadingModels: Bool = false
-    
-    var hostBinding: Binding<String> {
-        Binding<String>(
+
+    private var connectionManager: ConnectionStatusManager {
+        serviceContainer.getConnectionStatusManager()
+    }
+
+    private var hostBinding: Binding<String> {
+        Binding(
             get: { connectionManager.connectionSettings.host ?? "" },
-            set: { newValue in
-                let currentHost = connectionManager.connectionSettings.host ?? ""
-                // Only disconnect if the value actually changed
-                if currentHost != newValue {
-                    connectionManager.getLanguageModelService().isConnected = false
-                }
-                connectionManager.connectionSettings.host = newValue.isEmpty ? nil : newValue
-            }
+            set: { connectionManager.update(\.host, to: $0.isEmpty ? nil : $0) }
         )
     }
 
-    var portBinding: Binding<Int> {
-        Binding<Int>(
+    private var portBinding: Binding<Int> {
+        Binding(
             get: { connectionManager.connectionSettings.port ?? 5000 },
-            set: { newValue in
-                let currentPort = connectionManager.connectionSettings.port ?? 5000
-                // Only disconnect if the value actually changed
-                if currentPort != newValue {
-                    connectionManager.getLanguageModelService().isConnected = false
-                }
-                connectionManager.connectionSettings.port = newValue
-            }
-        )
-    }
-    
-    var apiKeyBinding: Binding<String> {
-        Binding<String>(
-            get: { connectionManager.connectionSettings.apiKey ?? "" },
-            set: { newValue in
-                let currentApiKey = connectionManager.connectionSettings.apiKey ?? ""
-                // Only disconnect if the value actually changed
-                if currentApiKey != newValue {
-                    connectionManager.getLanguageModelService().isConnected = false
-                }
-                connectionManager.connectionSettings.apiKey = newValue.isEmpty ? nil : newValue
-            }
-        )
-    }
-    
-    var selectedModelBinding: Binding<String> {
-        Binding<String>(
-            get: { connectionManager.connectionSettings.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free" },
-            set: { newValue in
-                let currentModel = connectionManager.connectionSettings.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free"
-                // Only disconnect if the value actually changed
-                if currentModel != newValue {
-                    connectionManager.getLanguageModelService().isConnected = false
-                }
-                connectionManager.connectionSettings.selectedModel = newValue
-            }
+            set: { connectionManager.update(\.port, to: $0) }
         )
     }
 
-    // Add computed bindings for slider values
+    private var apiKeyBinding: Binding<String> {
+        Binding(
+            get: { connectionManager.connectionSettings.apiKey ?? "" },
+            set: { connectionManager.update(\.apiKey, to: $0.isEmpty ? nil : $0) }
+        )
+    }
+
+    private var selectedModelBinding: Binding<String> {
+        Binding(
+            get: { connectionManager.connectionSettings.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free" },
+            set: { connectionManager.update(\.selectedModel, to: $0) }
+        )
+    }
+
     private var contextLengthBinding: Binding<Double> {
-        Binding<Double>(
+        Binding(
             get: { Double(connectionManager.connectionSettings.contextLength ?? 4096) },
-            set: {
-                connectionManager.connectionSettings.contextLength = Int($0)
-                connectionManager.saveConnectionSettings()
-            }
+            set: { connectionManager.update(\.contextLength, to: Int($0)) }
         )
     }
-    
+
     private var responseLengthBinding: Binding<Double> {
-        Binding<Double>(
+        Binding(
             get: { Double(connectionManager.connectionSettings.responseLength ?? 300) },
-            set: {
-                connectionManager.connectionSettings.responseLength = Int($0)
-                connectionManager.saveConnectionSettings()
-            }
+            set: { connectionManager.update(\.responseLength, to: Int($0)) }
         )
     }
-    
+
     var body: some View {
         ScrollView {
             VStack {
-                // Connection Type and Response Length Slider 
                 HStack {
                     Text("Connection")
                         .font(.title2)
                         .fontWeight(.semibold)
                         .foregroundColor(.primary)
-                    Spacer() 
+                    Spacer()
                 }
                 .padding(.top, 24)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
 
-                // Connection Type Picker 
                 Menu {
                     Button("KoboldAPI") {
-                        connectionManager.connectionSettings.connectionType = .KoboldAPI
+                        connectionManager.update(\.connectionType, to: .KoboldAPI)
                     }
                     Button("OpenRouter") {
-                        connectionManager.connectionSettings.connectionType = .OpenRouter
+                        connectionManager.update(\.connectionType, to: .OpenRouter)
                     }
                 } label: {
                     HStack {
                         VStack(alignment: .leading) {
-                            Text("Connection Type") 
+                            Text("Connection Type")
                                 .foregroundColor(.primary)
                             Text(connectionManager.connectionSettings.connectionType.rawValue)
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
-                        Spacer() 
+                        Spacer()
                         Image(systemName: "chevron.right")
                             .foregroundColor(.secondary)
                     }
@@ -132,15 +96,14 @@ struct ConnectionSettingsView: View {
                     .background(Color(.systemGray6).opacity(0.6))
                     .cornerRadius(12)
                 }
-                .buttonStyle(PlainButtonStyle())
+                .buttonStyle(.plain)
                 .padding(.horizontal, 16)
 
-                // Response Length Slider 
                 VStack(alignment: .leading) {
                     HStack {
                         Text("Response Length")
                             .foregroundColor(.primary)
-                        Spacer() 
+                        Spacer()
                         Text("\(Int(responseLengthBinding.wrappedValue))")
                             .foregroundColor(.secondary)
                             .font(.subheadline)
@@ -152,17 +115,15 @@ struct ConnectionSettingsView: View {
                 .cornerRadius(12)
                 .padding(.horizontal, 16)
 
-                // Connection Specific Settings
                 connectionSpecificSections()
             }
-
         }
         .scrollDismissesKeyboard(.immediately)
         .safeAreaInset(edge: .bottom) {
             HStack {
                 Text("Status")
                     .foregroundColor(.primary.opacity(0.8))
-                if connectionManager.isLoading {
+                if serviceContainer.isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .primary))
                         .scaleEffect(0.7)
@@ -171,12 +132,12 @@ struct ConnectionSettingsView: View {
                         .font(.subheadline)
                 } else {
                     Circle()
-                        .fill(connectionManager.isConnected ? .green : .red)
+                        .fill(serviceContainer.isConnected ? .green : .red)
                         .frame(width: 10, height: 10)
-                    Text(connectionManager.isConnected ? "Connected" : "Disconnected")
-                        .foregroundColor(connectionManager.isConnected ? .green : .red)
+                    Text(serviceContainer.isConnected ? "Connected" : "Disconnected")
+                        .foregroundColor(serviceContainer.isConnected ? .green : .red)
                 }
-                Spacer() 
+                Spacer()
                 Button {
                     Task {
                         await connectionManager.connect()
@@ -188,9 +149,9 @@ struct ConnectionSettingsView: View {
                         .padding(.vertical, 12)
                         .background(.secondary)
                         .cornerRadius(20)
-                        .animation(.easeInOut, value: connectionManager.isLoading)
+                        .animation(.easeInOut, value: serviceContainer.isLoading)
                 }
-                .disabled(connectionManager.isLoading)
+                .disabled(serviceContainer.isLoading)
             }
             .padding()
             .background(.thinMaterial)
@@ -213,23 +174,17 @@ struct ConnectionSettingsView: View {
             }
         }
     }
-    
-    // TODO: This really should not be here. ViewModel may be necessary. 
+
     private func loadAvailableModels() async {
-        guard connectionManager.connectionSettings.connectionType == .OpenRouter else { return }
-        
-        await MainActor.run {
-            isLoadingModels = true
+        guard connectionManager.connectionSettings.connectionType == .OpenRouter else {
+            return
         }
-        
-        let languageService = connectionManager.getLanguageModelService()
-        await languageService.getAvailableModels()
-        
-        await MainActor.run {
-            isLoadingModels = false
-        }
+
+        isLoadingModels = true
+        await connectionManager.refreshAvailableModels()
+        isLoadingModels = false
     }
-    
+
     @ViewBuilder
     private func connectionSpecificSections() -> some View {
         switch connectionManager.connectionSettings.connectionType {
@@ -239,7 +194,7 @@ struct ConnectionSettingsView: View {
             openRouterSettingsSections()
         }
     }
-    
+
     @ViewBuilder
     private func koboldAPISettingsSections() -> some View {
         VStack(spacing: 18) {
@@ -248,7 +203,7 @@ struct ConnectionSettingsView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
-                Spacer() 
+                Spacer()
             }
             .padding(.horizontal, 16)
             .padding(.top, 10)
@@ -279,12 +234,16 @@ struct ConnectionSettingsView: View {
                 HStack {
                     Text("Context Limit")
                         .foregroundColor(.primary)
-                    Spacer() 
+                    Spacer()
                     Text("\(Int(contextLengthBinding.wrappedValue))")
                         .foregroundColor(.secondary)
                         .font(.subheadline)
                 }
-                Slider(value: contextLengthBinding, in: 1024...Double(connectionManager.maxContextLength ?? 25600), step: 1024)
+                Slider(
+                    value: contextLengthBinding,
+                    in: 1024...Double(connectionManager.maxContextLength),
+                    step: 1024
+                )
             }
             .padding()
             .background(Color(.systemGray6).opacity(0.6))
@@ -292,7 +251,7 @@ struct ConnectionSettingsView: View {
             .padding(.horizontal, 16)
         }
     }
-    
+
     @ViewBuilder
     private func openRouterSettingsSections() -> some View {
         VStack(spacing: 18) {
@@ -301,7 +260,7 @@ struct ConnectionSettingsView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
-                Spacer() 
+                Spacer()
             }
             .padding(.horizontal, 16)
             .padding(.top, 10)
@@ -318,20 +277,27 @@ struct ConnectionSettingsView: View {
             }
             .padding(.horizontal, 16)
 
-            // Model Selection Picker 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Selected Model")
                     .foregroundColor(.primary)
-                Picker("Selected Model", selection: selectedModelBinding) {
-                    ForEach(connectionManager.availableModels, id: \.self.id) { model in
-                        Text(model.name).tag(model.id)
+                if isLoadingModels {
+                    ProgressView()
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemGray6).opacity(0.6))
+                        .cornerRadius(12)
+                } else {
+                    Picker("Selected Model", selection: selectedModelBinding) {
+                        ForEach(serviceContainer.availableModels, id: \.id) { model in
+                            Text(model.name).tag(model.id)
+                        }
                     }
+                    .tint(.secondary)
+                    .pickerStyle(.navigationLink)
+                    .padding()
+                    .background(Color(.systemGray6).opacity(0.6))
+                    .cornerRadius(12)
                 }
-                .tint(.secondary)
-                .pickerStyle(.navigationLink)
-                .padding()
-                .background(Color(.systemGray6).opacity(0.6))
-                .cornerRadius(12)
             }
             .padding(.horizontal, 16)
         }

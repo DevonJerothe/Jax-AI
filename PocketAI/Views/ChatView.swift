@@ -21,15 +21,12 @@ struct ChatView: View {
     // ---- Add State for tracking keyboard visibility ----
     @State private var isKeyboardVisible: Bool = false
 
-    init(chatModel: ChatModel) {
-        print("ChatView init called")
-        print("Chat Status: \(chatModel.isLoading), \(chatModel.isStreaming), \(chatModel.isThinking)")
-        self.viewModel = ChatViewModel.create(chatModel: chatModel)
+    init(chatID: UUID) {
+        _viewModel = State(initialValue: ChatViewModel(chatID: chatID))
     }
 
     var body: some View {
         VStack(spacing: 0) {
-
             if viewModel.isConnected == false {
                 APIStatusBanner(
                     stayOnPath: true
@@ -45,17 +42,17 @@ struct ChatView: View {
                         .frame(height: 8)
                         .id("topAnchor")
                     
-                    ForEach(viewModel.model.messages, id: \.self) {
-                        message in
-                        HStack {
-                        
-                            ChatBubbleView(
-                                message: message, viewModel: viewModel
-                            )
-                            .padding(.top, 4)
-                            .padding(.bottom, 4)
-                            .id(message)
-                            .onLongPressGesture {}
+                    if let chat = viewModel.model {
+                        ForEach(chat.messages, id: \.self) { message in
+                            HStack {
+                                ChatBubbleView(
+                                    message: message,
+                                    viewModel: viewModel
+                                )
+                                .padding(.top, 4)
+                                .padding(.bottom, 4)
+                                .id(message)                               
+                            }
                         }
                     }
                     
@@ -136,12 +133,12 @@ struct ChatView: View {
             }
             .background(Color(.secondarySystemBackground))
         }
-        .navigationTitle(viewModel.model.chatTitle)
+        .navigationTitle(viewModel.model?.chatTitle ?? "Chat")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    navManager.navigateToChatSettings(chat: viewModel)
+                    navManager.navigateToChatSettings(chatID: viewModel.chatID)
                 } label: {
                     Image(systemName: "gearshape")
                         .foregroundColor(.primary)
@@ -154,13 +151,6 @@ struct ChatView: View {
         }
         .onDisappear {
             self.viewModel.isViewActive = false
-        }
-        .onChange(of: ServiceContainer.shared.getChatListViewModel().chats) { _, newChats in
-            // If the viewModel that is responsible for the streamed response is not the active viewModel we should update the status to sync the stream. 
-            // without this if the user stays on the chat view and the chat is streaming.. we are triggering the update twice - this is causing the update to freeze. 
-            if let chat = newChats.first(where: { $0.id == viewModel.model.id }), viewModel.isViewInSync == false {
-                self.viewModel.updateChatLoadingStatus(model: chat)
-            }
         }
     }
 
