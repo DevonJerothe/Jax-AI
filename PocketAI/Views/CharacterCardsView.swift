@@ -43,6 +43,9 @@ struct CharacterCardsView: View {
                     Button("Import from ChubAI") {
                         navManager.navigateToChubImport(keepCurrentPath: true)
                     }
+                    Button("Browse ChubAI") {
+                        navManager.navigateToChubAIBrowser(keepCurrentPath: true) 
+                    }
                     Button("Browse the Hub") {
                         navManager.navigateToHubArchive(keepCurrentPath: true) 
                     }

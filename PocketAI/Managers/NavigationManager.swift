@@ -22,7 +22,8 @@ class NavigationManager {
         case chatSettings(UUID)
         case settingsView
         case newChatView(Bool)
-        case hubArchiveView
+        case booruBrowserView
+        case chubAIBrowserView
         case chubImportView
     }
 
@@ -32,7 +33,8 @@ class NavigationManager {
         case characterDetails(UUID)
         case chatSettings(UUID)
         case newTemplateView(String?)
-        case hubArchiveView
+        case booruBrowserView
+        case chubAIBrowserView
 
         var id: String {
             switch self {
@@ -46,8 +48,10 @@ class NavigationManager {
                 return "chatDetails_\(chatID.uuidString)"
             case .newTemplateView(let templateKey):
                 return "newTemplateView_\(templateKey ?? "new")"
-            case .hubArchiveView:
-                return "hubArchiveView"
+            case .booruBrowserView:
+                return "booruBrowserView"
+            case .chubAIBrowserView:
+                return "chubAIBrowserView"
             }
         }
     }
@@ -201,11 +205,21 @@ class NavigationManager {
     func navigateToHubArchive(keepCurrentPath: Bool = false) {
         presentedSheet = nil
         if keepCurrentPath {
-            appendToCurrentPath(Destination.hubArchiveView)
+            appendToCurrentPath(Destination.booruBrowserView)
         } else {
             currentTab = .characterList
             clearPath(for: .characterList)
-            characterListPath.append(Destination.hubArchiveView)
+            characterListPath.append(Destination.booruBrowserView)
+        }
+    }
+
+    func navigateToChubAIBrowser(keepCurrentPath: Bool = false) {
+        if keepCurrentPath {
+            appendToCurrentPath(Destination.chubAIBrowserView)
+        } else {
+            currentTab = .characterList
+            clearPath(for: .characterList)
+            characterListPath.append(Destination.chubAIBrowserView)
         }
     }
 

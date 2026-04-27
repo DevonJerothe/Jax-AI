@@ -13,7 +13,6 @@ public struct NewChatView: View {
     @Environment(NavigationManager.self) var navManager
 
     @State private var viewModel: NewChatViewModel = .init()
-    @State private var charHubViewModel: CharHubViewModel = .init()
     @State private var selectedTab: NewChatTab = .manual
     
     // Photo info for manual chat

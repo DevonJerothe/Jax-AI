@@ -14,6 +14,8 @@ public class UserDefaultsManager {
     
     public enum SettingsKeys: String {
         case ConnectionSettings
+        case BotBooruAuthSettings
+        case ChubAISettings
     }
     
     /// Save `Codable` settings objects
@@ -41,28 +43,34 @@ public class UserDefaultsManager {
             return nil
         }
     }
+
+    public func fetchBotBooruAuthSettings() -> BotBooruAuthSettings? {
+        guard let settingsData = userDefaults.data(forKey: SettingsKeys.BotBooruAuthSettings.rawValue) else {
+            return nil
+        }
+
+        let decoder = PropertyListDecoder()
+        do {
+            let settingsObject = try decoder.decode(BotBooruAuthSettings.self, from: settingsData)
+            return settingsObject
+        } catch {
+            print("UserDefaults Error: Failed to decode BotBooruAuthSettings")
+            return nil
+        }
+    }
+
+    public func fetchChubAISettings() -> ChubAISettings? {
+        guard let settingsData = userDefaults.data(forKey: SettingsKeys.ChubAISettings.rawValue) else {
+            return nil
+        }
+
+        let decoder = PropertyListDecoder()
+        do {
+            let settingsObject = try decoder.decode(ChubAISettings.self, from: settingsData)
+            return settingsObject
+        } catch {
+            print("UserDefaults Error: Failed to decode ChubAISettings")
+            return nil
+        }
+    }
 }
-
-// add codable conformance for OrderedDictionary
-// private struct KeyValuePair<K: Codable, V: Codable>: Codable {
-//     let key: K 
-//     let value: V
-// }
-
-// extension OrderedDictionary: Codable where Key: Codable, Value: Codable {
-//     public func encode(to encoder: Encoder) throws {
-//         var container = encoder.unkeyedContainer()
-//         for (k, v) in self {
-//             try container.encode(KeyValuePair(key: k, value: v))
-//         }
-//     }
-
-//     public init(from decoder: Decoder) throws {
-//         var container = try decoder.unkeyedContainer()
-//         self.init() 
-//         while !container.isAtEnd {
-//             let pair = try container.decode(KeyValuePair<Key, Value>.self)
-//             self[pair.key] = pair.value
-//         }
-//     }
-// }

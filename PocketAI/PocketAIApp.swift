@@ -98,8 +98,10 @@ struct PocketAIApp: App {
             }
         case .chatSettings(let chatID):
             ChatSettingsView(chatID: chatID)
-        case .hubArchiveView:
-            HubArchiveView()
+        case .booruBrowserView:
+            BooruBrowserView()
+        case .chubAIBrowserView:
+            ChubAIBrowserView()
         case .chubImportView:
             ChubImportView()
         }

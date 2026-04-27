@@ -103,7 +103,6 @@ final class LanguageModelService {
         if runtimeConnectionSettings.connectionType == .OpenRouter {
             if continued {
                 guard let lastMessage = requestMessages.last?.message else {
-                    print("No last message")
                     return AsyncStream { continuation in
                         continuation.finish()
                     }
@@ -323,6 +322,14 @@ final class LanguageModelService {
         continueResponse: Bool = false,
         forceThinking: Bool = false
     ) async -> String {
+
+        let settings = runtimeConnectionSettings
+        
+        // We only handle context for KoboldAPI until we can include a token counter in app.
+        guard settings.connectionType == .KoboldAPI else {
+            return ""
+        }
+
         let maxContextTokens = runtimeConnectionSettings.contextLength ?? 4096
         let reservedResponseTokens = runtimeConnectionSettings.responseLength ?? 240
         let memory = chatModel.getFullMemory()
@@ -344,6 +351,9 @@ final class LanguageModelService {
             fixedOverhead += systemTokens
         }
 
+        /// TODO: this is broken. memory will contain our character context. If we 
+        /// over context at this point, this will not send any of our messages including the recent one. 
+        /// We need to at a minimum return the last two messages or the bot will have 0 conversation history.
         if fixedOverhead >= maxContextTokens {
             return prefix
         }
@@ -353,12 +363,14 @@ final class LanguageModelService {
             let tokens: Int
         }
 
+        let lastUserID = chatModel.messages.last(where: { $0.actor == .user })?.id
+
         var blocks: [Block] = []
         for message in chatModel.messages {
             switch message.actor {
             case .user:
                 var text = "\(message.text)\nAssistant: "
-                if forceThinking {
+                if forceThinking && message.id == lastUserID {
                     text += "<think>\nOk, first we need to consider who we are and not to speak for the user."
                 }
 
@@ -386,10 +398,16 @@ final class LanguageModelService {
             }
         }
 
-        return selectedReversed
-            .reversed()
-            .reduce(prefix) { partialResult, block in
-                partialResult + block.text
-            }
+        // return selectedReversed
+        //     .reversed()
+        //     .reduce(prefix) { partialResult, block in
+        //         partialResult + block.text
+        //     }
+        selectedReversed = selectedReversed.reversed()
+        var prompt = "" 
+        for block in selectedReversed {
+            prompt += block.text
+        }
+        return prompt
     }
 }

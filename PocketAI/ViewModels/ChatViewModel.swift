@@ -194,7 +194,7 @@ final class ChatViewModel {
 
     private func generateResponse(for messageID: UUID, isContinued: Bool = false, streamed: Bool = true) async {
         guard let chat = model,
-              let messageIndex = chat.messages.firstIndex(where: { $0.id == messageID }) else {
+            let messageIndex = chat.messages.firstIndex(where: { $0.id == messageID }) else {
             return
         }
 
@@ -286,7 +286,7 @@ final class ChatViewModel {
         shouldShowThinking: Bool
     ) async {
         guard let chat = model,
-              let message = chat.messages.first(where: { $0.id == messageID }) else {
+            let message = chat.messages.first(where: { $0.id == messageID }) else {
             return
         }
 
@@ -405,6 +405,9 @@ final class ChatViewModel {
             fixedOverhead += systemTokens
         }
 
+        /// TODO: this is broken. memory will contain our character context. If we 
+        /// over context at this point, this will not send any of our messages including the recent one. 
+        /// We need to at a minimum return the last two messages or the bot will have 0 conversation history.
         if fixedOverhead >= maxContextTokens {
             return prefix
         }
@@ -414,12 +417,14 @@ final class ChatViewModel {
             let tokens: Int
         }
 
+        let lastUserID = chat.messages.last(where: { $0.actor == .user })?.id
+
         var blocks: [Block] = []
         for message in chat.messages {
             switch message.actor {
             case .user:
                 var text = "\(message.text)\nAssistant: "
-                if forceThinking {
+                if forceThinking && message.id == lastUserID {
                     text += "<think>\nOk, first we need to consider who we are and not to speak for the user."
                 }
 
@@ -447,11 +452,12 @@ final class ChatViewModel {
             }
         }
 
-        return selectedReversed
-            .reversed()
-            .reduce(prefix) { partialResult, block in
-                partialResult + block.text
-            }
+        selectedReversed = selectedReversed.reversed()
+        var prompt = "" 
+        for block in selectedReversed {
+            prompt += block.text
+        }
+        return prompt
     }
 
     private func sanitizeThinking(from responseText: String) -> String {
@@ -463,7 +469,7 @@ final class ChatViewModel {
     private func triggerHapticIfNeeded() {
         let now = Date()
         guard isViewActive,
-              lastHapticTriggerAt == nil || now.timeIntervalSince(lastHapticTriggerAt!) >= 0.1 else {
+            lastHapticTriggerAt == nil || now.timeIntervalSince(lastHapticTriggerAt!) >= 0.1 else {
             return
         }
 
