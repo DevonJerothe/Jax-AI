@@ -22,18 +22,23 @@ final class ChubAIViewModel {
     var hasMore: Bool = true
 
     init(
-        characterStore: CharacterStore? = nil
+        characterStore: CharacterStore? = nil,
+        loadCards: Bool = true
     ) {
         self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
         self.chubSettings = chubAIService.chubSettings ?? ChubAISettings()
         self.excludedTopics = chubSettings.excludedTopics
 
         Task {
-            isLoading = true 
-            async let cards: Void = searchCards(initLoad: true)
-            async let tags: Void = getTags()
-            _ = await (cards, tags)
-            isLoading = false 
+            if loadCards {
+                isLoading = true
+                async let cards: Void = searchCards(initLoad: true)
+                async let tags: Void = getTags()
+                _ = await (cards, tags)
+                isLoading = false
+            } else {
+                await getTags()
+            }
         }
     }
 

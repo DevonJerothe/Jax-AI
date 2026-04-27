@@ -257,19 +257,15 @@ struct ChubAISettingsView: View {
 
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                settingsCard {
+                SettingsCard("Browsing") {
                     Toggle("Show NSFW", isOn: chubBinding(\.showNSFW))
                     Toggle("Show NSFL", isOn: chubBinding(\.showNSFL))
                 }
-                settingsCard {
-                    Text("Excluded Topics")
-
+                SettingsCard("Excluded Topics") {
                     TextField("Search tags", text: $tagSearch)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                        .padding(10)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(10)
+                        .styledFormField()
 
                     if tagSearch.isEmpty == false {
                         ForEach(filteredTags.prefix(20)) { tag in
@@ -312,21 +308,10 @@ struct ChubAISettingsView: View {
             }
             .padding(16)
         }
-    }
-
-        @ViewBuilder
-    private func settingsCard<Content: View>(_ title: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if let title {
-                Text(title)
-                    .font(.headline)
-            }
-            content()
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(12)
+        .background(Color(.systemBackground))
+        .navigationTitle("Chub AI Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.visible, for: .navigationBar)
     }
 
     private func chubBinding(_ keyPath: WritableKeyPath<ChubAISettings, Bool>) -> Binding<Bool> {

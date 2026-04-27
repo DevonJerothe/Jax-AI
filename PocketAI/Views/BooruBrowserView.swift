@@ -140,7 +140,7 @@ public struct BooruBrowserView: View {
     }
 }
 
-private struct BooruBrowserSettingsView: View {
+struct BooruBrowserSettingsView: View {
     @Bindable var viewModel: BotBooruViewModel
     @State private var username = ""
     @State private var password = ""
@@ -148,7 +148,7 @@ private struct BooruBrowserSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                settingsCard {
+                SettingsCard {
                     HStack {
                         Label(
                             viewModel.loggedIn ? "Logged In" : "Logged Out",
@@ -162,18 +162,14 @@ private struct BooruBrowserSettingsView: View {
                 }
 
                 if viewModel.loggedIn == false {
-                    settingsCard("Login") {
+                    SettingsCard("Login") {
                         TextField("Username", text: $username)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
-                            .padding(12)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(12)
+                            .styledFormField()
 
                         SecureField("Password", text: $password)
-                            .padding(12)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(12)
+                            .styledFormField()
 
                         Button {
                             Task { await viewModel.login(username: username, password: password) }
@@ -194,7 +190,7 @@ private struct BooruBrowserSettingsView: View {
                     }
                 }
 
-                settingsCard("Browsing") {
+                SettingsCard("Browsing") {
                     Toggle("Show NSFW", isOn: authBinding(\.showNSFW))
                     Toggle("Hide AI", isOn: authBinding(\.hideAI))
                 }
@@ -209,21 +205,6 @@ private struct BooruBrowserSettingsView: View {
         .onAppear {
             username = viewModel.authSettings.username ?? ""
         }
-    }
-
-    @ViewBuilder
-    private func settingsCard<Content: View>(_ title: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if let title {
-                Text(title)
-                    .font(.headline)
-            }
-            content()
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(12)
     }
 
     private func authBinding(_ keyPath: WritableKeyPath<BotBooruAuthSettings, Bool>) -> Binding<Bool> {

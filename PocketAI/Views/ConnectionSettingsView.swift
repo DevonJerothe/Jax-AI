@@ -60,63 +60,49 @@ struct ConnectionSettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack {
-                HStack {
-                    Text("Connection")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                    Spacer()
-                }
-                .padding(.top, 24)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-
-                Menu {
-                    Button("KoboldAPI") {
-                        connectionManager.update(\.connectionType, to: .KoboldAPI)
-                    }
-                    Button("OpenRouter") {
-                        connectionManager.update(\.connectionType, to: .OpenRouter)
-                    }
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Connection Type")
-                                .foregroundColor(.primary)
-                            Text(connectionManager.connectionSettings.connectionType.rawValue)
-                                .font(.subheadline)
+            VStack(alignment: .leading, spacing: 16) {
+                SettingsCard("Connection") {
+                    Menu {
+                        Button("KoboldAPI") {
+                            connectionManager.update(\.connectionType, to: .KoboldAPI)
+                        }
+                        Button("OpenRouter") {
+                            connectionManager.update(\.connectionType, to: .OpenRouter)
+                        }
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Connection Type")
+                                    .foregroundColor(.primary)
+                                Text(connectionManager.connectionSettings.connectionType.rawValue)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
                                 .foregroundColor(.secondary)
                         }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.secondary)
                     }
-                    .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
-                    .cornerRadius(12)
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 16)
 
-                VStack(alignment: .leading) {
-                    HStack {
-                        Text("Response Length")
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Text("\(Int(responseLengthBinding.wrappedValue))")
-                            .foregroundColor(.secondary)
-                            .font(.subheadline)
+                SettingsCard("Generation") {
+                    VStack(alignment: .leading) {
+                        HStack {
+                            Text("Response Length")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text("\(Int(responseLengthBinding.wrappedValue))")
+                                .foregroundColor(.secondary)
+                                .font(.subheadline)
+                        }
+                        Slider(value: responseLengthBinding, in: 120...3000, step: 60)
                     }
-                    Slider(value: responseLengthBinding, in: 120...3000, step: 60)
                 }
-                .padding()
-                .background(Color(.systemGray6).opacity(0.6))
-                .cornerRadius(12)
-                .padding(.horizontal, 16)
 
                 connectionSpecificSections()
             }
+            .padding(16)
         }
         .scrollDismissesKeyboard(.immediately)
         .safeAreaInset(edge: .bottom) {
@@ -161,7 +147,7 @@ struct ConnectionSettingsView: View {
             .background(.thinMaterial)
             .ignoresSafeArea(.keyboard)
         }
-        .navigationTitle("Settings")
+        .navigationTitle("Connection")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if connectionManager.connectionSettings.connectionType == .OpenRouter {
@@ -201,38 +187,22 @@ struct ConnectionSettingsView: View {
 
     @ViewBuilder
     private func koboldAPISettingsSections() -> some View {
-        VStack(spacing: 18) {
-            HStack {
-                Text("KoboldAPI")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-
+        SettingsCard("KoboldAPI") {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Host")
                     .foregroundColor(.primary)
                 TextField("", text: hostBinding, prompt: Text("e.g., 127.0.0.1"))
                     .keyboardType(.URL)
-                    .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
-                    .cornerRadius(12)
+                    .styledFormField()
             }
-            .padding(.horizontal, 16)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Port")
                     .foregroundColor(.primary)
                 TextField("", value: portBinding, format: .number.grouping(.never))
                     .keyboardType(.numberPad)
-                    .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
-                    .cornerRadius(12)
+                    .styledFormField()
             }
-            .padding(.horizontal, 16)
 
             VStack(alignment: .leading) {
                 HStack {
@@ -249,47 +219,28 @@ struct ConnectionSettingsView: View {
                     step: 1024
                 )
             }
-            .padding()
-            .background(Color(.systemGray6).opacity(0.6))
-            .cornerRadius(12)
-            .padding(.horizontal, 16)
         }
     }
 
     @ViewBuilder
     private func openRouterSettingsSections() -> some View {
-        VStack(spacing: 18) {
-            HStack {
-                Text("OpenRouter")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-
+        SettingsCard("OpenRouter") {
             VStack(alignment: .leading, spacing: 8) {
                 Text("API Key")
                     .foregroundColor(.primary)
                 SecureField("Enter your API key", text: apiKeyBinding)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
-                    .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
-                    .cornerRadius(12)
+                    .styledFormField()
             }
-            .padding(.horizontal, 16)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Selected Model")
                     .foregroundColor(.primary)
                 if isLoadingModels {
                     ProgressView()
-                        .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(.systemGray6).opacity(0.6))
-                        .cornerRadius(12)
+                        .styledFormField()
                 } else {
                     Picker("Selected Model", selection: selectedModelBinding) {
                         ForEach(serviceContainer.availableModels, id: \.id) { model in
@@ -298,12 +249,9 @@ struct ConnectionSettingsView: View {
                     }
                     .tint(.secondary)
                     .pickerStyle(.navigationLink)
-                    .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
-                    .cornerRadius(12)
+                    .styledFormField()
                 }
             }
-            .padding(.horizontal, 16)
         }
     }
 }

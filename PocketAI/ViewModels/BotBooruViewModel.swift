@@ -16,7 +16,7 @@ final class BotBooruViewModel {
     var sort: BotBooruSort = .latest
     var sortTime: BotBooruSortTime = .allTime
 
-    init(characterStore: CharacterStore? = nil) {
+    init(characterStore: CharacterStore? = nil, loadPosts: Bool = true) {
         self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
         let initialAuthSettings = botBooruService.authSettings ?? BotBooruAuthSettings(username: nil, password: nil, token: nil)
         authSettings = initialAuthSettings
@@ -24,7 +24,7 @@ final class BotBooruViewModel {
         // check if logged in
         loggedIn = initialAuthSettings.token != nil
         
-        if loggedIn {
+        if loggedIn && loadPosts {
             Task {
                 await getPosts()
             }

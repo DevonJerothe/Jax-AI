@@ -21,6 +21,7 @@ class NavigationManager {
         case characterCardsView
         case chatSettings(UUID)
         case settingsView
+        case connectionSettings
         case newChatView(Bool)
         case booruBrowserView
         case chubAIBrowserView
@@ -183,6 +184,17 @@ class NavigationManager {
         } else {
             currentTab = .settings
             clearPath(for: .settings)
+        }
+    }
+
+    func navigateToConnectionSettings(keepCurrentPath: Bool = false) {
+        presentedSheet = nil
+        if keepCurrentPath {
+            appendToCurrentPath(Destination.connectionSettings)
+        } else {
+            currentTab = .settings
+            clearPath(for: .settings)
+            settingsPath.append(Destination.connectionSettings)
         }
     }
 
