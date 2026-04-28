@@ -14,7 +14,12 @@ final class ChatStore {
     private let messageRepository: MessageRepository
     
     // Used to block requests before an operation is complete when observing the DB
-    private var observerQueue: [CheckedContinuation<Void, Never>] = []
+    private struct PendingObserverWait {
+        let id: UUID
+        let continuation: CheckedContinuation<Void, Never>
+    }
+
+    private var observerQueue: [PendingObserverWait] = []
     // Message status/text is transient UI state. The DB observer rebuilds models from
     // rows that do not include those fields, so we overlay the latest in-memory value
     // back onto observed chats until the message returns to a persisted `.done` state.
@@ -39,7 +44,7 @@ final class ChatStore {
                 
                 let queued = observerQueue
                 observerQueue.removeAll()
-                queued.forEach { $0.resume() }
+                queued.forEach { $0.continuation.resume() }
             }
         } catch {
             print("Error observing chat records: \(error)")
@@ -53,7 +58,19 @@ final class ChatStore {
     /// the function to continue
     private func waitForObserver() async {
         await withCheckedContinuation { continuation in
-            observerQueue.append(continuation)
+            let id = UUID()
+            observerQueue.append(PendingObserverWait(id: id, continuation: continuation))
+
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                guard let index = observerQueue.firstIndex(where: { $0.id == id }) else {
+                    return
+                }
+
+                let pendingWait = observerQueue.remove(at: index)
+                pendingWait.continuation.resume()
+                print("Timed out waiting for chat observer refresh")
+            }
         }
     }
     

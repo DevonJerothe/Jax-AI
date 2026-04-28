@@ -33,7 +33,7 @@ final class ConnectionStatusManager {
     @ObservationIgnored private var connectionAttemptID = UUID()
 
     init() {
-        let savedSettings = UserDefaultsManager.shared.fetchConnectionSettiongs() ?? .defaults
+        let savedSettings = UserDefaultsManager.shared.fetchConnectionSettings() ?? .defaults
         let normalizedSettings = ConnectionStatusManager.normalize(savedSettings)
         self.connectionSettings = normalizedSettings
         self.maxContextLength = normalizedSettings.maxContextLength ?? ConnectionSettingsModel.defaults.maxContextLength ?? 25600

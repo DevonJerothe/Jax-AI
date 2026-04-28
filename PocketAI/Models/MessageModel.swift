@@ -39,29 +39,7 @@ struct MessageModel: Identifiable, Hashable {
     var status: MessageStatus = .done
 
     func getRolePlayText(cardName: String) -> String {
-        // First handle straight quotes
-        var processedText = text
-        let straightQuotePattern = "\"([^\"]+)\""
-        processedText = processedText.replacingOccurrences(
-            of: straightQuotePattern,
-            with: "`\"$1\"`",
-            options: .regularExpression)
-        
-        // Then handle curly quotes - using Unicode escape sequences
-        // these are usually added to user prompts when using iOS keyboard
-        let curlyQuotePattern = "\u{201C}([^\u{201D}]+)\u{201D}"
-        processedText = processedText.replacingOccurrences(
-            of: curlyQuotePattern,
-            with: "`\u{201C}$1\u{201D}`",
-            options: .regularExpression)
-        
-        // Whenever we get the following `{user}` or `{char}` we should replace with the correct names
-        processedText = processedText.replacingOccurrences(of: "{{char}}", with: cardName)
-        
-        // TODO: replace this with a user persona
-        processedText = processedText.replacingOccurrences(of: "{{user}}", with: "Devon")
-        
-        return processedText
+        MessageDisplayFormatter.rolePlayText(for: self, characterName: cardName)
     }
 }
 

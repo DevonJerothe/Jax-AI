@@ -114,7 +114,7 @@ final class LanguageModelService {
             }
         }
 
-        let (stream, continueation) = AsyncStream<ModelResponse>.makeStream()
+        let (stream, continuation) = AsyncStream<ModelResponse>.makeStream()
         var streamResponse: AsyncStream<Result<ModelResponse, APIError>>
         
         switch runtimeConnectionSettings.connectionType {
@@ -154,24 +154,19 @@ final class LanguageModelService {
             streamResponse = openRouterManager.streamMessage(builder: promptBuilder)
         }
         Task.detached(priority: .medium) {
-            defer { continueation.finish() }
+            defer { continuation.finish() }
         
             for await response in streamResponse {
                 switch response {
                 case .success(let modelResponse):
-                    var modelResponse = modelResponse
-                    // Hacky way to remove the need of deltas... which would be beter long term but I'm a lazy bum
-                    if continued {
-                        modelResponse.text = "\(chatModel.messages.last!.text) \(modelResponse.text ?? "")"
-                    }
-                    continueation.yield(modelResponse)
+                    continuation.yield(modelResponse)
                 case .failure(_):
                     let errorResponse = ModelResponse(              
                         role: "assistant",
                         text: "There was an error processing your request. Please try again later.",
                         disconnect: true
                     )
-                    continueation.yield(errorResponse)
+                    continuation.yield(errorResponse)
                     return
                 }
             }         
@@ -208,18 +203,25 @@ final class LanguageModelService {
         switch runtimeConnectionSettings.connectionType {
         case .KoboldAPI:
             print("Templates used: \(runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"))")        
+            let promptContext = await KoboldPromptContextBuilder(
+                tokenCount: { [weak self] text in
+                    await self?.getTokenCount(string: text) ?? 0
+                }
+            ).build(
+                for: chatModel,
+                settings: runtimeConnectionSettings,
+                continueResponse: continued,
+                forceThinking: runtimeConnectionSettings.forceThinking,
+                includeTemplate: continued == false
+            )
 
             let promptBuilder = KoboldRequestBuilder(
-                prompt: await autoTrimFullPrompt(
-                    for: chatModel,
-                    continueResponse: continued,
-                    forceThinking: runtimeConnectionSettings.forceThinking
-                ),
-                memory: chatModel.getFullMemory(),
+                prompt: promptContext.prompt,
+                memory: promptContext.memory,
                 maxContextLength: runtimeConnectionSettings.contextLength ?? 4096,
                 maxLength: runtimeConnectionSettings.responseLength ?? 240,
                 temperature: runtimeConnectionSettings.temperature ?? 1.15,
-                promptTemplate: runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n")
+                promptTemplate: promptContext.template
             )
             
             serviceResponse = await koboldManager?.sendMessage(builder: promptBuilder)
@@ -319,97 +321,4 @@ final class LanguageModelService {
         }
     }
 
-    private func autoTrimFullPrompt(
-        for chatModel: ChatModel,
-        continueResponse: Bool = false,
-        forceThinking: Bool = false
-    ) async -> String {
-
-        let settings = runtimeConnectionSettings
-        
-        // We only handle context for KoboldAPI until we can include a token counter in app.
-        guard settings.connectionType == .KoboldAPI else {
-            return ""
-        }
-
-        let maxContextTokens = runtimeConnectionSettings.contextLength ?? 4096
-        let reservedResponseTokens = runtimeConnectionSettings.responseLength ?? 240
-        let memory = chatModel.getFullMemory()
-        let memoryTokens = await getTokenCount(string: memory)
-        let userTemplates = runtimeConnectionSettings.userTemplates.values
-            .filter(\.isEnabled)
-            .map(\.content)
-            .joined(separator: "\n")
-        let systemTokens = await getTokenCount(string: userTemplates)
-
-        var prefix = "\nAssistant: "
-        if forceThinking {
-            prefix += "<think>\nOk, first we need to consider who we are and not to speak for the user."
-        }
-
-        let prefixTokens = await getTokenCount(string: prefix)
-        var fixedOverhead = memoryTokens + prefixTokens + reservedResponseTokens
-        if continueResponse {
-            fixedOverhead += systemTokens
-        }
-
-        /// TODO: this is broken. memory will contain our character context. If we 
-        /// over context at this point, this will not send any of our messages including the recent one. 
-        /// We need to at a minimum return the last two messages or the bot will have 0 conversation history.
-        if fixedOverhead >= maxContextTokens {
-            return prefix
-        }
-
-        struct Block {
-            let text: String
-            let tokens: Int
-        }
-
-        let lastUserID = chatModel.messages.last(where: { $0.actor == .user })?.id
-
-        var blocks: [Block] = []
-        for message in chatModel.messages {
-            switch message.actor {
-            case .user:
-                var text = "\(message.text)\nAssistant: "
-                if forceThinking && message.id == lastUserID {
-                    text += "<think>\nOk, first we need to consider who we are and not to speak for the user."
-                }
-
-                let tokens = await getTokenCount(string: text)
-                blocks.append(Block(text: text, tokens: tokens))
-            case .bot:
-                if message.status == .done || continueResponse {
-                    let suffix = continueResponse ? "" : "\nUser:"
-                    let text = "\(message.text)\(suffix)"
-                    let tokens = await getTokenCount(string: text)
-                    blocks.append(Block(text: text, tokens: tokens))
-                }
-            }
-        }
-
-        var remaining = maxContextTokens - fixedOverhead
-        var selectedReversed: [Block] = []
-
-        for block in blocks.reversed() {
-            if block.tokens <= remaining {
-                selectedReversed.append(block)
-                remaining -= block.tokens
-            } else {
-                break
-            }
-        }
-
-        // return selectedReversed
-        //     .reversed()
-        //     .reduce(prefix) { partialResult, block in
-        //         partialResult + block.text
-        //     }
-        selectedReversed = selectedReversed.reversed()
-        var prompt = "" 
-        for block in selectedReversed {
-            prompt += block.text
-        }
-        return prompt
-    }
 }

@@ -169,27 +169,12 @@ struct ChatBubbleView: View {
                             }
                             // Edit
                             Button(action: {
-                                if isEditing {
-                                    // Call viewModel to save the edited text
-                                    Task {
-                                        await viewModel.updateMessage(
-                                            message, newText: editedText)
-                                    }
-                                    isEditing = false
-                                    viewModel.updateScrollView.toggle()
-                                } else {
-                                    // Enter editing mode
-                                    editedText = message.getRolePlayText(
-                                        cardName: viewModel.model?
-                                            .characterCards.first?.name ?? "")  // Initialize editor text
-                                    isEditing = true
-                                    viewModel.editingMessageID = message.id
-                                }
+                                toggleEditing()
                             }) {
                                 Image(
                                     systemName: isEditing
                                         ? "checkmark.circle.fill" : "pencil"
-                                )  // Change icon when editing
+                                )
                                 .resizable()
                                 .frame(width: 10, height: 10)
                                 .foregroundStyle(Color.accentColor)
@@ -322,27 +307,12 @@ struct ChatBubbleView: View {
                                 }
                             // Edit
                             Button(action: {
-                                if isEditing {
-                                    // Call viewModel to save the edited text
-                                    Task {
-                                        await viewModel.updateMessage(
-                                            message, newText: editedText)
-                                    }
-                                    isEditing = false
-                                    viewModel.updateScrollView.toggle()
-                                } else {
-                                    // Enter editing mode
-                                    editedText = message.getRolePlayText(
-                                        cardName: viewModel.model?
-                                            .characterCards.first?.name ?? "")  // Initialize editor text
-                                    isEditing = true
-                                    viewModel.editingMessageID = message.id
-                                }
+                                toggleEditing()
                             }) {
                                 Image(
                                     systemName: isEditing
                                         ? "checkmark.circle.fill" : "pencil"
-                                )  // Change icon when editing
+                                )
                                 .resizable()
                                 .frame(width: 10, height: 10)
                                 .foregroundStyle(Color.accentColor)
@@ -371,5 +341,19 @@ struct ChatBubbleView: View {
 
     private var shouldShowLoadingBubble: Bool {
         message.status != .done && message.text.isEmpty
+    }
+
+    private func toggleEditing() {
+        if isEditing {
+            Task {
+                await viewModel.updateMessage(message, newText: editedText)
+            }
+            isEditing = false
+            viewModel.updateScrollView.toggle()
+        } else {
+            editedText = message.text
+            isEditing = true
+            viewModel.editingMessageID = message.id
+        }
     }
 }
