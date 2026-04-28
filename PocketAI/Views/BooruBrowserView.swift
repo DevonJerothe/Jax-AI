@@ -3,6 +3,8 @@ import SwiftUI
 public struct BooruBrowserView: View {
     @State private var viewModel: BotBooruViewModel = .init()
     @State private var showSettings = false
+    @State private var selectedCharacterCard: CharacterCardModel?
+    @State private var showCharacterEditor = false
 
     public var body: some View {
         VStack {
@@ -23,7 +25,10 @@ public struct BooruBrowserView: View {
                 Spacer()
             } else {
                 if viewModel.posts.isEmpty == false {
-                    BooruBrowserResultsView(viewModel: viewModel)
+                    BooruBrowserResultsView(viewModel: viewModel) { characterCard in
+                        selectedCharacterCard = characterCard
+                        showCharacterEditor = true
+                    }
                 } else if viewModel.isLoading {
                     Spacer()
                     LoadingIndicator(size: 30)
@@ -50,6 +55,15 @@ public struct BooruBrowserView: View {
         }
         .navigationDestination(isPresented: $showSettings) {
             BooruBrowserSettingsView(viewModel: viewModel)
+        }
+        .navigationDestination(isPresented: $showCharacterEditor) {
+            if let selectedCharacterCard {
+                CharacterCardSettingsView(
+                    characterCard: selectedCharacterCard,
+                    isNew: true,
+                    dismissOnSave: true
+                )
+            }
         }
         .safeAreaInset(edge: .top, spacing: 6) {
             if viewModel.loggedIn {
@@ -220,6 +234,7 @@ struct BooruBrowserSettingsView: View {
 
 struct BooruBrowserResultsView: View {
     @Bindable var viewModel: BotBooruViewModel
+    let onSelectCharacter: (CharacterCardModel) -> Void
 
     var body: some View {
         PaginatedResultsGridView(
@@ -233,7 +248,9 @@ struct BooruBrowserResultsView: View {
                 BooruBrowserPostCard(post: post)
                     .onTapGesture {
                         Task { 
-                            await viewModel.getCharacter(post: post)
+                            if let characterCard = await viewModel.getCharacter(post: post) {
+                                onSelectCharacter(characterCard)
+                            }
                         }
                     }
             }

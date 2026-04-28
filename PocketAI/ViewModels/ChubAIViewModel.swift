@@ -96,22 +96,18 @@ final class ChubAIViewModel {
         }
     }
 
-    // TODO: We should create a new page to view the card details before saving. 
-    func getCharacter(card: ChubCardNode) async {
+    func getCharacter(card: ChubCardNode) async -> CharacterCardModel? {
         isLoading = true 
         let result = await chubAIService.getCharacter(character: card)
+        defer { isLoading = false }
+
         switch result {
             case .success(let response):
-                do {
-                    let characterCard = CharacterCardModel(fromChub: response)
-                    try await characterStore.saveCharacterCard(characterCard)
-                } catch {
-                    print("Failed to save from chub: \(error.localizedDescription)")
-                }
+                return CharacterCardModel(fromChub: response)
             case .failure(let error):
                 print("Error getting character: \(error.localizedDescription)")
+                return nil
         }
-        isLoading = false
     }
 
     func loadMore() async {

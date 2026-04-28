@@ -5,6 +5,8 @@ public struct ChubAIBrowserView: View {
     @State private var viewModel: ChubAIViewModel = .init()
     @State private var showSettings = false
     @State private var showTopicSearch = false
+    @State private var selectedCharacterCard: CharacterCardModel?
+    @State private var showCharacterEditor = false
 
     public var body: some View {
         VStack {
@@ -20,7 +22,10 @@ public struct ChubAIBrowserView: View {
                         ChubBrowserCard(card: card)
                             .onTapGesture {
                                 Task { 
-                                    await viewModel.getCharacter(card: card)
+                                    if let characterCard = await viewModel.getCharacter(card: card) {
+                                        selectedCharacterCard = characterCard
+                                        showCharacterEditor = true
+                                    }
                                 }
                             }
                     }
@@ -53,6 +58,15 @@ public struct ChubAIBrowserView: View {
         }
         .navigationDestination(isPresented: $showTopicSearch) {
             ChubAITopicSearchView(viewModel: viewModel)
+        }
+        .navigationDestination(isPresented: $showCharacterEditor) {
+            if let selectedCharacterCard {
+                CharacterCardSettingsView(
+                    characterCard: selectedCharacterCard,
+                    isNew: true,
+                    dismissOnSave: true
+                )
+            }
         }
         .onChange(of: showSettings) { old, new in 
             guard old == true, new == false else { return }
