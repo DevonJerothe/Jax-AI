@@ -52,7 +52,7 @@ struct PocketAIApp: App {
 
                 // Settings Tab
                 NavigationStack(path: $navManager.settingsPath) {
-                    ConnectionSettingsView()
+                    GeneralSettingsView()
                         .navigationDestination(for: NavigationManager.Destination.self) { destination in
                             destinationView(for: destination)
                         }
@@ -89,6 +89,8 @@ struct PocketAIApp: App {
         case .characterCardsView:
             CharacterCardsView()
         case .settingsView:
+            GeneralSettingsView()
+        case .connectionSettings:
             ConnectionSettingsView()
         case .newChatView(let createChar):
             if createChar {
@@ -98,8 +100,10 @@ struct PocketAIApp: App {
             }
         case .chatSettings(let chatID):
             ChatSettingsView(chatID: chatID)
-        case .hubArchiveView:
-            HubArchiveView()
+        case .booruBrowserView:
+            BooruBrowserView()
+        case .chubAIBrowserView:
+            ChubAIBrowserView()
         case .chubImportView:
             ChubImportView()
         }

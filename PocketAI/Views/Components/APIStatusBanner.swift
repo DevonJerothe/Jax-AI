@@ -41,8 +41,11 @@ struct APIStatusBanner: View {
                 .stroke(Color.red.opacity(0.3), lineWidth: 1)
         )
         .onTapGesture {
-            // Navigate to settings
-            navManager.navigateToSettings(keepCurrentPath: self.stayOnPath)
+            navManager.navigateToConnectionSettings(keepCurrentPath: self.stayOnPath)
         }
+        .glassEffect(
+            .regular.interactive(),
+            in: RoundedRectangle(cornerRadius: 12)
+        )
     }
 }

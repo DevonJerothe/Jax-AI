@@ -43,6 +43,9 @@ struct CharacterCardsView: View {
                     Button("Import from ChubAI") {
                         navManager.navigateToChubImport(keepCurrentPath: true)
                     }
+                    Button("Browse ChubAI") {
+                        navManager.navigateToChubAIBrowser(keepCurrentPath: true) 
+                    }
                     Button("Browse the Hub") {
                         navManager.navigateToHubArchive(keepCurrentPath: true) 
                     }
@@ -114,5 +117,6 @@ struct CharacterCardPreview: View {
         }
         .background(Color(.secondarySystemBackground))
         .cornerRadius(12)
+        .contentShape(RoundedRectangle(cornerRadius: 12))
     }
 }
