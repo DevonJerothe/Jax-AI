@@ -6,11 +6,13 @@
 //
 
 import SwiftUI
+import SwiftLLMSDK
 
 struct ConnectionSettingsView: View {
     @Environment(ServiceContainer.self) private var serviceContainer
 
     @State private var isLoadingModels: Bool = false
+    @State private var showModelSearch = false
 
     private var connectionManager: ConnectionStatusManager {
         serviceContainer.getConnectionStatusManager()
@@ -56,6 +58,11 @@ struct ConnectionSettingsView: View {
             get: { Double(connectionManager.connectionSettings.responseLength ?? 300) },
             set: { connectionManager.update(\.responseLength, to: Int($0)) }
         )
+    }
+
+    private var selectedModelLabel: String {
+        let selectedModelID = selectedModelBinding.wrappedValue
+        return serviceContainer.availableModels.first { $0.id == selectedModelID }?.name ?? selectedModelID
     }
 
     var body: some View {
@@ -149,6 +156,12 @@ struct ConnectionSettingsView: View {
         }
         .navigationTitle("Connection")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $showModelSearch) {
+            OpenRouterModelSearchView(
+                models: serviceContainer.availableModels,
+                selectedModel: selectedModelBinding
+            )
+        }
         .onAppear {
             if connectionManager.connectionSettings.connectionType == .OpenRouter {
                 Task {
@@ -242,16 +255,73 @@ struct ConnectionSettingsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .styledFormField()
                 } else {
-                    Picker("Selected Model", selection: selectedModelBinding) {
-                        ForEach(serviceContainer.availableModels, id: \.id) { model in
-                            Text(model.name).tag(model.id)
+                    Button {
+                        showModelSearch = true
+                    } label: {
+                        HStack {
+                            Text(selectedModelLabel)
+                                .foregroundColor(.primary)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
                         }
                     }
-                    .tint(.secondary)
-                    .pickerStyle(.navigationLink)
+                    .buttonStyle(.plain)
                     .styledFormField()
                 }
             }
         }
+    }
+}
+
+struct OpenRouterModelSearchView: View {
+    let models: [OpenRouterModel]
+    @Binding var selectedModel: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var search = ""
+
+    private var filteredModels: [OpenRouterModel] {
+        models.filter { model in
+            search.isEmpty ||
+                model.name.localizedCaseInsensitiveContains(search) ||
+                model.id.localizedCaseInsensitiveContains(search) ||
+                model.description.localizedCaseInsensitiveContains(search)
+        }
+    }
+
+    var body: some View {
+        List(filteredModels, id: \.id) { model in
+            Button {
+                selectedModel = model.id
+                dismiss()
+            } label: {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(model.name)
+                            .foregroundColor(.primary)
+
+                        Text(model.id)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    if selectedModel == model.id {
+                        Image(systemName: "checkmark")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Select Model")
+        .searchable(text: $search, prompt: "Search models")
     }
 }

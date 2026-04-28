@@ -63,6 +63,6 @@ public struct BotBooruAuthSettings: Codable {
     var token: String? 
 
     // Settings
-    var showNSFW: Bool = true 
-    var hideAI: Bool = true
+    var showNSFW: Bool = false 
+    var hideAI: Bool = false
 }
