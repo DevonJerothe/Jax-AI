@@ -154,6 +154,8 @@ final class LanguageModelService {
             streamResponse = openRouterManager.streamMessage(builder: promptBuilder)
         }
         Task.detached(priority: .medium) {
+            defer { continueation.finish() }
+        
             for await response in streamResponse {
                 switch response {
                 case .success(let modelResponse):
@@ -170,9 +172,9 @@ final class LanguageModelService {
                         disconnect: true
                     )
                     continueation.yield(errorResponse)
-                    continueation.finish()
+                    return
                 }
-            }
+            }         
         }
         return stream
     }

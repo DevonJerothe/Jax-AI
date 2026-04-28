@@ -117,5 +117,6 @@ struct CharacterCardPreview: View {
         }
         .background(Color(.secondarySystemBackground))
         .cornerRadius(12)
+        .contentShape(RoundedRectangle(cornerRadius: 12))
     }
 }

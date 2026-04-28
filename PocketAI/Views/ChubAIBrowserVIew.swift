@@ -198,6 +198,7 @@ struct ChubBrowserCard: View {
         }
         .background(Color(.secondarySystemBackground))
         .cornerRadius(12)
+        .contentShape(RoundedRectangle(cornerRadius: 12))
     }
 
 
@@ -209,14 +210,20 @@ struct ChubBrowserCard: View {
 
         let formatter = DateFormatter()
         let calendar = Calendar.current
+        let now = Date()
 
         if calendar.isDateInToday(date) {
             formatter.dateFormat = "h:mm a"
             return formatter.string(from: date)
         } else if calendar.isDateInYesterday(date) {
             return "Yesterday"
-        } else {
+        } else if let daysAgo = calendar.dateComponents(
+            [.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: now)
+        ).day, daysAgo > 7 {
             formatter.dateFormat = "EEE"
+            return formatter.string(from: date)
+        } else {
+            formatter.dateFormat = "MMM d"
             return formatter.string(from: date)
         }
     }
