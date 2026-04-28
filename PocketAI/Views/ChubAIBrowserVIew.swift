@@ -68,6 +68,9 @@ public struct ChubAIBrowserView: View {
                 )
             }
         }
+        .task {
+            await viewModel.getTags()
+        }
         .onChange(of: showSettings) { old, new in 
             guard old == true, new == false else { return }
             Task { await viewModel.searchCards(refresh: true) }
@@ -333,6 +336,9 @@ struct ChubAISettingsView: View {
         .navigationTitle("Chub AI Settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
+        .task {
+            await viewModel.getTags()
+        }
     }
 
     private func chubBinding(_ keyPath: WritableKeyPath<ChubAISettings, Bool>) -> Binding<Bool> {

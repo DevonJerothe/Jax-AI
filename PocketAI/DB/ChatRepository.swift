@@ -17,22 +17,7 @@ class ChatRepository: Repository {
         }
         
         let observer = ValueObservation.tracking { db in
-            let chatsRequest = ChatRecord
-                .including(all: ChatRecord.characterCards)
-                .including(all: ChatRecord.messages.order(Column("createdAt").asc))
-                .order(Column("updatedAt").desc)
-                .asRequest(of: ChatWithCharacterCards.self)
-            
-            let chatsWithCharacters = try chatsRequest.fetchAll(db)
-            
-            let chats = chatsWithCharacters.map { model in
-                var chat = ChatModel(record: model.chat)
-                chat.characterCards = model.characterCards.map { CharacterCardModel(record: $0) }
-                chat.messages = model.messages.map { MessageModel(record: $0) }
-                return chat
-            }
-            
-            return chats
+            try self.fetchChats(db)
         }
         return observer.values(in: writer)
         
@@ -40,23 +25,24 @@ class ChatRepository: Repository {
     
     func getAll() throws -> [ChatModel] {
         try dbManager.read { db in
-            let chatsRequest = ChatRecord
-                .including(all: ChatRecord.characterCards)
-                .including(all: ChatRecord.messages.order(Column("createdAt").asc))
-                .order(Column("updatedAt").desc)
-                .asRequest(of: ChatWithCharacterCards.self)
+            try fetchChats(db)
+        }
+    }
 
-            // fetch DTO
-            let chatsWithCharacters = try chatsRequest.fetchAll(db)
-            
-            let chats = chatsWithCharacters.map { model in
-                var chat = ChatModel(record: model.chat)
-                chat.characterCards = model.characterCards.map { CharacterCardModel(record: $0) }
-                chat.messages = model.messages.map { MessageModel(record: $0) }
-                return chat
-            }
+    private func allChatsRequest() -> QueryInterfaceRequest<ChatWithCharacterCards> {
+        ChatRecord
+            .including(all: ChatRecord.characterCards)
+            .including(all: ChatRecord.messages.order(Column("createdAt").asc))
+            .order(Column("updatedAt").desc)
+            .asRequest(of: ChatWithCharacterCards.self)
+    }
 
-            return chats
+    private func fetchChats(_ db: Database) throws -> [ChatModel] {
+        try allChatsRequest().fetchAll(db).map { model in
+            var chat = ChatModel(record: model.chat)
+            chat.characterCards = model.characterCards.map { CharacterCardModel(record: $0) }
+            chat.messages = model.messages.map { MessageModel(record: $0) }
+            return chat
         }
     }
     

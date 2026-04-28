@@ -223,12 +223,16 @@ final class ChatViewModel {
 
         let response = await languageModelService.sendMessage(chatModel: chat, continued: isContinued)
         let responseText = response?.text ?? "There was an error processing your request. Please try again later."
-        let sanitizedResponse = sanitizeThinking(from: responseText)
+        let sanitizedResponse = ReasoningStreamParser.visibleText(from: responseText)
+        let originalText = isContinued ? chat.messages[messageIndex].text : ""
+        let visibleResponse = StreamAccumulator(
+            originalText: originalText,
+            continuationSeparator: " "
+        ).combinedVisibleText(sanitizedResponse)
 
         await applyResponseUpdate(
             for: messageID,
-            isContinued: isContinued,
-            responseText: sanitizedResponse,
+            responseText: visibleResponse,
             disconnect: response?.disconnect ?? true,
             isFinal: true,
             shouldShowThinking: false
@@ -249,6 +253,17 @@ final class ChatViewModel {
                 print("Failed to set chat status: \(error)")
             }
 
+            let originalText = isContinued
+                ? chat.messages.first(where: { $0.id == messageID })?.text ?? ""
+                : ""
+            var rawAccumulator = StreamAccumulator()
+            let visibleAccumulator = StreamAccumulator(
+                originalText: originalText,
+                continuationSeparator: " "
+            )
+            var reasoningParser = ReasoningStreamParser(
+                startsInsideReasoning: connectionManager.connectionSettings.forceThinking
+            )
             let stream = languageModelService.sendStreamedMessage(
                 chatModel: chat,
                 continued: isContinued,
@@ -257,21 +272,21 @@ final class ChatViewModel {
 
             for await response in stream {
                 let responseText = response.text ?? ""
-                let firstNonWhitespaceChar = responseText.first(where: { !$0.isWhitespace })
-                let didThinkingStart = firstNonWhitespaceChar == "<" || connectionManager.connectionSettings.forceThinking
-                let didThinkingFinish = responseText.contains("</think>") || isContinued
-                let shouldShowThinking = didThinkingStart && !didThinkingFinish
-                let visibleResponse = (!excludeThinking || didThinkingFinish || !didThinkingStart)
-                    ? sanitizeThinking(from: responseText)
-                    : ""
+                let rawResponse = rawAccumulator.ingest(responseText)
+                let isFinal = response.streaming == false
+                let parsedResponse = excludeThinking
+                    ? reasoningParser.parse(rawResponse, isFinal: isFinal)
+                    : ReasoningParseResult(visibleText: rawResponse, shouldShowThinking: false)
+                let visibleResponse = parsedResponse.visibleText.isEmpty
+                    ? ""
+                    : visibleAccumulator.combinedVisibleText(parsedResponse.visibleText)
 
                 await applyResponseUpdate(
                     for: messageID,
-                    isContinued: isContinued,
                     responseText: visibleResponse,
                     disconnect: response.disconnect,
-                    isFinal: response.streaming == false,
-                    shouldShowThinking: shouldShowThinking
+                    isFinal: isFinal,
+                    shouldShowThinking: parsedResponse.shouldShowThinking
                 )
             }
         }
@@ -279,7 +294,6 @@ final class ChatViewModel {
 
     private func applyResponseUpdate(
         for messageID: UUID,
-        isContinued: Bool,
         responseText: String,
         disconnect: Bool,
         isFinal: Bool,
@@ -294,11 +308,7 @@ final class ChatViewModel {
         updatedMessage.error = disconnect ? .apiError : .none
 
         if responseText.isEmpty == false {
-            updatedMessage.text = mergedResponseText(
-                currentText: updatedMessage.text,
-                incomingText: responseText,
-                isContinued: isContinued
-            )
+            updatedMessage.text = responseText
         }
 
         if disconnect {
@@ -330,29 +340,6 @@ final class ChatViewModel {
         }
     }
 
-    private func mergedResponseText(
-        currentText: String,
-        incomingText: String,
-        isContinued: Bool
-    ) -> String {
-        guard incomingText.isEmpty == false else {
-            return currentText
-        }
-
-        if isContinued || currentText.isEmpty {
-            return incomingText
-        }
-
-        // Some providers stream deltas while others resend the full partial text.
-        // Prefer the incoming value when it already contains what we have, otherwise
-        // append the new chunk so text visibly streams into the bubble.
-        if incomingText.hasPrefix(currentText) {
-            return incomingText
-        }
-
-        return currentText + incomingText
-    }
-
     private func finalizeDisconnectedMessage(at messageIndex: Int, in chat: ChatModel) async {
         guard chat.messages.indices.contains(messageIndex) else {
             return
@@ -378,92 +365,21 @@ final class ChatViewModel {
         forceThinking: Bool
     ) async -> String {
         let settings = connectionManager.connectionSettings
-        
-        // We only handle context for KoboldAPI until we can include a token counter in app.
         guard settings.connectionType == .KoboldAPI else {
             return ""
         }
-        
-        let maxContextTokens = settings.contextLength ?? 4096
-        let reservedResponseTokens = settings.responseLength ?? 240
-        let memory = chat.getFullMemory()
-        let memoryTokens = await languageModelService.getTokenCount(string: memory)
-        let userTemplates = settings.userTemplates.values
-            .filter(\.isEnabled)
-            .map(\.content)
-            .joined(separator: "\n")
-        let systemTokens = await languageModelService.getTokenCount(string: userTemplates)
 
-        var prefix = "\nAssistant: "
-        if forceThinking {
-            prefix += "<think>\nOk, first we need to consider who we are and not to speak for the user."
-        }
-
-        let prefixTokens = await languageModelService.getTokenCount(string: prefix)
-        var fixedOverhead = memoryTokens + prefixTokens + reservedResponseTokens
-        if continueResponse {
-            fixedOverhead += systemTokens
-        }
-
-        /// TODO: this is broken. memory will contain our character context. If we 
-        /// over context at this point, this will not send any of our messages including the recent one. 
-        /// We need to at a minimum return the last two messages or the bot will have 0 conversation history.
-        if fixedOverhead >= maxContextTokens {
-            return prefix
-        }
-
-        struct Block {
-            let text: String
-            let tokens: Int
-        }
-
-        let lastUserID = chat.messages.last(where: { $0.actor == .user })?.id
-
-        var blocks: [Block] = []
-        for message in chat.messages {
-            switch message.actor {
-            case .user:
-                var text = "\(message.text)\nAssistant: "
-                if forceThinking && message.id == lastUserID {
-                    text += "<think>\nOk, first we need to consider who we are and not to speak for the user."
-                }
-
-                let tokens = await languageModelService.getTokenCount(string: text)
-                blocks.append(Block(text: text, tokens: tokens))
-            case .bot:
-                if message.status == .done || continueResponse {
-                    let suffix = continueResponse ? "" : "\nUser:"
-                    let text = "\(message.text)\(suffix)"
-                    let tokens = await languageModelService.getTokenCount(string: text)
-                    blocks.append(Block(text: text, tokens: tokens))
-                }
+        return await KoboldPromptContextBuilder(
+            tokenCount: { [languageModelService] text in
+                await languageModelService.getTokenCount(string: text)
             }
-        }
-
-        var remaining = maxContextTokens - fixedOverhead
-        var selectedReversed: [Block] = []
-
-        for block in blocks.reversed() {
-            if block.tokens <= remaining {
-                selectedReversed.append(block)
-                remaining -= block.tokens
-            } else {
-                break
-            }
-        }
-
-        selectedReversed = selectedReversed.reversed()
-        var prompt = "" 
-        for block in selectedReversed {
-            prompt += block.text
-        }
-        return prompt
-    }
-
-    private func sanitizeThinking(from responseText: String) -> String {
-        responseText
-            .replacing(/\A[\s\S]*?<\/think>\s*/, with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        ).build(
+            for: chat,
+            settings: settings,
+            continueResponse: continueResponse,
+            forceThinking: forceThinking,
+            includeTemplate: continueResponse == false
+        ).prompt
     }
 
     private func triggerHapticIfNeeded() {

@@ -29,47 +29,28 @@ public class UserDefaultsManager {
         }
     }
     
-    public func fetchConnectionSettiongs() -> ConnectionSettingsModel? {
-        guard let settingsData = userDefaults.data(forKey: SettingsKeys.ConnectionSettings.rawValue) else {
-            return nil
-        }
-        
-        let decoder = PropertyListDecoder()
-        do {
-            let settingsObject = try decoder.decode(ConnectionSettingsModel.self, from: settingsData)
-            return settingsObject
-        } catch {
-            print("UserDefaults Error: Failed to decode ConnectionSettings")
-            return nil
-        }
+    public func fetchConnectionSettings() -> ConnectionSettingsModel? {
+        fetchSettings(ConnectionSettingsModel.self, forKey: .ConnectionSettings)
     }
 
     public func fetchBotBooruAuthSettings() -> BotBooruAuthSettings? {
-        guard let settingsData = userDefaults.data(forKey: SettingsKeys.BotBooruAuthSettings.rawValue) else {
-            return nil
-        }
-
-        let decoder = PropertyListDecoder()
-        do {
-            let settingsObject = try decoder.decode(BotBooruAuthSettings.self, from: settingsData)
-            return settingsObject
-        } catch {
-            print("UserDefaults Error: Failed to decode BotBooruAuthSettings")
-            return nil
-        }
+        fetchSettings(BotBooruAuthSettings.self, forKey: .BotBooruAuthSettings)
     }
 
     public func fetchChubAISettings() -> ChubAISettings? {
-        guard let settingsData = userDefaults.data(forKey: SettingsKeys.ChubAISettings.rawValue) else {
+        fetchSettings(ChubAISettings.self, forKey: .ChubAISettings)
+    }
+
+    private func fetchSettings<T: Codable>(_ type: T.Type, forKey key: SettingsKeys) -> T? {
+        guard let settingsData = userDefaults.data(forKey: key.rawValue) else {
             return nil
         }
 
         let decoder = PropertyListDecoder()
         do {
-            let settingsObject = try decoder.decode(ChubAISettings.self, from: settingsData)
-            return settingsObject
+            return try decoder.decode(T.self, from: settingsData)
         } catch {
-            print("UserDefaults Error: Failed to decode ChubAISettings")
+            print("UserDefaults Error: Failed to decode \(T.self)")
             return nil
         }
     }

@@ -16,11 +16,6 @@ struct ChatView: View {
     @State var textPrompt: String = ""
     @FocusState private var isInputFocused: Bool
 
-    // ---- Add State for Keyboard Height ----
-    @State private var keyboardHeight: CGFloat = 0
-    // ---- Add State for tracking keyboard visibility ----
-    @State private var isKeyboardVisible: Bool = false
-
     init(chatID: UUID) {
         _viewModel = State(initialValue: ChatViewModel(chatID: chatID))
     }
@@ -160,10 +155,9 @@ struct ChatView: View {
         }
     }
 
-    // ---- Helper function for scrolling ----
     private func scrollToBottom(proxy: ScrollViewProxy, anchor: any Hashable, delay: Double = 0.0) {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            withAnimation {  // Ensure scrolling is animated
+            withAnimation {
                 proxy.scrollTo(anchor, anchor: .bottom)
             }
         }

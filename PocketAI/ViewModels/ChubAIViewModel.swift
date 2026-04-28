@@ -18,6 +18,7 @@ final class ChubAIViewModel {
     var sort: ChubSort = .defaultSort
 
     var chubSettings: ChubAISettings
+    private var isLoadingTags: Bool = false
 
     var hasMore: Bool = true
 
@@ -29,25 +30,29 @@ final class ChubAIViewModel {
         self.chubSettings = chubAIService.chubSettings ?? ChubAISettings()
         self.excludedTopics = chubSettings.excludedTopics
 
+        guard loadCards else { return }
+
         Task {
-            if loadCards {
-                isLoading = true
-                async let cards: Void = searchCards(initLoad: true)
-                async let tags: Void = getTags()
-                _ = await (cards, tags)
-                isLoading = false
-            } else {
-                await getTags()
-            }
+            isLoading = true
+            await searchCards(initLoad: true)
+            isLoading = false
         }
     }
 
     func updateChubSettings(_ settings: ChubAISettings) {
         chubSettings = settings
         chubAIService.updateChubSettings(settings)
+        Task { await getTags(forceRefresh: true) }
     }
 
-    func getTags() async {
+    func getTags(forceRefresh: Bool = false) async {
+        if isLoadingTags || (!forceRefresh && tags.isEmpty == false) {
+            return
+        }
+
+        isLoadingTags = true
+        defer { isLoadingTags = false }
+
         let result = await chubAIService.getTags()
         switch result {
             case .success(let response):
