@@ -134,7 +134,15 @@ final class ChatStore {
     
     func updateChatNotes() {}
     
-    func updatePrivacy(for chatId: UUID, isPrivate: Bool) {}
+    func updatePrivacy(for chatId: UUID, isPrivate: Bool) async throws {
+        guard let index = chats.firstIndex(where: { $0.id == chatId }) else {
+            throw AppDBError.recordNotFound("chat: \(chatId.uuidString)")
+        }
+
+        chats[index].isPrivate = isPrivate
+        try chatRepository.save(chats[index])
+        await waitForObserver()
+    }
     
     // MARK: - Message Calls
     func addMessage(_ message: MessageModel, to chatId: UUID) async throws {

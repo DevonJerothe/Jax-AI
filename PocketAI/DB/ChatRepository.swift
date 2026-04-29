@@ -77,6 +77,30 @@ class ChatRepository: Repository {
                 var record = ChatCharacterJoinRecord(chatId: item.id.uuidString, characterCardId: characterCardId)
                 try record.save(db)
             }
+
+            let privateCharacterIds = item.characterCards
+                .filter(\.isPrivate)
+                .map { $0.id.uuidString }
+
+            guard privateCharacterIds.isEmpty == false else {
+                return
+            }
+
+            let placeholders = Array(repeating: "?", count: privateCharacterIds.count).joined(separator: ",")
+
+            try db.execute(
+                sql: """
+                UPDATE chats
+                SET isPrivate = 1,
+                    updatedAt = CURRENT_TIMESTAMP
+                WHERE id IN (
+                    SELECT chatId
+                    FROM chat_character_join
+                    WHERE characterCardId IN (\(placeholders))
+                )
+                """,
+                arguments: StatementArguments(privateCharacterIds)
+            )
         }
     }
     

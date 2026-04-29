@@ -13,6 +13,7 @@ struct PocketAIApp: App {
 
     @State var navManager: NavigationManager = .init()
     @State var serviceContainer: ServiceContainer = .shared
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         print("PocketAIApp initializing...")
@@ -72,6 +73,13 @@ struct PocketAIApp: App {
             .tint(.primary)
             .task {
                 serviceContainer.bootstrap()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else {
+                    return
+                }
+
+                serviceContainer.lockForAppResumeIfNeeded()
             }
         }
         .environment(navManager)

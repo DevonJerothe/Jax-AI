@@ -15,6 +15,7 @@ struct ChatSettingsView: View {
 
     @State private var viewModel: ChatViewModel
     @State private var characterCard: CharacterCardModel
+    @State private var chatIsPrivate: Bool
     @State private var isDragging: Bool = false 
 
     private var connectionManager: ConnectionStatusManager {
@@ -28,6 +29,7 @@ struct ChatSettingsView: View {
         /// TODO: we need to make sure that if we cant load the character card, we hide the section that uses it. 
         /// We should never be on this screen with no active character card. 
         _characterCard = State(initialValue: viewModel.model?.getCharacterCard() ?? CharacterCardModel())
+        _chatIsPrivate = State(initialValue: viewModel.model?.isPrivate ?? false)
     }
 
     private var responseLengthBinding: Binding<Double> {
@@ -132,6 +134,22 @@ struct ChatSettingsView: View {
                 .padding(.top, 24)
                 .padding(.horizontal, 16)
 
+                Toggle(isOn: $chatIsPrivate) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Private Chat")
+                            .foregroundColor(.primary)
+
+                        Text("Hide this chat while the app is locked.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding()
+                .background(Color(.systemGray6).opacity(0.6))
+                .cornerRadius(12)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+
                 HStack {
                     AvatarImage(image: characterCard.getAvatarImg(), size: 50)
                         .padding(.trailing, 12)
@@ -229,7 +247,8 @@ struct ChatSettingsView: View {
                     Button("Save") {
                         Task {
                             await viewModel.updateChatSettings(
-                                characterCard: characterCard
+                                characterCard: characterCard,
+                                isPrivate: chatIsPrivate
                             )
                             dismiss()
                         }
@@ -242,6 +261,7 @@ struct ChatSettingsView: View {
             if let card = viewModel.fetchCharacterCard() {
                 self.characterCard = card
             }
+            self.chatIsPrivate = viewModel.model?.isPrivate ?? false
         }
         .scrollDismissesKeyboard(.immediately)
         .scrollIndicators(.hidden)

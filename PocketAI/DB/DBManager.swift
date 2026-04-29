@@ -91,6 +91,22 @@ class DBManager {
             try ChatCharacterJoinRecord.migrateTable(db)
         }
 
+        migrator.registerMigration("v2_privacy_flags") { db in
+            let chatColumns = try db.columns(in: ChatRecord.databaseTableName).map(\.name)
+            if chatColumns.contains("isPrivate") == false {
+                try db.alter(table: ChatRecord.databaseTableName) { t in
+                    t.add(column: "isPrivate", .boolean).notNull().defaults(to: false)
+                }
+            }
+
+            let characterColumns = try db.columns(in: CharacterCardRecord.databaseTableName).map(\.name)
+            if characterColumns.contains("isPrivate") == false {
+                try db.alter(table: CharacterCardRecord.databaseTableName) { t in
+                    t.add(column: "isPrivate", .boolean).notNull().defaults(to: false)
+                }
+            }
+        }
+
         try migrator.migrate(dbQueue)
     }
 
