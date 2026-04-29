@@ -28,17 +28,27 @@ public struct ConnectionSettingsModel: Codable {
     var selectedModel: String?
 
     // Sampler Settings 
-    var temperature: Double?
-    var topP: Double?
-    var topK: Int?
-    var typicalP: Double?
-    var repetitionPenalty: Double?
-    var repetitionRange: Int?
+    var temperature: Double
+    var topP: Double
+    var topK: Double
+    var typicalP: Double
+    var tfs: Int
+    var topA: Double
+    var minP: Double
+    var repetitionPenalty: Double
+    var repetitionRange: Int
+    var repetitionSlope: Double
+    var samplerOrder: [Int]
+    var userStopSequence: String 
+    var botStopSequence: String 
+    var systemStopSequence: String 
+    var thinkingStartSequence: String
+    var thinkingStopSequence: String
+    var forceThinkingInstruct: String
 
     // Chat Settings
     var forceThinking: Bool = false // KoboldAPI only
     var disableReasoning: Bool = false
-    var resetDeleteMe: Bool = false
     var userTemplates: OrderedDictionary<String, TemplateModel> = [:]
 
     // App Settings
@@ -55,19 +65,30 @@ public struct ConnectionSettingsModel: Codable {
         responseLength: Int? = nil,
         apiKey: String? = nil,
         selectedModel: String? = nil,
-        temperature: Double? = nil,
-        topP: Double? = nil,
-        topK: Int? = nil,
-        typicalP: Double? = nil,
-        repetitionPenalty: Double? = nil,
-        repetitionRange: Int? = nil,
+        temperature: Double = 0.9,
+        topP: Double = 0.95,
+        topK: Double = 40,
+        typicalP: Double = 1,
+        tfs: Int = 1,
+        topA: Double = 0,
+        minP: Double = 0.05,
+        repetitionPenalty: Double = 1.1,
+        repetitionRange: Int = 512,
+        repetitionSlope: Double = 0,
+        samplerOrder: [Int] = [6, 0, 1, 3, 4, 2, 5],
         forceThinking: Bool = false,
         disableReasoning: Bool = false,
         resetDeleteMe: Bool = false,
         userTemplates: OrderedDictionary<String, TemplateModel> = [:],
         locked: Bool = false,
         autoLock: Bool = false,
-        autoConnect: Bool = false
+        autoConnect: Bool = false,
+        userStopSequence: String = "\nUser:",
+        botStopSequence: String = "\nAssistant:",
+        systemStopSequence: String = "\nSystem:",
+        thinkingStartSequence: String = "<think>",
+        thinkingStopSequence: String = "</think>",
+        forceThinkingInstruct: String = "Ok, first we need to consider who we are and not to speak for the user."
     ) {
         self.host = host
         self.port = port
@@ -81,15 +102,25 @@ public struct ConnectionSettingsModel: Codable {
         self.topP = topP
         self.topK = topK
         self.typicalP = typicalP
+        self.tfs = tfs
+        self.topA = topA
+        self.minP = minP
         self.repetitionPenalty = repetitionPenalty
         self.repetitionRange = repetitionRange
+        self.repetitionSlope = repetitionSlope
+        self.samplerOrder = samplerOrder
         self.forceThinking = forceThinking
         self.disableReasoning = disableReasoning
-        self.resetDeleteMe = resetDeleteMe
         self.userTemplates = userTemplates
         self.locked = locked
         self.autoLock = autoLock
         self.autoConnect = autoConnect
+        self.userStopSequence = userStopSequence
+        self.botStopSequence = botStopSequence
+        self.systemStopSequence = systemStopSequence
+        self.thinkingStartSequence = thinkingStartSequence
+        self.thinkingStopSequence = thinkingStopSequence
+        self.forceThinkingInstruct = forceThinkingInstruct
     }
 
     enum CodingKeys: String, CodingKey {
@@ -105,19 +136,31 @@ public struct ConnectionSettingsModel: Codable {
         case topP
         case topK
         case typicalP
+        case tfs
+        case topA
+        case minP
         case repetitionPenalty
         case repetitionRange
+        case repetitionSlope
+        case samplerOrder
         case forceThinking
         case disableReasoning
-        case resetDeleteMe
         case userTemplates
         case locked
         case autoLock
         case autoConnect
+        case userStopSequence
+        case botStopSequence
+        case systemStopSequence
+        case thinkingStartSequence
+        case thinkingStopSequence
+        case forceThinkingInstruct
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = ConnectionSettingsModel.defaults
+
         self.host = try container.decodeIfPresent(String.self, forKey: .host)
         self.port = try container.decodeIfPresent(Int.self, forKey: .port)
         self.connectionType = try container.decodeIfPresent(APITypeSelection.self, forKey: .connectionType) ?? .KoboldAPI
@@ -126,19 +169,29 @@ public struct ConnectionSettingsModel: Codable {
         self.responseLength = try container.decodeIfPresent(Int.self, forKey: .responseLength)
         self.apiKey = try container.decodeIfPresent(String.self, forKey: .apiKey)
         self.selectedModel = try container.decodeIfPresent(String.self, forKey: .selectedModel)
-        self.temperature = try container.decodeIfPresent(Double.self, forKey: .temperature)
-        self.topP = try container.decodeIfPresent(Double.self, forKey: .topP)
-        self.topK = try container.decodeIfPresent(Int.self, forKey: .topK)
-        self.typicalP = try container.decodeIfPresent(Double.self, forKey: .typicalP)
-        self.repetitionPenalty = try container.decodeIfPresent(Double.self, forKey: .repetitionPenalty)
-        self.repetitionRange = try container.decodeIfPresent(Int.self, forKey: .repetitionRange)
+        self.temperature = try container.decodeIfPresent(Double.self, forKey: .temperature) ?? defaults.temperature
+        self.topP = try container.decodeIfPresent(Double.self, forKey: .topP) ?? defaults.topP
+        self.topK = try container.decodeIfPresent(Double.self, forKey: .topK) ?? defaults.topK
+        self.typicalP = try container.decodeIfPresent(Double.self, forKey: .typicalP) ?? defaults.typicalP
+        self.tfs = try container.decodeIfPresent(Int.self, forKey: .tfs) ?? defaults.tfs
+        self.topA = try container.decodeIfPresent(Double.self, forKey: .topA) ?? defaults.topA
+        self.minP = try container.decodeIfPresent(Double.self, forKey: .minP) ?? defaults.minP
+        self.repetitionPenalty = try container.decodeIfPresent(Double.self, forKey: .repetitionPenalty) ?? defaults.repetitionPenalty
+        self.repetitionRange = try container.decodeIfPresent(Int.self, forKey: .repetitionRange) ?? defaults.repetitionRange
+        self.repetitionSlope = try container.decodeIfPresent(Double.self, forKey: .repetitionSlope) ?? defaults.repetitionSlope
+        self.samplerOrder = try container.decodeIfPresent([Int].self, forKey: .samplerOrder) ?? defaults.samplerOrder
         self.forceThinking = try container.decodeIfPresent(Bool.self, forKey: .forceThinking) ?? false
         self.disableReasoning = try container.decodeIfPresent(Bool.self, forKey: .disableReasoning) ?? false
-        self.resetDeleteMe = try container.decodeIfPresent(Bool.self, forKey: .resetDeleteMe) ?? false
         self.userTemplates = try container.decodeIfPresent(OrderedDictionary<String, TemplateModel>.self, forKey: .userTemplates) ?? [:]
         self.locked = try container.decodeIfPresent(Bool.self, forKey: .locked) ?? false
         self.autoLock = try container.decodeIfPresent(Bool.self, forKey: .autoLock) ?? false
         self.autoConnect = try container.decodeIfPresent(Bool.self, forKey: .autoConnect) ?? false
+        self.userStopSequence = try container.decodeIfPresent(String.self, forKey: .userStopSequence) ?? defaults.userStopSequence
+        self.botStopSequence = try container.decodeIfPresent(String.self, forKey: .botStopSequence) ?? defaults.botStopSequence
+        self.systemStopSequence = try container.decodeIfPresent(String.self, forKey: .systemStopSequence) ?? defaults.systemStopSequence
+        self.thinkingStartSequence = try container.decodeIfPresent(String.self, forKey: .thinkingStartSequence) ?? defaults.thinkingStartSequence
+        self.thinkingStopSequence = try container.decodeIfPresent(String.self, forKey: .thinkingStopSequence) ?? defaults.thinkingStopSequence
+        self.forceThinkingInstruct = try container.decodeIfPresent(String.self, forKey: .forceThinkingInstruct) ?? defaults.forceThinkingInstruct
     }
 }
 
@@ -152,13 +205,24 @@ extension ConnectionSettingsModel {
         maxContextLength: 25600,
         responseLength: 300,
         selectedModel: "deepseek/deepseek-chat-v3-0324:free",
-        temperature: 1.15,
-        topP: 0,
+        temperature: 0.9,
+        topP: 0.95,
         topK: 40,
-        typicalP: 0,
-        repetitionPenalty: 1.18,
-        repetitionRange: 64, 
-        userTemplates: defaultUserTemplates
+        typicalP: 1,
+        tfs: 1,
+        topA: 0,
+        minP: 0.05,
+        repetitionPenalty: 1.1,
+        repetitionRange: 512,
+        repetitionSlope: 0,
+        samplerOrder: [6, 0, 1, 3, 4, 2, 5],
+        userTemplates: defaultUserTemplates,
+        userStopSequence: "\nUser:",
+        botStopSequence: "\nAssistant:",
+        systemStopSequence: "\nSystem:",
+        thinkingStartSequence: "<think>",
+        thinkingStopSequence: "</think>",
+        forceThinkingInstruct: "Ok, first we need to consider who we are and not to speak for the user."
     )
 
     static let defaultUserTemplates: OrderedDictionary<String, TemplateModel> = [

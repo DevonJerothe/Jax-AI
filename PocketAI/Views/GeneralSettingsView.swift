@@ -32,6 +32,19 @@ struct GeneralSettingsView: View {
                         )
                     }
                     .buttonStyle(.plain)
+
+                    Divider() 
+
+                    NavigationLink {
+                        SamplerSettingsView()
+                    } label: {
+                        SettingsNavigationRow( 
+                            title: "Sampler", 
+                            subtitle: "Control how responses are sent and received",
+                            systemImage: "sparkles"
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 SettingsCard("Browsers") {

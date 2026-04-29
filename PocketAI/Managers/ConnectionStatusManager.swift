@@ -177,13 +177,6 @@ final class ConnectionStatusManager {
             normalized.apiKey = trimmedAPIKey?.isEmpty == true ? nil : trimmedAPIKey
         }
 
-        normalized.temperature = normalized.temperature ?? defaultSettings.temperature
-        normalized.topP = normalized.topP ?? defaultSettings.topP
-        normalized.topK = normalized.topK ?? defaultSettings.topK
-        normalized.typicalP = normalized.typicalP ?? defaultSettings.typicalP
-        normalized.repetitionPenalty = normalized.repetitionPenalty ?? defaultSettings.repetitionPenalty
-        normalized.repetitionRange = normalized.repetitionRange ?? defaultSettings.repetitionRange
-
         if normalized.userTemplates.isEmpty {
             normalized.userTemplates = ConnectionSettingsModel.defaultUserTemplates
         }

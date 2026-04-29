@@ -130,7 +130,18 @@ final class LanguageModelService {
                 memory: chatModel.getFullMemory(),
                 maxContextLength: runtimeConnectionSettings.contextLength ?? 4096,
                 maxLength: runtimeConnectionSettings.responseLength ?? 240,
-                temperature: runtimeConnectionSettings.temperature ?? 1.15,
+                temperature: runtimeConnectionSettings.temperature,
+                tfs: runtimeConnectionSettings.tfs,
+                topA: runtimeConnectionSettings.topA,
+                topK: runtimeConnectionSettings.topK,
+                topP: runtimeConnectionSettings.topP,
+                minP: runtimeConnectionSettings.minP,
+                typical: Int(runtimeConnectionSettings.typicalP),
+                repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
+                repetitionRange: runtimeConnectionSettings.repetitionRange,
+                repetitionSlope: runtimeConnectionSettings.repetitionSlope,
+                stopSequence: stopSequences,
+                samplerOrder: runtimeConnectionSettings.samplerOrder,
                 promptTemplate: continued ? "" : runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n")
             )
             
@@ -143,7 +154,14 @@ final class LanguageModelService {
             let promptBuilder = OpenRouterRequestBuilder(
                 model: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
                 messages: requestMessages,
+                stop: stopSequences,
+                temperature: runtimeConnectionSettings.temperature,
+                topP: runtimeConnectionSettings.topP,
+                minP: runtimeConnectionSettings.minP,
+                topA: runtimeConnectionSettings.topA,
+                topK: runtimeConnectionSettings.topK,
                 maxTokens: runtimeConnectionSettings.responseLength ?? 240,
+                repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
                 stream: true,
                 systemPromptTemplate: TemplatePrompts().defaultRolePlayPrompt,
                 characterDescription: chatModel.characterCards.first?.description,
@@ -220,7 +238,18 @@ final class LanguageModelService {
                 memory: promptContext.memory,
                 maxContextLength: runtimeConnectionSettings.contextLength ?? 4096,
                 maxLength: runtimeConnectionSettings.responseLength ?? 240,
-                temperature: runtimeConnectionSettings.temperature ?? 1.15,
+                temperature: runtimeConnectionSettings.temperature,
+                tfs: runtimeConnectionSettings.tfs,
+                topA: runtimeConnectionSettings.topA,
+                topK: runtimeConnectionSettings.topK,
+                topP: runtimeConnectionSettings.topP,
+                minP: runtimeConnectionSettings.minP,
+                typical: Int(runtimeConnectionSettings.typicalP),
+                repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
+                repetitionRange: runtimeConnectionSettings.repetitionRange,
+                repetitionSlope: runtimeConnectionSettings.repetitionSlope,
+                stopSequence: stopSequences,
+                samplerOrder: runtimeConnectionSettings.samplerOrder,
                 promptTemplate: promptContext.template
             )
             
@@ -229,7 +258,14 @@ final class LanguageModelService {
             let promptBuilder = OpenRouterRequestBuilder(
                 model: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
                 messages: requestMessages,
+                stop: stopSequences,
+                temperature: runtimeConnectionSettings.temperature,
+                topP: runtimeConnectionSettings.topP,
+                minP: runtimeConnectionSettings.minP,
+                topA: runtimeConnectionSettings.topA,
+                topK: runtimeConnectionSettings.topK,
                 maxTokens: runtimeConnectionSettings.responseLength ?? 240,
+                repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
                 stream: false,
                 systemPromptTemplate: TemplatePrompts().defaultRolePlayPrompt,
                 characterDescription: chatModel.characterCards.first?.description,
@@ -274,6 +310,15 @@ final class LanguageModelService {
             self.runtimeConnectionSettings = newConnectionSettings
         }
     } 
+
+    private var stopSequences: [String] {
+        [
+            runtimeConnectionSettings.userStopSequence,
+            runtimeConnectionSettings.botStopSequence,
+            runtimeConnectionSettings.systemStopSequence
+        ]
+        .filter { $0.isEmpty == false }
+    }
 
     // MARK: - Kobold Functions
     func getMaxContextLength() async -> Int? {
