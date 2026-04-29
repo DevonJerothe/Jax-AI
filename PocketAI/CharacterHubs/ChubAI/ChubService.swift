@@ -77,7 +77,8 @@ final public class ChubService {
             "nsfl": "\(chubSettings?.showNSFL ?? false)",
             "topics": topics.joined(separator: ","),
             "excludetopics": chubSettings?.excludedTopics.map { $0.name }.joined(separator: ",") ?? "",
-            "sort": sort.rawValue
+            "sort": sort.rawValue,
+            "include_forks": "true"
         ]
 
         let result = await client.sendRequest(

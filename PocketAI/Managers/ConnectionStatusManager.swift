@@ -33,10 +33,14 @@ final class ConnectionStatusManager {
     @ObservationIgnored private var connectionAttemptID = UUID()
 
     init() {
-        let savedSettings = UserDefaultsManager.shared.fetchConnectionSettings() ?? .defaults
+        var savedSettings = UserDefaultsManager.shared.fetchConnectionSettings() ?? .defaults
+        if savedSettings.autoLock, UserDefaultsManager.shared.fetchUserLock() != nil {
+            savedSettings.locked = true
+        }
         let normalizedSettings = ConnectionStatusManager.normalize(savedSettings)
         self.connectionSettings = normalizedSettings
         self.maxContextLength = normalizedSettings.maxContextLength ?? ConnectionSettingsModel.defaults.maxContextLength ?? 25600
+        UserDefaultsManager.shared.saveSettings(normalizedSettings, forKey: .ConnectionSettings)
     }
 
     func attachLanguageModelService(_ languageModelService: LanguageModelService) {
@@ -66,6 +70,14 @@ final class ConnectionStatusManager {
 
     func saveConnectionSettings() {
         persistSettings(ConnectionStatusManager.normalize(connectionSettings))
+    }
+
+    func lockForAppResumeIfNeeded() {
+        guard connectionSettings.autoLock, UserDefaultsManager.shared.fetchUserLock() != nil else {
+            return
+        }
+
+        update(\.locked, to: true)
     }
 
     func connect() async {

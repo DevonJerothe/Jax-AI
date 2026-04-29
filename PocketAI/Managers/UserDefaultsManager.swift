@@ -54,4 +54,13 @@ public class UserDefaultsManager {
             return nil
         }
     }
+
+    // User Lock Settings
+    public func saveUserLock(pass: String) {
+        userDefaults.set(pass, forKey: "UserLock")
+    }
+
+    public func fetchUserLock() -> String? {
+        userDefaults.string(forKey: "UserLock") ?? userDefaults.string(forKey: "userLock")
+    }
 }

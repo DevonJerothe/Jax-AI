@@ -13,21 +13,35 @@ import SwiftUI
 final class ChatListViewModel {
     private let chatStore: ChatStore
     private let characterStore: CharacterStore
+    private let connectionManager: ConnectionStatusManager
 
     var showNewChatSheet: Bool = false
     var showConnectionSheet: Bool = false
 
-    init(chatStore: ChatStore? = nil, characterStore: CharacterStore? = nil) {
+    init(
+        chatStore: ChatStore? = nil,
+        characterStore: CharacterStore? = nil,
+        connectionManager: ConnectionStatusManager? = nil
+    ) {
         self.chatStore = chatStore ?? ServiceContainer.shared.getChatStore()
         self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
+        self.connectionManager = connectionManager ?? ServiceContainer.shared.getConnectionStatusManager()
     }
 
     var chats: [ChatModel] {
-        chatStore.chats
+        guard connectionManager.connectionSettings.locked else {
+            return chatStore.chats
+        }
+
+        return chatStore.chats.filter { $0.isPrivate == false }
     }
 
     var characterCards: [CharacterCardModel] {
-        characterStore.characters
+        guard connectionManager.connectionSettings.locked else {
+            return characterStore.characters
+        }
+
+        return characterStore.characters.filter { $0.isPrivate == false }
     }
 
     func createNewChat(fromCharacter: CharacterCardModel) async -> ChatModel? {

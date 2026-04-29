@@ -24,6 +24,10 @@ final class ChatViewModel {
         chatStore.chat(withID: chatID)
     }
 
+    var shouldHidePrivateContent: Bool {
+        connectionManager.connectionSettings.locked && model?.isPrivate == true
+    }
+
     var isConnected: Bool {
         connectionManager.connectionStatus == .connected
     }
@@ -139,14 +143,14 @@ final class ChatViewModel {
         }
     }
 
-    func updateChatSettings(characterCard: CharacterCardModel) async {
+    func updateChatSettings(characterCard: CharacterCardModel, isPrivate: Bool) async {
         guard var chat = model else {
             return
         }
 
         chat.characterCards = [characterCard]
         chat.memory = characterCard.description ?? chat.memory
-        chat.isPrivate = characterCard.isPrivate
+        chat.isPrivate = isPrivate
 
         do {
             try await chatStore.saveChat(chat)

@@ -54,6 +54,13 @@ final class ServiceContainer {
         )
 
         connectionStatusManager.attachLanguageModelService(languageModelService)
+
+        // if auto connect is enabled, connect to the last used service
+        if connectionStatusManager.connectionSettings.autoConnect {
+            Task {
+                await connectionStatusManager.connect()
+            }
+        }
     }
     
     func getChatStore() -> ChatStore {
@@ -70,6 +77,10 @@ final class ServiceContainer {
 
     func getLanguageModelService() -> LanguageModelService {
         return self.languageModelService
+    }
+
+    func lockForAppResumeIfNeeded() {
+        connectionStatusManager.lockForAppResumeIfNeeded()
     }
 
     /// Starts the shared DB observers once so every screen can read from the same

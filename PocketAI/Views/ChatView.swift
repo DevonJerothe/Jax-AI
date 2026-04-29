@@ -22,6 +22,20 @@ struct ChatView: View {
 
     var body: some View {
 
+        Group {
+            if viewModel.shouldHidePrivateContent {
+                ContentUnavailableView(
+                    "Private Chat Locked",
+                    systemImage: "lock.fill",
+                    description: Text("Unlock the app in Settings to view this chat.")
+                )
+            } else {
+                chatContent
+            }
+        }
+    }
+
+    private var chatContent: some View {
         ScrollViewReader { proxy in
             ScrollView {
 

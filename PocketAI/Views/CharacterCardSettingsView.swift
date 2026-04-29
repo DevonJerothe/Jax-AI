@@ -3,6 +3,7 @@ import PhotosUI
 
 struct CharacterCardSettingsView: View {
     @Environment(NavigationManager.self) var navManager
+    @Environment(ServiceContainer.self) private var serviceContainer
     @Environment(\.dismiss) private var dismiss
     @State private var characterCard: CharacterCardModel
 
@@ -19,6 +20,10 @@ struct CharacterCardSettingsView: View {
     private let dismissOnSave: Bool
     var isNew: Bool = false
 
+    private var shouldHidePrivateContent: Bool {
+        serviceContainer.getConnectionStatusManager().connectionSettings.locked && characterCard.isPrivate
+    }
+
     init(
         characterID: UUID? = nil,
         characterCard: CharacterCardModel = CharacterCardModel(),
@@ -32,6 +37,20 @@ struct CharacterCardSettingsView: View {
     }
 
     var body: some View {
+        Group {
+            if shouldHidePrivateContent {
+                ContentUnavailableView(
+                    "Private Character Locked",
+                    systemImage: "lock.fill",
+                    description: Text("Unlock the app in Settings to view this character.")
+                )
+            } else {
+                settingsContent
+            }
+        }
+    }
+
+    private var settingsContent: some View {
         ScrollView {
             VStack(alignment: .leading) {
                 HStack(alignment: .center) {
@@ -56,6 +75,21 @@ struct CharacterCardSettingsView: View {
                 .padding(.top, 24)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
+
+                Toggle(isOn: $characterCard.isPrivate) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Private Character")
+                            .foregroundColor(.primary)
+
+                        Text("Hide this character while the app is locked.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding()
+                .background(Color(.systemGray6).opacity(0.6))
+                .cornerRadius(12)
+                .padding(.horizontal, 16)
 
                 collapsibleField(
                     title: "Description Preview",
