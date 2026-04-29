@@ -71,10 +71,10 @@ public struct ConnectionSettingsModel: Codable {
         typicalP: Double = 1,
         tfs: Int = 1,
         topA: Double = 0,
-        minP: Double = 0.05,
+        minP: Double = 0,
         repetitionPenalty: Double = 1.1,
-        repetitionRange: Int = 512,
-        repetitionSlope: Double = 0,
+        repetitionRange: Int = 360,
+        repetitionSlope: Double = 0.5,
         samplerOrder: [Int] = [6, 0, 1, 3, 4, 2, 5],
         forceThinking: Bool = false,
         disableReasoning: Bool = false,
@@ -83,12 +83,12 @@ public struct ConnectionSettingsModel: Codable {
         locked: Bool = false,
         autoLock: Bool = false,
         autoConnect: Bool = false,
-        userStopSequence: String = "\nUser:",
-        botStopSequence: String = "\nAssistant:",
-        systemStopSequence: String = "\nSystem:",
-        thinkingStartSequence: String = "<think>",
-        thinkingStopSequence: String = "</think>",
-        forceThinkingInstruct: String = "Ok, first we need to consider who we are and not to speak for the user."
+        userStopSequence: String = ConnectionSettingsModel.defaultUserStopSequence,
+        botStopSequence: String = ConnectionSettingsModel.defaultBotStopSequence,
+        systemStopSequence: String = ConnectionSettingsModel.defaultSystemStopSequence,
+        thinkingStartSequence: String = ConnectionSettingsModel.defaultThinkingStartSequence,
+        thinkingStopSequence: String = ConnectionSettingsModel.defaultThinkingStopSequence,
+        forceThinkingInstruct: String = ConnectionSettingsModel.defaultForceThinkingInstruct
     ) {
         self.host = host
         self.port = port
@@ -121,6 +121,7 @@ public struct ConnectionSettingsModel: Codable {
         self.thinkingStartSequence = thinkingStartSequence
         self.thinkingStopSequence = thinkingStopSequence
         self.forceThinkingInstruct = forceThinkingInstruct
+        self.ensureNonEmptySequences()
     }
 
     enum CodingKeys: String, CodingKey {
@@ -192,10 +193,17 @@ public struct ConnectionSettingsModel: Codable {
         self.thinkingStartSequence = try container.decodeIfPresent(String.self, forKey: .thinkingStartSequence) ?? defaults.thinkingStartSequence
         self.thinkingStopSequence = try container.decodeIfPresent(String.self, forKey: .thinkingStopSequence) ?? defaults.thinkingStopSequence
         self.forceThinkingInstruct = try container.decodeIfPresent(String.self, forKey: .forceThinkingInstruct) ?? defaults.forceThinkingInstruct
+        self.ensureNonEmptySequences()
     }
 }
 
 extension ConnectionSettingsModel {
+    static let defaultUserStopSequence = "\nUser:"
+    static let defaultBotStopSequence = "\nAssistant:"
+    static let defaultSystemStopSequence = "\nSystem:"
+    static let defaultThinkingStartSequence = "<think>"
+    static let defaultThinkingStopSequence = "</think>"
+    static let defaultForceThinkingInstruct = "Ok, first we need to consider who we are and not to speak for the user."
 
     static let defaults = ConnectionSettingsModel(
         host: "127.0.0.1",
@@ -211,22 +219,53 @@ extension ConnectionSettingsModel {
         typicalP: 1,
         tfs: 1,
         topA: 0,
-        minP: 0.05,
+        minP: 0,
         repetitionPenalty: 1.1,
-        repetitionRange: 512,
-        repetitionSlope: 0,
+        repetitionRange: 360,
+        repetitionSlope: 0.5,
         samplerOrder: [6, 0, 1, 3, 4, 2, 5],
         userTemplates: defaultUserTemplates,
-        userStopSequence: "\nUser:",
-        botStopSequence: "\nAssistant:",
-        systemStopSequence: "\nSystem:",
-        thinkingStartSequence: "<think>",
-        thinkingStopSequence: "</think>",
-        forceThinkingInstruct: "Ok, first we need to consider who we are and not to speak for the user."
+        userStopSequence: defaultUserStopSequence,
+        botStopSequence: defaultBotStopSequence,
+        systemStopSequence: defaultSystemStopSequence,
+        thinkingStartSequence: defaultThinkingStartSequence,
+        thinkingStopSequence: defaultThinkingStopSequence,
+        forceThinkingInstruct: defaultForceThinkingInstruct
     )
 
     static let defaultUserTemplates: OrderedDictionary<String, TemplateModel> = [
         "Roleplay": TemplateModel(content: TemplatePrompts().defaultRolePlayPrompt, isEnabled: true),
         "Reasoning": TemplateModel(content: TemplateInstructions().reasoningInstructions, isEnabled: true)
     ]
+
+    mutating func ensureNonEmptySequences() {
+        userStopSequence = Self.nonEmptySequence(
+            userStopSequence,
+            fallback: Self.defaultUserStopSequence
+        )
+        botStopSequence = Self.nonEmptySequence(
+            botStopSequence,
+            fallback: Self.defaultBotStopSequence
+        )
+        systemStopSequence = Self.nonEmptySequence(
+            systemStopSequence,
+            fallback: Self.defaultSystemStopSequence
+        )
+        thinkingStartSequence = Self.nonEmptySequence(
+            thinkingStartSequence,
+            fallback: Self.defaultThinkingStartSequence
+        )
+        thinkingStopSequence = Self.nonEmptySequence(
+            thinkingStopSequence,
+            fallback: Self.defaultThinkingStopSequence
+        )
+        forceThinkingInstruct = Self.nonEmptySequence(
+            forceThinkingInstruct,
+            fallback: Self.defaultForceThinkingInstruct
+        )
+    }
+
+    private static func nonEmptySequence(_ sequence: String, fallback: String) -> String {
+        sequence.isEmpty ? fallback : sequence
+    }
 }

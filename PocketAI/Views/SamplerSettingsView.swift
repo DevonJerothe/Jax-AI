@@ -101,7 +101,7 @@ struct SamplerSettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    samplerSlider(
+                    SamplerSlider(
                         title: "Temperature",
                         value: temperatureBinding,
                         range: 0.1...2,
@@ -113,7 +113,7 @@ struct SamplerSettingsView: View {
 
                     DisclosureGroup(isExpanded: $isAdvancedSamplingExpanded) {
                         VStack(alignment: .leading, spacing: 14) {
-                            samplerSlider(
+                            SamplerSlider(
                                 title: "Top P",
                                 value: topPBinding,
                                 range: 0...1,
@@ -121,7 +121,7 @@ struct SamplerSettingsView: View {
                                 displayValue: formattedDecimal(topPBinding.wrappedValue)
                             )
 
-                            samplerSlider(
+                            SamplerSlider(
                                 title: "Top K",
                                 value: topKBinding,
                                 range: 0...200,
@@ -129,7 +129,7 @@ struct SamplerSettingsView: View {
                                 displayValue: "\(Int(topKBinding.wrappedValue))"
                             )
 
-                            samplerSlider(
+                            SamplerSlider(
                                 title: "Typical P",
                                 value: typicalPBinding,
                                 range: 0...1,
@@ -137,7 +137,7 @@ struct SamplerSettingsView: View {
                                 displayValue: formattedDecimal(typicalPBinding.wrappedValue)
                             )
 
-                            samplerSlider(
+                            SamplerSlider(
                                 title: "TFS",
                                 value: tfsBinding,
                                 range: 0...1,
@@ -145,7 +145,7 @@ struct SamplerSettingsView: View {
                                 displayValue: "\(Int(tfsBinding.wrappedValue))"
                             )
 
-                            samplerSlider(
+                            SamplerSlider(
                                 title: "Top A",
                                 value: topABinding,
                                 range: 0...1,
@@ -153,7 +153,7 @@ struct SamplerSettingsView: View {
                                 displayValue: formattedDecimal(topABinding.wrappedValue)
                             )
 
-                            samplerSlider(
+                            SamplerSlider(
                                 title: "Min P",
                                 value: minPBinding,
                                 range: 0...1,
@@ -161,7 +161,7 @@ struct SamplerSettingsView: View {
                                 displayValue: formattedDecimal(minPBinding.wrappedValue)
                             )
 
-                            samplerSlider(
+                            SamplerSlider(
                                 title: "Repetition Penalty",
                                 value: repetitionPenaltyBinding,
                                 range: 1...2,
@@ -169,7 +169,7 @@ struct SamplerSettingsView: View {
                                 displayValue: formattedDecimal(repetitionPenaltyBinding.wrappedValue)
                             )
 
-                            samplerSlider(
+                            SamplerSlider(
                                 title: "Repetition Range",
                                 value: repetitionRangeBinding,
                                 range: 0...Double(connectionManager.connectionSettings.contextLength ?? 4096),
@@ -177,7 +177,7 @@ struct SamplerSettingsView: View {
                                 displayValue: "\(Int(repetitionRangeBinding.wrappedValue))"
                             )
 
-                            samplerSlider(
+                            SamplerSlider(
                                 title: "Repetition Slope",
                                 value: repetitionSlopeBinding,
                                 range: 0...10,
@@ -227,7 +227,7 @@ struct SamplerSettingsView: View {
                         sequenceField(title: "Force Thinking Instruct", text: $forceThinkingInstructText)
                     }
                 }
-                Text("You may find if the model does not close the </think> tag, the response does not stream. It should still load when complete.")
+                Text("You may find if the model does not close the \(connectionManager.connectionSettings.thinkingStopSequence.encodeEscapedSequence()) tag, the response does not stream. It should still load when complete.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 16)
@@ -281,28 +281,28 @@ struct SamplerSettingsView: View {
         }
     }
 
-    private func samplerSlider(
-        title: String,
-        value: Binding<Double>,
-        range: ClosedRange<Double>,
-        step: Double,
-        displayValue: String
-    ) -> some View {
-        VStack(alignment: .leading) {
-            HStack {
-                Text(title)
-                    .foregroundColor(.primary)
+    // private func samplerSlider(
+    //     title: String,
+    //     value: Binding<Double>,
+    //     range: ClosedRange<Double>,
+    //     step: Double,
+    //     displayValue: String
+    // ) -> some View {
+    //     VStack(alignment: .leading) {
+    //         HStack {
+    //             Text(title)
+    //                 .foregroundColor(.primary)
 
-                Spacer()
+    //             Spacer()
 
-                Text(displayValue)
-                    .foregroundColor(.secondary)
-                    .font(.subheadline)
-            }
+    //             Text(displayValue)
+    //                 .foregroundColor(.secondary)
+    //                 .font(.subheadline)
+    //         }
 
-            Slider(value: value, in: range, step: step)
-        }
-    }
+    //         Slider(value: value, in: range, step: step)
+    //     }
+    // }
 
     private func formattedDecimal(_ value: Double) -> String {
         value.formatted(.number.precision(.fractionLength(2)))
@@ -323,7 +323,38 @@ struct SamplerSettingsView: View {
         _ keyPath: WritableKeyPath<ConnectionSettingsModel, String>,
         from text: String
     ) {
-        connectionManager.update(keyPath, to: text.decodeEscapedSequence())
+        let decodedSequence = text.decodeEscapedSequence()
+        connectionManager.update(
+            keyPath,
+            to: decodedSequence.isEmpty ? defaultSequence(for: keyPath) : decodedSequence
+        )
+
+        if decodedSequence.isEmpty {
+            syncSequenceFieldsFromSettings()
+        }
+    }
+
+    private func defaultSequence(
+        for keyPath: WritableKeyPath<ConnectionSettingsModel, String>
+    ) -> String {
+        let defaults = ConnectionSettingsModel.defaults
+
+        switch keyPath {
+        case \.userStopSequence:
+            return defaults.userStopSequence
+        case \.botStopSequence:
+            return defaults.botStopSequence
+        case \.systemStopSequence:
+            return defaults.systemStopSequence
+        case \.thinkingStartSequence:
+            return defaults.thinkingStartSequence
+        case \.thinkingStopSequence:
+            return defaults.thinkingStopSequence
+        case \.forceThinkingInstruct:
+            return defaults.forceThinkingInstruct
+        default:
+            return ""
+        }
     }
 
     private func updateSamplerOrder(from text: String) {

@@ -227,7 +227,12 @@ final class ChatViewModel {
 
         let response = await languageModelService.sendMessage(chatModel: chat, continued: isContinued)
         let responseText = response?.text ?? "There was an error processing your request. Please try again later."
-        let sanitizedResponse = ReasoningStreamParser.visibleText(from: responseText)
+        let settings = connectionManager.connectionSettings
+        let sanitizedResponse = ReasoningStreamParser.visibleText(
+            from: responseText,
+            thinkingStartSequence: settings.thinkingStartSequence,
+            thinkingStopSequence: settings.thinkingStopSequence
+        )
         let originalText = isContinued ? chat.messages[messageIndex].text : ""
         let visibleResponse = StreamAccumulator(
             originalText: originalText,
@@ -266,7 +271,9 @@ final class ChatViewModel {
                 continuationSeparator: " "
             )
             var reasoningParser = ReasoningStreamParser(
-                startsInsideReasoning: connectionManager.connectionSettings.forceThinking
+                startsInsideReasoning: connectionManager.connectionSettings.forceThinking,
+                thinkingStartSequence: connectionManager.connectionSettings.thinkingStartSequence,
+                thinkingStopSequence: connectionManager.connectionSettings.thinkingStopSequence
             )
             let stream = languageModelService.sendStreamedMessage(
                 chatModel: chat,

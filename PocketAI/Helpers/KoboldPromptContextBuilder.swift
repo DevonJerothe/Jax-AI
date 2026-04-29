@@ -50,6 +50,7 @@ struct KoboldPromptContextBuilder {
 
         let blocks = await messageBlocks(
             for: chat,
+            settings: settings,
             continueResponse: continueResponse,
             forceThinking: forceThinking
         )
@@ -78,10 +79,12 @@ struct KoboldPromptContextBuilder {
 
     private func messageBlocks(
         for chat: ChatModel,
+        settings: ConnectionSettingsModel,
         continueResponse: Bool,
         forceThinking: Bool
     ) async -> [MessageBlock] {
         let lastUserID = chat.messages.last(where: { $0.actor == .user })?.id
+        let firstBotID = chat.messages.first(where: { $0.actor == .bot })?.id
         var blocks: [MessageBlock] = []
 
         for message in chat.messages {
@@ -92,9 +95,12 @@ struct KoboldPromptContextBuilder {
             let text: String
             switch message.actor {
             case .user:
-                var userText = "\(message.text)\nAssistant: "
+                var userText = "\(message.text)\(settings.botStopSequence)"
+                if settings.botStopSequence.isEmpty == false {
+                    userText += " "
+                }
                 if forceThinking && message.id == lastUserID {
-                    userText += "<think>\nOk, first we need to consider who we are and not to speak for the user."
+                    userText += "\(settings.thinkingStartSequence)\n\(settings.forceThinkingInstruct)"
                 }
                 text = userText
 
@@ -102,8 +108,9 @@ struct KoboldPromptContextBuilder {
                 guard message.status == .done || continueResponse else {
                     continue
                 }
-                let suffix = continueResponse ? "" : "\nUser:"
-                text = "\(message.text)\(suffix)"
+                let suffix = continueResponse ? "" : settings.userStopSequence
+                let prefix = firstBotID == message.id ? settings.botStopSequence : "" 
+                text = "\(prefix)\(message.text)\(suffix)"
             }
 
             blocks.append(
@@ -141,4 +148,3 @@ struct KoboldPromptContextBuilder {
         return selectedReversed.reversed()
     }
 }
-

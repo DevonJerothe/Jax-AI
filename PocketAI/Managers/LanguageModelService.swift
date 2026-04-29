@@ -19,7 +19,9 @@ final class LanguageModelService {
     var maxContextLength: Int = 26000
 
     init(initialConnectionSettings: ConnectionSettingsModel) {
-        self.runtimeConnectionSettings = initialConnectionSettings
+        var normalizedSettings = initialConnectionSettings
+        normalizedSettings.ensureNonEmptySequences()
+        self.runtimeConnectionSettings = normalizedSettings
 
         setupManagers()
     }
@@ -163,7 +165,7 @@ final class LanguageModelService {
                 maxTokens: runtimeConnectionSettings.responseLength ?? 240,
                 repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
                 stream: true,
-                systemPromptTemplate: TemplatePrompts().defaultRolePlayPrompt,
+                systemPromptTemplate: runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"),
                 characterDescription: chatModel.characterCards.first?.description,
                 characterPersonality: chatModel.characterCards.first?.personality,
                 characterScenario: chatModel.characterCards.first?.scenario
@@ -267,7 +269,7 @@ final class LanguageModelService {
                 maxTokens: runtimeConnectionSettings.responseLength ?? 240,
                 repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
                 stream: false,
-                systemPromptTemplate: TemplatePrompts().defaultRolePlayPrompt,
+                systemPromptTemplate: runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"),
                 characterDescription: chatModel.characterCards.first?.description,
                 characterPersonality: chatModel.characterCards.first?.personality,
                 characterScenario: chatModel.characterCards.first?.scenario
@@ -299,15 +301,18 @@ final class LanguageModelService {
     /// Updates the service's runtime settings and refreshes API managers when the
     /// connection identity changes.
     func updateConnectionSettings(_ newConnectionSettings: ConnectionSettingsModel) {
-        if newConnectionSettings.host != runtimeConnectionSettings.host ||
-            newConnectionSettings.port != runtimeConnectionSettings.port ||
-            newConnectionSettings.apiKey != runtimeConnectionSettings.apiKey ||
-            newConnectionSettings.selectedModel != runtimeConnectionSettings.selectedModel ||
-            newConnectionSettings.connectionType != runtimeConnectionSettings.connectionType {
-            self.runtimeConnectionSettings = newConnectionSettings
+        var normalizedSettings = newConnectionSettings
+        normalizedSettings.ensureNonEmptySequences()
+
+        if normalizedSettings.host != runtimeConnectionSettings.host ||
+            normalizedSettings.port != runtimeConnectionSettings.port ||
+            normalizedSettings.apiKey != runtimeConnectionSettings.apiKey ||
+            normalizedSettings.selectedModel != runtimeConnectionSettings.selectedModel ||
+            normalizedSettings.connectionType != runtimeConnectionSettings.connectionType {
+            self.runtimeConnectionSettings = normalizedSettings
             setupManagers()
         } else {
-            self.runtimeConnectionSettings = newConnectionSettings
+            self.runtimeConnectionSettings = normalizedSettings
         }
     } 
 
@@ -318,6 +323,13 @@ final class LanguageModelService {
             runtimeConnectionSettings.systemStopSequence
         ]
         .filter { $0.isEmpty == false }
+    }
+
+    private var defaultRolePlayPrompt: String {
+        TemplatePrompts().defaultRolePlayPrompt(
+            thinkingStartSequence: runtimeConnectionSettings.thinkingStartSequence,
+            thinkingStopSequence: runtimeConnectionSettings.thinkingStopSequence
+        )
     }
 
     // MARK: - Kobold Functions

@@ -62,3 +62,28 @@ struct SettingsNavigationRow: View {
         .contentShape(Rectangle())
     }
 }
+
+struct SamplerSlider: View {
+    var title: String
+    var value: Binding<Double> 
+    var range: ClosedRange<Double>
+    var step: Double
+    var displayValue: String 
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            HStack {
+                Text(title)
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                Text(displayValue)
+                    .foregroundColor(.secondary)
+                    .font(.subheadline)
+            }
+
+            Slider(value: value, in: range, step: step)
+        }
+    }
+}

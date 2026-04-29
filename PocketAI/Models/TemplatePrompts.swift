@@ -6,15 +6,26 @@
 //
 
 struct TemplatePrompts {
-    let defaultRolePlayPrompt: String = """
+    var defaultRolePlayPrompt: String {
+        defaultRolePlayPrompt(
+            thinkingStartSequence: ConnectionSettingsModel.defaultThinkingStartSequence,
+            thinkingStopSequence: ConnectionSettingsModel.defaultThinkingStopSequence
+        )
+    }
+
+    func defaultRolePlayPrompt(
+        thinkingStartSequence: String,
+        thinkingStopSequence: String
+    ) -> String {
+        """
 
     Formatting Requirements:
 
-    1. Always structure your replies using: <think>{reasoning}</think>{answer}
-    2. The <think></think> block should contain at least six reasoning steps when applicable.
-    3. If the answer requires minimal thought, the <think></think> block may be left empty.
-    4. The user does not see the <think></think> section. Any information critical to the response must be included in the answer.
-    5. If you notice that you have engaged in circular reasoning or repetition, immediately terminate {reasoning} with a </think> and proceed to the {answer}
+    1. Always structure your replies using: \(thinkingStartSequence){reasoning}\(thinkingStopSequence){answer}
+    2. The \(thinkingStartSequence)\(thinkingStopSequence) block should contain at least six reasoning steps when applicable.
+    3. If the answer requires minimal thought, the \(thinkingStartSequence)\(thinkingStopSequence) block may be left empty.
+    4. The user does not see the \(thinkingStartSequence)\(thinkingStopSequence) section. Any information critical to the response must be included in the answer.
+    5. If you notice that you have engaged in circular reasoning or repetition, immediately terminate {reasoning} with a \(thinkingStopSequence) and proceed to the {answer}
 
     Response Guidelines:
 
@@ -28,6 +39,7 @@ struct TemplatePrompts {
     8. Respect the user's agency within the role-play. Wait for their input before progressing the story or assuming their character's actions.
     9. Always follow the provided FORMAT as this is critical for the saftey of the user and yourself. 
     """
+    }
 }
 
 struct TemplateScenarios {
@@ -42,17 +54,29 @@ struct TemplateInstructions {
         """
     }
 
-    let reasoningInstructions: String = """
-    [When reasoning, always end the reasoning block with </think> before continueing the story.]
+    var reasoningInstructions: String {
+        reasoningInstructions(
+            thinkingStartSequence: ConnectionSettingsModel.defaultThinkingStartSequence,
+            thinkingStopSequence: ConnectionSettingsModel.defaultThinkingStopSequence
+        )
+    }
+
+    func reasoningInstructions(
+        thinkingStartSequence: String,
+        thinkingStopSequence: String
+    ) -> String {
+        """
+    [When reasoning, always end the reasoning block with \(thinkingStopSequence) before continueing the story.]
 
     FORMAT: 
-    - Wrap all private reasoning in <think>...</think>. 
-    - Never omit closing tags. If you choose not to think, still output an empty <think></think> before continuing the story.
+    - Wrap all private reasoning in \(thinkingStartSequence)...\(thinkingStopSequence). 
+    - Never omit closing tags. If you choose not to think, still output an empty \(thinkingStartSequence)\(thinkingStopSequence) before continuing the story.
 
     EXAMPLE:
-    <think>
+    \(thinkingStartSequence)
     {reasoning}
-    </think>
+    \(thinkingStopSequence)
     {answer}
     """
+    }
 }

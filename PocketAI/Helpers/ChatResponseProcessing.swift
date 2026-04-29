@@ -51,10 +51,18 @@ struct ReasoningStreamParser {
     }
 
     private let startsInsideReasoning: Bool
+    private let thinkingStartSequence: String
+    private let thinkingStopSequence: String
     private var state: State
 
-    init(startsInsideReasoning: Bool = false) {
+    init(
+        startsInsideReasoning: Bool = false,
+        thinkingStartSequence: String = ConnectionSettingsModel.defaultThinkingStartSequence,
+        thinkingStopSequence: String = ConnectionSettingsModel.defaultThinkingStopSequence
+    ) {
         self.startsInsideReasoning = startsInsideReasoning
+        self.thinkingStartSequence = thinkingStartSequence
+        self.thinkingStopSequence = thinkingStopSequence
         self.state = startsInsideReasoning ? .insideReasoning : .notStarted
     }
 
@@ -109,7 +117,11 @@ struct ReasoningStreamParser {
             }
 
             return ReasoningParseResult(
-                visibleText: ReasoningStreamParser.visibleText(from: rawText),
+                visibleText: ReasoningStreamParser.visibleText(
+                    from: rawText,
+                    thinkingStartSequence: thinkingStartSequence,
+                    thinkingStopSequence: thinkingStopSequence
+                ),
                 shouldShowThinking: false
             )
 
@@ -121,39 +133,68 @@ struct ReasoningStreamParser {
         }
     }
 
-    static func visibleText(from rawText: String) -> String {
-        if hasOpeningThinkTag(atStartOf: rawText) {
-            if let visibleText = textAfterClosingThinkTag(in: rawText) {
+    static func visibleText(
+        from rawText: String,
+        thinkingStartSequence: String = ConnectionSettingsModel.defaultThinkingStartSequence,
+        thinkingStopSequence: String = ConnectionSettingsModel.defaultThinkingStopSequence
+    ) -> String {
+        if hasOpeningThinkTag(atStartOf: rawText, thinkingStartSequence: thinkingStartSequence) {
+            if let visibleText = textAfterClosingThinkTag(
+                in: rawText,
+                thinkingStopSequence: thinkingStopSequence
+            ) {
                 return visibleText
             }
 
-            return textAfterOpeningThinkTag(in: rawText)
+            return textAfterOpeningThinkTag(
+                in: rawText,
+                thinkingStartSequence: thinkingStartSequence
+            )
         }
 
         return rawText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func hasOpeningThinkTag(atStartOf text: String) -> Bool {
-        text.range(
-            of: #"^\s*<think\s*>"#,
-            options: [.regularExpression, .caseInsensitive]
-        ) != nil
+    private static func hasOpeningThinkTag(
+        atStartOf text: String,
+        thinkingStartSequence: String
+    ) -> Bool {
+        guard thinkingStartSequence.isEmpty == false else {
+            return false
+        }
+
+        return text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .hasPrefix(thinkingStartSequence, caseInsensitive: true)
     }
 
-    private static func textAfterOpeningThinkTag(in text: String) -> String {
-        guard let range = text.range(
-            of: #"^\s*<think\s*>"#,
-            options: [.regularExpression, .caseInsensitive]
-        ) else {
+    private static func textAfterOpeningThinkTag(
+        in text: String,
+        thinkingStartSequence: String
+    ) -> String {
+        guard thinkingStartSequence.isEmpty == false else {
             return text.trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        return String(text[range.upperBound...])
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.hasPrefix(thinkingStartSequence, caseInsensitive: true) else {
+            return trimmedText
+        }
+
+        let upperBound = trimmedText.index(
+            trimmedText.startIndex,
+            offsetBy: thinkingStartSequence.count
+        )
+        return String(trimmedText[upperBound...])
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func textAfterClosingThinkTag(in text: String) -> String? {
-        guard let range = text.range(of: "</think>", options: .caseInsensitive) else {
+    private static func textAfterClosingThinkTag(
+        in text: String,
+        thinkingStopSequence: String
+    ) -> String? {
+        guard thinkingStopSequence.isEmpty == false,
+            let range = text.range(of: thinkingStopSequence, options: .caseInsensitive) else {
             return nil
         }
 
@@ -162,14 +203,27 @@ struct ReasoningStreamParser {
     }
 
     private func hasOpeningThinkTag(atStartOf text: String) -> Bool {
-        Self.hasOpeningThinkTag(atStartOf: text)
+        Self.hasOpeningThinkTag(atStartOf: text, thinkingStartSequence: thinkingStartSequence)
     }
 
     private func textAfterOpeningThinkTag(in text: String) -> String {
-        Self.textAfterOpeningThinkTag(in: text)
+        Self.textAfterOpeningThinkTag(in: text, thinkingStartSequence: thinkingStartSequence)
     }
 
     private func textAfterClosingThinkTag(in text: String) -> String? {
-        Self.textAfterClosingThinkTag(in: text)
+        Self.textAfterClosingThinkTag(in: text, thinkingStopSequence: thinkingStopSequence)
+    }
+}
+
+private extension String {
+    func hasPrefix(_ prefix: String, caseInsensitive: Bool) -> Bool {
+        guard caseInsensitive else {
+            return hasPrefix(prefix)
+        }
+
+        return range(
+            of: prefix,
+            options: [.anchored, .caseInsensitive]
+        ) != nil
     }
 }

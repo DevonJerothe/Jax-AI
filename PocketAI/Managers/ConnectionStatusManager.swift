@@ -165,6 +165,7 @@ final class ConnectionStatusManager {
         normalized.maxContextLength = resolvedMaxContextLength
         normalized.contextLength = resolvedContextLength
         normalized.responseLength = resolvedResponseLength
+        normalized.ensureNonEmptySequences()
 
         if normalized.connectionType == .KoboldAPI {
             let trimmedHost = normalized.host?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
