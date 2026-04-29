@@ -59,49 +59,34 @@ struct ChatSettingsView: View {
                 // MARK: - Connection Related Settings
                 // this will change the connections settings for the app and all chats
                 // potentially we could have a per chat connection settings option
-                HStack {
-                    Text("Model Settings")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary) 
-                    Spacer()
-                }
-                .padding(.top, 24)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                SettingsCard("Model Settings") {
+                    SamplerSlider(
+                        title: "Response Length", 
+                        value: responseLengthBinding, 
+                        range: 120...3000, 
+                        step: 60, 
+                        displayValue: "\(Int(responseLengthBinding.wrappedValue))"
+                    )
 
-                // Response Length Slider 
-                VStack(alignment: .leading) {
-                    HStack {
-                        Text("Response Length")
-                            .foregroundColor(.primary)
-                        Spacer() 
-                        Text("\(Int(responseLengthBinding.wrappedValue))")
-                            .foregroundColor(.secondary)
-                            .font(.subheadline)
-                    }
-                    Slider(value: responseLengthBinding, in: 120...3000, step: 60)
-                }
-                .padding()
-                .background(Color(.systemGray6).opacity(0.6))
-                .cornerRadius(12)
-                .padding(.horizontal, 16)
+                    SamplerSlider(
+                        title: "Temperature", 
+                        value: temperatureBinding, 
+                        range: 0.1...2, 
+                        step: 0.05, 
+                        displayValue: "\(temperatureBinding.wrappedValue)"
+                    )
 
-                // Sampler Settings
-                VStack(alignment: .leading) {
-                    HStack {
-                        Text("Temperature")
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Text("\(temperatureBinding.wrappedValue)")
-                            .foregroundColor(.secondary)
-                            .font(.subheadline)
+                    NavigationLink {
+                        SamplerSettingsView()
+                    } label: {
+                        SettingsNavigationRow(
+                            title: "Sampler Settings", 
+                            subtitle: "Advanced sampler settings", 
+                            systemImage: "sparkles"
+                        )
                     }
-                    Slider(value: temperatureBinding, in: 0.1...2.0, step: 0.05)
+                    .buttonStyle(.plain)
                 }
-                .padding()
-                .background(Color(.systemGray6).opacity(0.6))
-                .cornerRadius(12)
                 .padding(.horizontal, 16)
 
                 VStack{
@@ -117,7 +102,7 @@ struct ChatSettingsView: View {
                     .background(Color(.systemGray6).opacity(0.6))
                     .cornerRadius(12)
 
-                    Text("You may find if the model does not close the </think> tag, the response does not stream. It should still load when complete.")
+                    Text("You may find if the model does not close the \(connectionManager.connectionSettings.thinkingStopSequence.encodeEscapedSequence()) tag, the response does not stream. It should still load when complete.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }

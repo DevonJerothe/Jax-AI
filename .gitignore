@@ -100,3 +100,11 @@ PocketAI/.DS_Store
 PocketAI/Views/.DS_Store
 .DS_Store
 buildServer.json
+xcede.yml
+.xcede/
+.zed/
+
+CODE_REVIEW.md
+PocketAI.code-workspace
+Tools/DESIGN.MD
+TODO.md

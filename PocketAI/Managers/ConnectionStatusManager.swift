@@ -165,6 +165,7 @@ final class ConnectionStatusManager {
         normalized.maxContextLength = resolvedMaxContextLength
         normalized.contextLength = resolvedContextLength
         normalized.responseLength = resolvedResponseLength
+        normalized.ensureNonEmptySequences()
 
         if normalized.connectionType == .KoboldAPI {
             let trimmedHost = normalized.host?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -176,13 +177,6 @@ final class ConnectionStatusManager {
             let trimmedAPIKey = normalized.apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
             normalized.apiKey = trimmedAPIKey?.isEmpty == true ? nil : trimmedAPIKey
         }
-
-        normalized.temperature = normalized.temperature ?? defaultSettings.temperature
-        normalized.topP = normalized.topP ?? defaultSettings.topP
-        normalized.topK = normalized.topK ?? defaultSettings.topK
-        normalized.typicalP = normalized.typicalP ?? defaultSettings.typicalP
-        normalized.repetitionPenalty = normalized.repetitionPenalty ?? defaultSettings.repetitionPenalty
-        normalized.repetitionRange = normalized.repetitionRange ?? defaultSettings.repetitionRange
 
         if normalized.userTemplates.isEmpty {
             normalized.userTemplates = ConnectionSettingsModel.defaultUserTemplates
