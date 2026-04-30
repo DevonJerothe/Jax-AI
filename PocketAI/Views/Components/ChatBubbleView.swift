@@ -18,6 +18,7 @@ struct BubbleHeightKey: PreferenceKey {
 struct ChatBubbleView: View {
 
     @Environment(\.colorScheme) var colorScheme: ColorScheme
+    @Environment(\.appTheme) private var appTheme
 
     var message: MessageModel
     var viewModel: ChatViewModel
@@ -52,7 +53,7 @@ struct ChatBubbleView: View {
                                 .cornerRadius(15)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 15)
-                                        .stroke(Color.accentColor, lineWidth: 1)
+                                        .stroke(appTheme.tintColor.color, lineWidth: 1)
                                 )
                                 .frame(minHeight: bubbleHeight + 30)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -88,7 +89,7 @@ struct ChatBubbleView: View {
                                         .padding(4)
                                     }
                                     .background(
-                                        Color(UIColor.secondarySystemFill))
+                                        appTheme.secondaryAction.color)
                                     ScrollView(.horizontal) {
                                         configuration.label
                                             .padding(10)
@@ -99,12 +100,12 @@ struct ChatBubbleView: View {
                                         FontSize(.em(0.65))
                                     })
                                     .background(
-                                        Color(UIColor.secondarySystemBackground)
+                                        appTheme.secondaryBackgroundColor.color
                                     )
                                 }
                                 .cornerRadius(8)
                             }
-                            .markdownTheme(.rolePlay)
+                            .markdownTheme(.rolePlay(appTheme))
                             .padding()
 //                            .background(Color(.secondarySystemBackground))
                             .cornerRadius(15)
@@ -133,12 +134,12 @@ struct ChatBubbleView: View {
                                 Image(systemName: "trash.fill")
                                     .resizable()
                                     .frame(width: 10, height: 10)
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(appTheme.destructiveAction.color)
                                     .padding(5)
                                     .background(
                                         Circle()
                                             .stroke(
-                                                Color.accentColor,
+                                                appTheme.destructiveAction.color,
                                                 lineWidth: 0.5)
                                     )
                                     .frame(width: 15, height: 15)
@@ -155,12 +156,12 @@ struct ChatBubbleView: View {
                                 Image(systemName: "repeat")
                                     .resizable()
                                     .frame(width: 10, height: 10)
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(appTheme.tintColor.color)
                                     .padding(5)
                                     .background(
                                         Circle()
                                             .stroke(
-                                                Color.accentColor,
+                                                appTheme.tintColor.color,
                                                 lineWidth: 0.5)
                                     )
                                     .frame(width: 15, height: 15)
@@ -177,12 +178,12 @@ struct ChatBubbleView: View {
                                 )
                                 .resizable()
                                 .frame(width: 10, height: 10)
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(appTheme.tintColor.color)
                                 .padding(5)
                                 .background(
                                     Circle()
                                         .stroke(
-                                            Color.accentColor,
+                                            appTheme.tintColor.color,
                                             lineWidth: 0.5)
                                 )
                                 .frame(width: 15, height: 15)
@@ -200,12 +201,12 @@ struct ChatBubbleView: View {
                                 Image(systemName: "play.fill")
                                     .resizable()
                                     .frame(width: 10, height: 10)
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(appTheme.tintColor.color)
                                     .padding(5)
                                     .background(
                                         Circle()
                                             .stroke(
-                                                Color.accentColor,
+                                                appTheme.tintColor.color,
                                                 lineWidth: 0.5)
                                     )
                                     .frame(width: 15, height: 15)
@@ -239,7 +240,7 @@ struct ChatBubbleView: View {
                             .cornerRadius(15)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 15)
-                                    .stroke(Color.accentColor, lineWidth: 1)
+                                    .stroke(appTheme.tintColor.color, lineWidth: 1)
                             )
                             .frame(minHeight: bubbleHeight + 30)
                             .fixedSize(horizontal: false, vertical: true)
@@ -257,10 +258,10 @@ struct ChatBubbleView: View {
                                     cardName: viewModel.model?.characterCards.first?.name
                                         ?? "")
                             )
-                            .foregroundStyle(.black)
-                            .markdownTheme(.userRolePlay)
+                            .foregroundStyle(appTheme.primaryText.color)
+                            .markdownTheme(.userRolePlay(appTheme))
                             .padding()
-                            .background(Color(.secondarySystemFill))
+                            .background(appTheme.secondaryAction.color)
                             .clipShape(
                                 UnevenRoundedRectangle(
                                     topLeadingRadius: 15,
@@ -293,12 +294,12 @@ struct ChatBubbleView: View {
                                     Image(systemName: "trash.fill")
                                         .resizable()
                                         .frame(width: 10, height: 10)
-                                        .foregroundStyle(Color.accentColor)
+                                        .foregroundStyle(appTheme.destructiveAction.color)
                                         .padding(5)
                                         .background(
                                             Circle()
                                                 .stroke(
-                                                    Color.accentColor,
+                                                    appTheme.destructiveAction.color,
                                                     lineWidth: 0.5)
                                         )
                                         .frame(width: 15, height: 15)
@@ -315,12 +316,12 @@ struct ChatBubbleView: View {
                                 )
                                 .resizable()
                                 .frame(width: 10, height: 10)
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(appTheme.tintColor.color)
                                 .padding(5) 
                                 .background(
                                     Circle()
                                         .stroke(
-                                            Color.accentColor,
+                                            appTheme.tintColor.color,
                                             lineWidth: 0.5)
                                 )
                                 .frame(width: 15, height: 15)

@@ -1,6 +1,8 @@
 import SwiftUI
 
 public struct BooruBrowserView: View {
+    @Environment(\.appTheme) private var appTheme
+
     @State private var viewModel: BotBooruViewModel = .init()
     @State private var showSettings = false
     @State private var selectedCharacterCard: CharacterCardModel?
@@ -49,7 +51,7 @@ public struct BooruBrowserView: View {
                     showSettings = true
                 } label: {
                     Image(systemName: "gearshape")
-                        .foregroundColor(.primary)
+                        .foregroundColor(appTheme.primaryText.color)
                 }
             }
         }
@@ -72,7 +74,8 @@ public struct BooruBrowserView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .padding(12)
-                        .background(Color(.systemGray6).opacity(0.6))
+                        .foregroundStyle(appTheme.primaryText.color)
+                        .background(appTheme.secondaryBackgroundColor.color)
                         .cornerRadius(12)
                         .onSubmit {
                             Task { await viewModel.getPosts(refresh: true) }
@@ -93,7 +96,7 @@ public struct BooruBrowserView: View {
                         }
                     } label: {
                         Image(systemName: "line.3.horizontal.decrease")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(appTheme.secondaryText.color)
                             .glassCapsule()
                     }               
                     .buttonStyle(.plain)
@@ -109,7 +112,7 @@ public struct BooruBrowserView: View {
                             }
                         } label: {
                             Image(systemName: "clock.fill")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(appTheme.secondaryText.color)
                                 .glassCapsule()
                         }
                         .buttonStyle(.plain)
@@ -125,6 +128,7 @@ public struct BooruBrowserView: View {
                 // .animation(.snappy(duration: 0.22), value: showsSortTimeMenu)
             }
         }
+        .background(appTheme.backgroundColor.color)
     }
 
     private var showsSortTimeMenu: Bool {
@@ -155,6 +159,8 @@ public struct BooruBrowserView: View {
 }
 
 struct BooruBrowserSettingsView: View {
+    @Environment(\.appTheme) private var appTheme
+
     @Bindable var viewModel: BotBooruViewModel
     @State private var username = ""
     @State private var password = ""
@@ -171,7 +177,7 @@ struct BooruBrowserSettingsView: View {
                         Spacer()
                         Text(viewModel.authSettings.username ?? "")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(appTheme.secondaryText.color)
                     }
                 }
 
@@ -208,11 +214,12 @@ struct BooruBrowserSettingsView: View {
                     Toggle("Show NSFW", isOn: authBinding(\.showNSFW))
                     Toggle("Hide AI", isOn: authBinding(\.hideAI))
                 }
+                .tint(appTheme.tintColor.color)
                 .disabled(viewModel.loggedIn == false)
             }
             .padding(16)
         }
-        .background(Color(.systemBackground))
+        .background(appTheme.backgroundColor.color)
         .navigationTitle("Booru Settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -259,6 +266,8 @@ struct BooruBrowserResultsView: View {
 }
 
 struct BooruBrowserPostCard: View {
+    @Environment(\.appTheme) private var appTheme
+
     let post: BotBooruPostItem
 
     var body: some View {
@@ -281,21 +290,21 @@ struct BooruBrowserPostCard: View {
                         .clipped()
                 case .failure(_):
                     Rectangle()
-                        .fill(Color.gray.opacity(0.3))
+                        .fill(appTheme.secondaryAction.color)
                         .frame(height: 150)
                         .overlay(
                             Image(systemName: "photo")
                                 .font(.largeTitle)
-                                .foregroundStyle(.gray)
+                                .foregroundStyle(appTheme.secondaryText.color)
                         )
                 @unknown default:
                     Rectangle()
-                        .fill(Color.gray.opacity(0.3))
+                        .fill(appTheme.secondaryAction.color)
                         .frame(height: 150)
                         .overlay(
                             Image(systemName: "photo")
                                 .font(.largeTitle)
-                                .foregroundStyle(.gray)
+                                .foregroundStyle(appTheme.secondaryText.color)
                         )
                 }
             }
@@ -303,27 +312,27 @@ struct BooruBrowserPostCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(post.characterName)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
 
                 Spacer() 
                 HStack {
                     Text(post.tags.map { $0.name }.prefix(3).joined(separator: ", "))
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(appTheme.secondaryText.color)
                         .truncationMode(.tail)
                     
                     Spacer()
 
                     Text(post.createdAt.formatted(date: .abbreviated, time: .omitted))
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(appTheme.secondaryText.color)
                         .lineLimit(3)
                 }    
             }
             .padding([.leading, .trailing, .bottom], 12)
             .padding(.top, 8)
         }
-        .background(Color(.secondarySystemBackground))
+        .background(appTheme.secondaryBackgroundColor.color)
         .cornerRadius(12)
         .contentShape(RoundedRectangle(cornerRadius: 12))
     }

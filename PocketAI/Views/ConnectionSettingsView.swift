@@ -10,6 +10,7 @@ import SwiftLLMSDK
 
 struct ConnectionSettingsView: View {
     @Environment(ServiceContainer.self) private var serviceContainer
+    @Environment(\.appTheme) private var appTheme
 
     @State private var isLoadingModels: Bool = false
     @State private var showModelSearch = false
@@ -80,14 +81,14 @@ struct ConnectionSettingsView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Connection Type")
-                                    .foregroundColor(.primary)
+                                    .foregroundColor(appTheme.primaryText.color)
                                 Text(connectionManager.connectionSettings.connectionType.rawValue)
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(appTheme.secondaryText.color)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(appTheme.secondaryText.color)
                         }
                     }
                     .buttonStyle(.plain)
@@ -97,13 +98,14 @@ struct ConnectionSettingsView: View {
                     VStack(alignment: .leading) {
                         HStack {
                             Text("Response Length")
-                                .foregroundColor(.primary)
+                                .foregroundColor(appTheme.primaryText.color)
                             Spacer()
                             Text("\(Int(responseLengthBinding.wrappedValue))")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(appTheme.secondaryText.color)
                                 .font(.subheadline)
                         }
                         Slider(value: responseLengthBinding, in: 120...3000, step: 60)
+                            .tint(appTheme.tintColor.color)
                     }
                 }
 
@@ -111,24 +113,25 @@ struct ConnectionSettingsView: View {
             }
             .padding(16)
         }
+        .background(appTheme.backgroundColor.color)
         .scrollDismissesKeyboard(.immediately)
         .safeAreaInset(edge: .bottom) {
             HStack {
                 Text("Status")
-                    .foregroundColor(.primary.opacity(0.8))
+                    .foregroundColor(appTheme.primaryText.color.opacity(0.8))
                 if serviceContainer.isLoading {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .primary))
+                        .progressViewStyle(CircularProgressViewStyle(tint: appTheme.primaryText.color))
                         .scaleEffect(0.7)
                     Text("Connecting...")
-                        .foregroundColor(.primary.opacity(0.8))
+                        .foregroundColor(appTheme.primaryText.color.opacity(0.8))
                         .font(.subheadline)
                 } else {
                     Circle()
-                        .fill(serviceContainer.isConnected ? .green : .red)
+                        .fill(serviceContainer.isConnected ? appTheme.successColor.color : appTheme.destructiveAction.color)
                         .frame(width: 10, height: 10)
                     Text(serviceContainer.isConnected ? "Connected" : "Disconnected")
-                        .foregroundColor(serviceContainer.isConnected ? .green : .red)
+                        .foregroundColor(serviceContainer.isConnected ? appTheme.successColor.color : appTheme.destructiveAction.color)
                 }
                 Spacer()
                 Button {
@@ -137,10 +140,10 @@ struct ConnectionSettingsView: View {
                     }
                 } label: {
                     Text("Connect")
-                        .foregroundColor(.primary)
+                        .foregroundColor(appTheme.primaryText.color)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(.secondary)
+                        .background(appTheme.primaryAction.color)
                         .cornerRadius(20)
                         .animation(.easeInOut, value: serviceContainer.isLoading)
                 }
@@ -203,7 +206,7 @@ struct ConnectionSettingsView: View {
         SettingsCard("KoboldAPI") {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Host")
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
                 TextField("", text: hostBinding, prompt: Text("e.g., 127.0.0.1"))
                     .keyboardType(.URL)
                     .styledFormField()
@@ -211,7 +214,7 @@ struct ConnectionSettingsView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Port")
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
                 TextField("", value: portBinding, format: .number.grouping(.never))
                     .keyboardType(.numberPad)
                     .styledFormField()
@@ -220,10 +223,10 @@ struct ConnectionSettingsView: View {
             VStack(alignment: .leading) {
                 HStack {
                     Text("Context Limit")
-                        .foregroundColor(.primary)
+                        .foregroundColor(appTheme.primaryText.color)
                     Spacer()
                     Text("\(Int(contextLengthBinding.wrappedValue))")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(appTheme.secondaryText.color)
                         .font(.subheadline)
                 }
                 Slider(
@@ -231,6 +234,7 @@ struct ConnectionSettingsView: View {
                     in: 1024...Double(connectionManager.maxContextLength),
                     step: 1024
                 )
+                .tint(appTheme.tintColor.color)
             }
         }
     }
@@ -240,7 +244,7 @@ struct ConnectionSettingsView: View {
         SettingsCard("OpenRouter") {
             VStack(alignment: .leading, spacing: 8) {
                 Text("API Key")
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
                 SecureField("Enter your API key", text: apiKeyBinding)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
@@ -249,7 +253,7 @@ struct ConnectionSettingsView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Selected Model")
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
                 if isLoadingModels {
                     ProgressView()
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -260,7 +264,7 @@ struct ConnectionSettingsView: View {
                     } label: {
                         HStack {
                             Text(selectedModelLabel)
-                                .foregroundColor(.primary)
+                                .foregroundColor(appTheme.primaryText.color)
                                 .lineLimit(2)
                                 .multilineTextAlignment(.leading)
 
@@ -268,7 +272,7 @@ struct ConnectionSettingsView: View {
 
                             Image(systemName: "chevron.right")
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(.tertiary)
+                                .foregroundStyle(appTheme.borderColor.color)
                         }
                     }
                     .buttonStyle(.plain)
@@ -282,6 +286,7 @@ struct ConnectionSettingsView: View {
 struct OpenRouterModelSearchView: View {
     let models: [OpenRouterModel]
     @Binding var selectedModel: String
+    @Environment(\.appTheme) private var appTheme
     @Environment(\.dismiss) private var dismiss
     @State private var search = ""
 
@@ -303,11 +308,11 @@ struct OpenRouterModelSearchView: View {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(model.name)
-                            .foregroundColor(.primary)
+                            .foregroundColor(appTheme.primaryText.color)
 
                         Text(model.id)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(appTheme.secondaryText.color)
                             .lineLimit(1)
                     }
 
@@ -316,11 +321,13 @@ struct OpenRouterModelSearchView: View {
                     if selectedModel == model.id {
                         Image(systemName: "checkmark")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(appTheme.tintColor.color)
                     }
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(appTheme.backgroundColor.color)
         .navigationTitle("Select Model")
         .searchable(text: $search, prompt: "Search models")
     }

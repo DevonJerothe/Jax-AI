@@ -40,6 +40,10 @@ final class ServiceContainer {
         isLoading
     }
 
+    var currentTheme: AppTheme {
+        connectionStatusManager.connectionSettings.currentTheme
+    }
+
     private init() {
         self.connectionStatusManager = ConnectionStatusManager()
         self.languageModelService = LanguageModelService(

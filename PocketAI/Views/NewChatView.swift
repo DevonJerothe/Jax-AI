@@ -11,6 +11,7 @@ public enum NewChatTab: String, CaseIterable, Identifiable {
 
 public struct NewChatView: View {
     @Environment(NavigationManager.self) var navManager
+    @Environment(\.appTheme) private var appTheme
 
     @State private var viewModel: NewChatViewModel = .init()
     @State private var selectedTab: NewChatTab = .manual
@@ -44,15 +45,16 @@ public struct NewChatView: View {
                     buildManualChatView
                 } else if selectedTab == .charHub {
                     Text("Character Hub import is available from the Characters tab.")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(appTheme.secondaryText.color)
                         .padding(.top, 32)
                 } else {
                     Text("Import cards from the Characters tab.")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(appTheme.secondaryText.color)
                         .padding(.top, 32)
                 }
             }
         }
+        .background(appTheme.backgroundColor.color)
         .navigationTitle("New Chat") 
         .navigationBarTitleDisplayMode(.inline)
         .scrollDismissesKeyboard(.immediately)
@@ -82,7 +84,7 @@ public struct NewChatView: View {
                 Text("Avatar")
                     .font(.title2)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
                 Spacer()
             }
             .padding(.top, 24)

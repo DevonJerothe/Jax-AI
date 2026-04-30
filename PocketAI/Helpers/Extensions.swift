@@ -1,4 +1,5 @@
-import Foundation 
+import Foundation
+import UIKit
 
 extension String {
     func decodeStringArray() throws -> [String] {
@@ -58,5 +59,11 @@ extension Array where Element == String {
     func encodeStringArray() -> String {
         guard let data = try? JSONEncoder().encode(self) else { return "" }
         return String(data: data, encoding: .utf8) ?? ""
+    }
+}
+
+extension UIApplication {
+    func endEditing() {
+        sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }

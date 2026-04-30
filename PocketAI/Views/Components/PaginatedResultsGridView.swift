@@ -83,6 +83,8 @@ private struct BottomOverscrollPreferenceKey: PreferenceKey {
 }
 
 struct PullUpLoadMoreView: View {
+    @Environment(\.appTheme) private var appTheme
+
     let progress: CGFloat
     let isArmed: Bool
     let isLoading: Bool
@@ -108,19 +110,19 @@ struct PullUpLoadMoreView: View {
                     .font(.title3.weight(.semibold))
                     .rotationEffect(.degrees(effectiveIsArmed ? 180 : 0))
                     .scaleEffect(effectiveIsArmed ? 1.18 : 0.85 + effectiveProgress * 0.15)
-                    .foregroundStyle(effectiveIsArmed ? .blue : .secondary)
+                    .foregroundStyle(effectiveIsArmed ? appTheme.tintColor.color : appTheme.secondaryText.color)
             }
 
             Text(label)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(effectiveIsArmed ? .primary : .secondary)
+                .foregroundStyle(effectiveIsArmed ? appTheme.primaryText.color : appTheme.secondaryText.color)
                 .contentTransition(.opacity)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 11)
         .background {
             Capsule()
-                .fill(Color(.secondarySystemBackground))
+                .fill(appTheme.secondaryBackgroundColor.color)
                 .shadow(
                     color: .black.opacity(effectiveIsArmed ? 0.16 : 0.08 * effectiveProgress),
                     radius: effectiveIsArmed ? 14 : 8 * effectiveProgress,

@@ -70,7 +70,8 @@ struct PocketAIApp: App {
                     .presentationBackground(.ultraThinMaterial)
                     .ignoresSafeArea()
             }
-            .tint(.primary)
+            .tint(serviceContainer.currentTheme.tintColor.color)
+            .environment(\.appTheme, serviceContainer.currentTheme)
             .task {
                 serviceContainer.bootstrap()
             }

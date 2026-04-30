@@ -3,6 +3,7 @@ import SwiftUI
 public struct ChubImportView: View {
 
     @Environment(NavigationManager.self) var navManager
+    @Environment(\.appTheme) private var appTheme
 
     @State private var viewModel: NewChatViewModel = .init()
     @FocusState private var isURLFieldFocused: Bool
@@ -15,7 +16,7 @@ public struct ChubImportView: View {
                     Text("Import Character Card")
                         .font(.title2)
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .foregroundColor(appTheme.primaryText.color)
                     Spacer()
                 }
                 .padding(.top, 24)
@@ -25,7 +26,7 @@ public struct ChubImportView: View {
                 // URL Input Section
                 VStack(alignment: .leading) {
                     Text("Character Card URL")
-                        .foregroundColor(.primary)
+                        .foregroundColor(appTheme.primaryText.color)
                         
                     HStack {
                         TextField("https://example.com/character.png", text: $viewModel.urlEntry)
@@ -33,7 +34,8 @@ public struct ChubImportView: View {
                             .textInputAutocapitalization(.never)
                             .focused($isURLFieldFocused)
                             .padding()
-                            .background(Color(.systemGray6).opacity(0.6))
+                            .foregroundStyle(appTheme.primaryText.color)
+                            .background(appTheme.secondaryBackgroundColor.color)
                             .cornerRadius(12)
                         
                         Button(action: {
@@ -43,10 +45,10 @@ public struct ChubImportView: View {
                             }
                         }) {
                             Text("Import")
-                                .foregroundColor(.primary)
+                                .foregroundColor(appTheme.primaryText.color)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 12)
-                                .background(.secondary)
+                                .background(appTheme.primaryAction.color)
                                 .cornerRadius(8)
                         }
                     }
@@ -60,9 +62,9 @@ public struct ChubImportView: View {
                 if let error = viewModel.importError {
                     VStack {
                         Text(error)
-                            .foregroundStyle(Color.red)
+                            .foregroundStyle(appTheme.destructiveAction.color)
                             .padding()
-                            .background(Color(.systemGray6).opacity(0.6))
+                            .background(appTheme.secondaryBackgroundColor.color)
                             .cornerRadius(12)
                     }
                     .padding(.horizontal, 16)
@@ -123,7 +125,7 @@ public struct ChubImportView: View {
                     if let altGreetings = viewModel.characterCard?.altGreetings, !altGreetings.isEmpty {
                         VStack(alignment: .leading) {
                             Text("Alternative Greetings")
-                                .foregroundColor(.primary)
+                                .foregroundColor(appTheme.primaryText.color)
                             
                             ForEach(altGreetings.indices, id: \.self) { index in
                                 TextEditor(
@@ -136,7 +138,8 @@ public struct ChubImportView: View {
                                 .scrollContentBackground(.hidden)
                                 .textInputAutocapitalization(.never)
                                 .padding()
-                                .background(Color(.systemGray6).opacity(0.6))
+                                .foregroundStyle(appTheme.primaryText.color)
+                                .background(appTheme.secondaryBackgroundColor.color)
                                 .cornerRadius(12)
                             }
                         }
@@ -176,5 +179,6 @@ public struct ChubImportView: View {
                 .disabled(viewModel.isCreateDisabled(type: .importCard))
             }
         }
+        .background(appTheme.backgroundColor.color)
     }
 }

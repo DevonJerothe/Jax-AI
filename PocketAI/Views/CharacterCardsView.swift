@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CharacterCardsView: View {
     @Environment(NavigationManager.self) var navManager
+    @Environment(\.appTheme) private var appTheme
     @State var viewModel: CharacterCardsViewModel = CharacterCardsViewModel()
     
     private let columns: [GridItem] = [
@@ -32,6 +33,7 @@ struct CharacterCardsView: View {
                 .padding()
             }
         }
+        .background(appTheme.backgroundColor.color)
         .navigationTitle("My Characters")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -59,6 +61,8 @@ struct CharacterCardsView: View {
 }
 
 struct CharacterCardPreview: View {
+    @Environment(\.appTheme) private var appTheme
+
     let card: CharacterCardModel
     
     var body: some View {
@@ -73,23 +77,23 @@ struct CharacterCardPreview: View {
             } else {
                 // Placeholder image
                 Rectangle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(appTheme.secondaryAction.color)
                     .frame(height: 150)
                     .overlay(
                         Image(systemName: "photo")
                             .font(.largeTitle)
-                            .foregroundColor(.gray)
+                            .foregroundColor(appTheme.secondaryText.color)
                     )
             }
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(card.name ?? "Unknown")
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
                 
                 Text(card.cardTagline ?? card.description ?? "No description available.")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(appTheme.secondaryText.color)
                     .lineLimit(3)
                 
                 Spacer()
@@ -97,7 +101,7 @@ struct CharacterCardPreview: View {
                 HStack {
                     Text(card.tags?.prefix(3).joined(separator: ", ") ?? "")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(appTheme.secondaryText.color)
                         .lineLimit(1)
                         .truncationMode(.tail)
                     
@@ -105,9 +109,9 @@ struct CharacterCardPreview: View {
                     
                     HStack(spacing: 4) {
                         Image(systemName: "message")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(appTheme.secondaryText.color)
                         Text("\(card.chats.count)")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(appTheme.secondaryText.color)
                     }
                     .font(.caption)
                 }
@@ -115,7 +119,7 @@ struct CharacterCardPreview: View {
             .padding([.leading, .trailing, .bottom], 12)
             .padding(.top, 8)
         }
-        .background(Color(.secondarySystemBackground))
+        .background(appTheme.secondaryBackgroundColor.color)
         .cornerRadius(12)
         .contentShape(RoundedRectangle(cornerRadius: 12))
     }

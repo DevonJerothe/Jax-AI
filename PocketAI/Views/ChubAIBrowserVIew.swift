@@ -2,6 +2,8 @@ import SwiftUI
 import SwiftLLMSDK
 
 public struct ChubAIBrowserView: View {
+    @Environment(\.appTheme) private var appTheme
+
     @State private var viewModel: ChubAIViewModel = .init()
     @State private var showSettings = false
     @State private var showTopicSearch = false
@@ -49,7 +51,7 @@ public struct ChubAIBrowserView: View {
                     showSettings = true
                 } label: {
                     Image(systemName: "gearshape")
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
                 }
             }
         }
@@ -81,7 +83,8 @@ public struct ChubAIBrowserView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .padding(12)
-                    .background(Color(.systemGray6).opacity(0.6))
+                    .foregroundStyle(appTheme.primaryText.color)
+                    .background(appTheme.secondaryBackgroundColor.color)
                     .cornerRadius(12)
                     .onSubmit {
                         Task { await viewModel.searchCards() }
@@ -103,7 +106,7 @@ public struct ChubAIBrowserView: View {
 
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(appTheme.secondaryText.color)
                         .glassCapsule()
                 }
                 .buttonStyle(.plain)
@@ -127,13 +130,14 @@ public struct ChubAIBrowserView: View {
                     }
                 } label: {
                     Image(systemName: "tag.fill")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(appTheme.secondaryText.color)
                         .glassCapsule()
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 19)
             }
         }
+        .background(appTheme.backgroundColor.color)
     }
 
     private var sortSelection: Binding<ChubSort> {
@@ -151,6 +155,8 @@ public struct ChubAIBrowserView: View {
 }
 
 struct ChubBrowserCard: View {
+    @Environment(\.appTheme) private var appTheme
+
     let card: ChubCardNode 
 
     var body: some View {
@@ -173,12 +179,12 @@ struct ChubBrowserCard: View {
                             .clipped()
                     default: 
                         Rectangle() 
-                            .fill(Color.gray.opacity(0.3))
+                            .fill(appTheme.secondaryAction.color)
                             .frame(height: 150)
                             .overlay(
                                 Image(systemName: "photo")
                                     .font(.largeTitle)
-                                    .foregroundStyle(.gray)
+                                    .foregroundStyle(appTheme.secondaryText.color)
                             )
                 }
             }
@@ -186,11 +192,11 @@ struct ChubBrowserCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(card.name ?? "")
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
 
                 Text(card.tagline ?? card.description ?? "No description available.")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(appTheme.secondaryText.color)
                     .lineLimit(3)
 
                 Spacer() 
@@ -198,7 +204,7 @@ struct ChubBrowserCard: View {
                 HStack {
                     Text(card.topics?.prefix(3).joined(separator: ", ") ?? "")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(appTheme.secondaryText.color)
                         .lineLimit(1)
                         .truncationMode(.tail)
 
@@ -206,14 +212,14 @@ struct ChubBrowserCard: View {
 
                     Text(getFormattedTimestamp(stringDate: card.createdAt ?? ""))
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(appTheme.secondaryText.color)
                         .lineLimit(3)
                 }
             }
             .padding([.leading, .trailing, .bottom], 12)
             .padding(.top, 8)
         }
-        .background(Color(.secondarySystemBackground))
+        .background(appTheme.secondaryBackgroundColor.color)
         .cornerRadius(12)
         .contentShape(RoundedRectangle(cornerRadius: 12))
     }
@@ -248,6 +254,7 @@ struct ChubBrowserCard: View {
 
 struct ChubAITopicSearchView: View {
     @Bindable var viewModel: ChubAIViewModel
+    @Environment(\.appTheme) private var appTheme
     @Environment(\.dismiss) private var dismiss
     @State private var search = ""
 
@@ -263,14 +270,19 @@ struct ChubAITopicSearchView: View {
                 dismiss()
             } label: {
                 Text(tag.title.isEmpty ? tag.name : tag.title)
+                    .foregroundStyle(appTheme.primaryText.color)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(appTheme.backgroundColor.color)
         .navigationTitle("Add Topic")
         .searchable(text: $search, prompt: "Search topics")
     }
 }
 
 struct ChubAISettingsView: View {
+    @Environment(\.appTheme) private var appTheme
+
     @Bindable var viewModel: ChubAIViewModel
     @State private var tagSearch = ""
 
@@ -285,6 +297,7 @@ struct ChubAISettingsView: View {
                     Toggle("Show NSFW", isOn: chubBinding(\.showNSFW))
                     Toggle("Show NSFL", isOn: chubBinding(\.showNSFL))
                 }
+                .tint(appTheme.tintColor.color)
                 SettingsCard("Excluded Topics") {
                     TextField("Search tags", text: $tagSearch)
                         .textInputAutocapitalization(.never)
@@ -320,19 +333,19 @@ struct ChubAISettingsView: View {
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(appTheme.secondaryText.color)
                             }
                             .buttonStyle(.plain)
                         }
                         .padding(8)
-                        .background(Color(.systemGray6))
+                        .background(appTheme.secondaryAction.color)
                         .cornerRadius(12)
                     }
                 }
             }
             .padding(16)
         }
-        .background(Color(.systemBackground))
+        .background(appTheme.backgroundColor.color)
         .navigationTitle("Chub AI Settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
