@@ -268,7 +268,7 @@ final class ChatViewModel {
             var rawAccumulator = StreamAccumulator()
             let visibleAccumulator = StreamAccumulator(
                 originalText: originalText,
-                continuationSeparator: " "
+                continuationSeparator: ""
             )
             var reasoningParser = ReasoningStreamParser(
                 startsInsideReasoning: connectionManager.connectionSettings.forceThinking,

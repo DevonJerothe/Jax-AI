@@ -37,7 +37,6 @@ struct ChatBubbleView: View {
                                 .padding(.trailing, 5)
                         }
                         .padding(10)
-//                        .background(Color(.secondarySystemBackground))
                         .cornerRadius(15)
                         .frame(alignment: .leading)
                         .transition(.opacity.combined(with: .scale(scale: 0.98)))
@@ -107,7 +106,6 @@ struct ChatBubbleView: View {
                             }
                             .markdownTheme(.rolePlay(appTheme))
                             .padding()
-//                            .background(Color(.secondarySystemBackground))
                             .cornerRadius(15)
                             .frame(
                                 maxWidth: UIScreen.main.bounds.width * 1,
@@ -122,7 +120,7 @@ struct ChatBubbleView: View {
                             )
                         }
                     }
-                    if viewModel.shouldShowToolbar(message) {
+                    if viewModel.shouldShowToolbar(message) && isEditing == false {
                         HStack(spacing: 16) {
                             // Delete
                             Button(action: {
@@ -213,6 +211,27 @@ struct ChatBubbleView: View {
                                     .padding(.leading, 4)
                                     .padding(.top, 4)
                             }
+                        }
+                    } else if isEditing == true {
+                        Button(action: {
+                            toggleEditing()
+                        }) {
+                            Image(
+                                systemName: "checkmark.circle.fill"
+                            )
+                            .resizable()
+                            .frame(width: 10, height: 10)
+                            .foregroundStyle(appTheme.tintColor.color)
+                            .padding(5)
+                            .background(
+                                Circle()
+                                    .stroke(
+                                        appTheme.tintColor.color,
+                                        lineWidth: 0.5)
+                            )
+                            .frame(width: 15, height: 15)
+                            .padding(.leading, 4)
+                            .padding(.top, 4)
                         }
                     }
                 }

@@ -8,6 +8,7 @@ struct CharacterCardSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appTheme) private var appTheme
     @State private var characterCard: CharacterCardModel
+    @State private var setPrivate: Bool
 
     @State private var selectedImage: PhotosPickerItem?
     @State private var descriptionPreviewExpanded = false
@@ -46,6 +47,7 @@ struct CharacterCardSettingsView: View {
         self.characterID = characterID
         self.dismissOnSave = dismissOnSave
         _characterCard = State(initialValue: characterCard)
+        _setPrivate = State(initialValue: characterCard.isPrivate)
         self.isNew = isNew
     }
 
@@ -102,7 +104,7 @@ struct CharacterCardSettingsView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
 
-                    Toggle(isOn: $characterCard.isPrivate) {
+                    Toggle(isOn: $setPrivate) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Private Character")
                                 .foregroundColor(appTheme.primaryText.color)
@@ -190,6 +192,7 @@ struct CharacterCardSettingsView: View {
                 Button("Save") {
                     Task {
                         do {
+                            characterCard.isPrivate = setPrivate
                             try await ServiceContainer.shared.getCharacterStore().saveCharacterCard(characterCard)
                             focusedField = nil
                             UIApplication.shared.endEditing()
