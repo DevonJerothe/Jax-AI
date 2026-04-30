@@ -26,6 +26,7 @@ struct RepresentableTextView: UIViewRepresentable {
         // --- Configuration ---
         textView.delegate = context.coordinator
         textView.font = font
+        textView.textColor = textColor
         textView.isScrollEnabled = false  // Disable scrolling initially
         textView.backgroundColor = .clear
         textView.textContainerInset = UIEdgeInsets(
@@ -62,6 +63,10 @@ struct RepresentableTextView: UIViewRepresentable {
 
         if uiView.font != self.font {
             uiView.font = self.font
+        }
+
+        if uiView.textColor != self.textColor {
+            uiView.textColor = self.textColor
         }
 
         // Recalculate height (deferred to avoid state modification during view update)
@@ -129,7 +134,6 @@ struct RepresentableTextView: UIViewRepresentable {
             // This action should only be triggered if scrolling is disabled,
             // enforced by gestureRecognizerShouldBegin.
             guard let textView = gesture.view as? UITextView else { return }
-             print("Swipe Down Action Triggered (isScrollEnabled: \(textView.isScrollEnabled))") // Debugging
             if !textView.isScrollEnabled {
                 textView.resignFirstResponder() // Dismiss keyboard
             }
@@ -137,7 +141,6 @@ struct RepresentableTextView: UIViewRepresentable {
         
         @objc func handleSwipeUp(_ gesture: UISwipeGestureRecognizer) {
             guard let textView = gesture.view as? UITextView else { return }
-            print("Swipe Up Action Triggered (isFirstResponder: \(textView.isFirstResponder))") // Debugging
             // Present keyboard only if it's not already the first responder
             if !textView.isFirstResponder {
                 textView.becomeFirstResponder()
@@ -154,7 +157,6 @@ struct RepresentableTextView: UIViewRepresentable {
                 // if the text view is NOT scrollable. Otherwise, let the default
                 // scroll pan gesture handle the swipe down.
                 let shouldBegin = !textView.isScrollEnabled
-                 print("Swipe Down Should Begin Check: \(shouldBegin) (isScrollEnabled: \(textView.isScrollEnabled))") // Debugging
                 return shouldBegin
             }
             // Allow other gestures (like swipe up or the internal pan gesture) to begin
@@ -228,7 +230,7 @@ struct EnhancedTextEditor: View {
         )
         .overlay(alignment: .leading, content: {
             if text.isEmpty {
-                Text("Send a Message...")
+                Text(placeholder)
                     .foregroundStyle(.placeholder)
                     .padding(.leading, 14)
                     .padding(.bottom, 6)

@@ -26,6 +26,14 @@ struct ChatBubbleView: View {
     @State private var bubbleHeight: CGFloat = 0
     @State private var editedText: String = ""
 
+    private var editorMaxHeight: CGFloat {
+        min(UIScreen.main.bounds.height * 0.45, 360)
+    }
+
+    private var editorMinHeight: CGFloat {
+        max(44, min(bubbleHeight, editorMaxHeight))
+    }
+
     var body: some View {
         switch message.actor {
         case .bot:
@@ -42,27 +50,7 @@ struct ChatBubbleView: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.98)))
                     } else {
                         if isEditing {
-                            TextEditor(text: $editedText)
-                                .padding(
-                                    EdgeInsets(
-                                        top: 8, leading: 10, bottom: 8,
-                                        trailing: 10)
-                                )
-                                .background(Color(.clear))
-                                .cornerRadius(15)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .stroke(appTheme.tintColor.color, lineWidth: 1)
-                                )
-                                .frame(minHeight: bubbleHeight + 30)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(
-                                    maxWidth: UIScreen.main.bounds.width * 1,
-                                    alignment: .leading
-                                )
-                                .onChange(of: editedText) {
-                                    viewModel.updateScrollView.toggle()
-                                }
+                            editingTextView(maxWidth: UIScreen.main.bounds.width)
                         } else {
                             Markdown(
                                 message.getRolePlayText(
@@ -249,27 +237,7 @@ struct ChatBubbleView: View {
                 Spacer()
                 VStack(alignment: .trailing) {
                     if isEditing {
-                        TextEditor(text: $editedText)
-                            .padding(
-                                EdgeInsets(
-                                    top: 8, leading: 10, bottom: 8,
-                                    trailing: 10)
-                            )
-                            .background(Color(.clear))
-                            .cornerRadius(15)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 15)
-                                    .stroke(appTheme.tintColor.color, lineWidth: 1)
-                            )
-                            .frame(minHeight: bubbleHeight + 30)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(
-                                maxWidth: UIScreen.main.bounds.width * 0.80,
-                                alignment: .leading
-                            )
-                            .onChange(of: editedText) {
-                                viewModel.updateScrollView.toggle()
-                            }
+                        editingTextView(maxWidth: UIScreen.main.bounds.width * 0.80)
                     } else {
                         VStack(alignment: .trailing) {
                             Markdown(
@@ -363,6 +331,27 @@ struct ChatBubbleView: View {
         message.status != .done && message.text.isEmpty
     }
 
+    private func editingTextView(maxWidth: CGFloat) -> some View {
+        EnhancedTextEditor(
+            text: $editedText,
+            placeholder: "",
+            maxHeight: editorMaxHeight,
+            minHeight: editorMinHeight,
+            textColor: UIColor(appTheme.primaryText.color)
+        )
+        .padding(.vertical, 2)
+        .background(appTheme.secondaryBackgroundColor.color.opacity(0.35))
+        .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .stroke(appTheme.tintColor.color.opacity(0.55), lineWidth: 1)
+        )
+        .frame(maxWidth: maxWidth, alignment: .leading)
+        .onChange(of: editedText) {
+            scrollToEditedMessage()
+        }
+    }
+
     private func toggleEditing() {
         if isEditing {
             Task {
@@ -373,7 +362,11 @@ struct ChatBubbleView: View {
         } else {
             editedText = message.text
             isEditing = true
-            viewModel.editingMessageID = message.id
+            scrollToEditedMessage()
         }
+    }
+
+    private func scrollToEditedMessage() {
+        viewModel.editingMessageID = message.id
     }
 }

@@ -143,14 +143,16 @@ struct ConnectionSettingsView: View {
                         .foregroundColor(appTheme.primaryText.color)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(appTheme.primaryAction.color)
-                        .cornerRadius(20)
+                        .background(appTheme.primaryAction.color.opacity(0.6))
+                        .clipShape(Capsule())
+                        .contentShape(Capsule())
+                        .glassEffect(
+                            .regular.interactive(), 
+                            in: Capsule()
+                        )
                         .animation(.easeInOut, value: serviceContainer.isLoading)
                 }
-                .glassEffect(
-                    .regular.interactive(), 
-                    in: Capsule()
-                )
+                .buttonStyle(.plain)
                 .disabled(serviceContainer.isLoading)
             }
             .padding()

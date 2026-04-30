@@ -54,7 +54,7 @@ struct ChatView: View {
                             )
                             .padding(.top, 4)
                             .padding(.bottom, 4)
-                            .id(message)
+                            .id(message.id)
                         }
                     }
                 }
@@ -65,6 +65,7 @@ struct ChatView: View {
             }
             .padding(.horizontal)
             .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
             .onChange(
                 of: viewModel.updateScrollView,
                 ({
@@ -73,7 +74,7 @@ struct ChatView: View {
             )
             .onChange(of: viewModel.editingMessageID) { _, messageID in
                 if let messageID {
-                    scrollToBottom(proxy: proxy, anchor: messageID, delay: 0.2)
+                    scrollToBottom(proxy: proxy, anchor: messageID, delay: 0.35)
                     viewModel.editingMessageID = nil
                 }
             }
