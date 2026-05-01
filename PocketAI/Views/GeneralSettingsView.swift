@@ -46,6 +46,18 @@ struct GeneralSettingsView: View {
                         )
                     }
                     .buttonStyle(.plain)
+
+                    Divider() 
+                    
+                    NavigationLink {
+                        UserPersonaView(personaStore: serviceContainer.getPersonaStore())
+                    } label: {
+                        SettingsNavigationRow(
+                            title: "Persona",
+                            subtitle: "Manage your persona",
+                            systemImage: "person"
+                        )
+                    }
                 }
 
                 SettingsCard("Browsers") {

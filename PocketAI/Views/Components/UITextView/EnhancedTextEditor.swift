@@ -259,6 +259,8 @@ struct EnhancedTextEditor: View {
     }
 
     var body: some View {
+        let editorHeight = min(maxHeight, max(minHeight, calculatedHeight))
+
         RepresentableTextView(
             text: $text,
             maxHeight: maxHeight,
@@ -266,6 +268,7 @@ struct EnhancedTextEditor: View {
             textColor: textColor,
             calculatedHeight: $calculatedHeight
         )
+        .frame(height: editorHeight, alignment: .topLeading)
         .overlay(alignment: .topLeading, content: {
             if text.isEmpty && placeholder.isEmpty == false {
                 Text(placeholder)
@@ -275,7 +278,6 @@ struct EnhancedTextEditor: View {
                     .allowsHitTesting(false)
             }
         })
-        .frame(height: min(maxHeight, max(minHeight, calculatedHeight)))  // Use calculated height within bounds
         .cornerRadius(8)
         .clipped()
     }

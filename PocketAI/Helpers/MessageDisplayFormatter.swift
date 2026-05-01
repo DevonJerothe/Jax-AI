@@ -4,7 +4,7 @@ struct MessageDisplayFormatter {
     static func rolePlayText(
         for message: MessageModel,
         characterName: String,
-        userName: String = "Devon"
+        userName: String = "User"
     ) -> String {
         var processedText = message.text
         processedText = processedText.replacingOccurrences(

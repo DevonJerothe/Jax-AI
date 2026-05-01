@@ -54,8 +54,9 @@ struct ChatBubbleView: View {
                         } else {
                             Markdown(
                                 message.getRolePlayText(
-                                    cardName: viewModel.model?.characterCards.first?.name
-                                        ?? "")
+                                    cardName: viewModel.model?.characterCards.first?.name ?? "",
+                                    personaName: ServiceContainer.shared.getPersonaName
+                                )
                             )
                             .markdownCodeSyntaxHighlighter(
                                 .splash(
@@ -242,8 +243,9 @@ struct ChatBubbleView: View {
                         VStack(alignment: .trailing) {
                             Markdown(
                                 message.getRolePlayText(
-                                    cardName: viewModel.model?.characterCards.first?.name
-                                        ?? "")
+                                    cardName: viewModel.model?.characterCards.first?.name ?? "",
+                                    personaName: ServiceContainer.shared.getPersonaName
+                                )
                             )
                             .foregroundStyle(appTheme.primaryText.color)
                             .markdownTheme(.userRolePlay(appTheme))

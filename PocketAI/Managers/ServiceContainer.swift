@@ -45,6 +45,18 @@ final class ServiceContainer {
         connectionStatusManager.connectionSettings.currentTheme
     }
 
+    var getPersonaName: String {
+        personaStore.activePersona?.name ?? "User"
+    }
+
+    var getPersonaDescription: String? {
+        personaStore.activePersona?.description
+    }
+
+    var getPersona: UserPersonaModel? {
+        personaStore.activePersona
+    }
+    
     private init() {
         self.connectionStatusManager = ConnectionStatusManager()
         self.languageModelService = LanguageModelService(
