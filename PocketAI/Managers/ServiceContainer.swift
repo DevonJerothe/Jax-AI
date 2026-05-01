@@ -14,6 +14,7 @@ final class ServiceContainer {
     private let connectionStatusManager: ConnectionStatusManager
     private let chatStore: ChatStore
     private let characterStore: CharacterStore
+    private let personaStore: PersonaStore
     private var hasBootstrappedStores = false
     
     var isLoading: Bool {
@@ -56,6 +57,9 @@ final class ServiceContainer {
         self.characterStore = CharacterStore(
             characterRepository: CharacterRepository()
         )
+        self.personaStore = PersonaStore(
+            personaRepository: UserPersonaRepository()
+        )
 
         connectionStatusManager.attachLanguageModelService(languageModelService)
 
@@ -69,6 +73,10 @@ final class ServiceContainer {
     
     func getChatStore() -> ChatStore {
         return self.chatStore
+    }
+    
+    func getPersonaStore() -> PersonaStore {
+        return self.personaStore
     }
     
     func getCharacterStore() -> CharacterStore {
