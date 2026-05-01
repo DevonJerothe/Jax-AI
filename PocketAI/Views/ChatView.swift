@@ -8,9 +8,11 @@
 import MarkdownUI
 import SwiftLLMSDK
 import SwiftUI
+import UIKit
 
 struct ChatView: View {
     @Environment(NavigationManager.self) var navManager
+    @Environment(\.appTheme) private var appTheme
 
     @State var viewModel: ChatViewModel
     @State var textPrompt: String = ""
@@ -52,7 +54,7 @@ struct ChatView: View {
                             )
                             .padding(.top, 4)
                             .padding(.bottom, 4)
-                            .id(message)
+                            .id(message.id)
                         }
                     }
                 }
@@ -63,6 +65,7 @@ struct ChatView: View {
             }
             .padding(.horizontal)
             .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
             .onChange(
                 of: viewModel.updateScrollView,
                 ({
@@ -71,7 +74,7 @@ struct ChatView: View {
             )
             .onChange(of: viewModel.editingMessageID) { _, messageID in
                 if let messageID {
-                    scrollToBottom(proxy: proxy, anchor: messageID, delay: 0.2)
+                    scrollToBottom(proxy: proxy, anchor: messageID, delay: 0.35)
                     viewModel.editingMessageID = nil
                 }
             }
@@ -103,7 +106,7 @@ struct ChatView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
                 }
-                .background(Color(.secondarySystemBackground))
+                .background(appTheme.secondaryBackgroundColor.color)
                 .clipShape(
                     UnevenRoundedRectangle(
                         topLeadingRadius: 20,
@@ -120,7 +123,7 @@ struct ChatView: View {
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 26))
-                            .foregroundColor(.gray)
+                            .foregroundColor(appTheme.secondaryText.color)
                     }
                     .disabled(true)
                     .padding(.bottom, 8)
@@ -136,14 +139,14 @@ struct ChatView: View {
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.system(size: 26))
-                            .foregroundColor(viewModel.isConnected ? .accentColor : .gray)
+                            .foregroundColor(viewModel.isConnected ? appTheme.tintColor.color : appTheme.secondaryText.color)
                     }
                     .disabled(viewModel.isConnected == false || viewModel.isStreaming == true)
                     .padding(.bottom, 8)
                     .padding(.trailing, 16)
                 }
                 .background(
-                    Color(.secondarySystemBackground)
+                    appTheme.secondaryBackgroundColor.color
                         .ignoresSafeArea(.all, edges: .bottom)
                 )
             }
@@ -153,18 +156,23 @@ struct ChatView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
+                    isInputFocused = false
+                    UIApplication.shared.endEditing()
                     navManager.navigateToChatSettings(chatID: viewModel.chatID)
                 } label: {
                     Image(systemName: "gearshape")
-                        .foregroundColor(.primary)
+                        .foregroundColor(appTheme.primaryText.color)
                 }
             }
         }
+        .background(appTheme.backgroundColor.color)
         .onAppear {
             self.viewModel.updateScrollView.toggle()
             self.viewModel.isViewActive = true
         }
         .onDisappear {
+            isInputFocused = false
+            UIApplication.shared.endEditing()
             self.viewModel.isViewActive = false
         }
     }

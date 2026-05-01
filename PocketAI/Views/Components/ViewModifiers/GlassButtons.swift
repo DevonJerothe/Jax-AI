@@ -1,6 +1,8 @@
 import SwiftUI
 
 public struct GlassCapsuleViewModifier: ViewModifier {
+    @Environment(\.appTheme) private var appTheme
+
     private let size: CGFloat
 
     public init(size: CGFloat = 44) {
@@ -11,7 +13,8 @@ public struct GlassCapsuleViewModifier: ViewModifier {
         content
             .buttonStyle(.plain)
             .frame(width: size, height: size)
-            .background(Color(.systemGray6).opacity(0.6))
+            .foregroundStyle(appTheme.primaryText.color)
+            .background(appTheme.secondaryBackgroundColor.color)
             .clipShape(Capsule())
             .contentShape(Capsule())
             .glassEffect(.regular.interactive(), in: Capsule())

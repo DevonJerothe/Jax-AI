@@ -10,6 +10,7 @@ import SwiftUI
 struct ChatListView: View {
     @Environment(NavigationManager.self) var navManager
     @Environment(ServiceContainer.self) var serviceContainer
+    @Environment(\.appTheme) private var appTheme
 
     @State private var viewModel: ChatListViewModel = .init()
 
@@ -23,6 +24,7 @@ struct ChatListView: View {
                         .padding(.top, 12)
                         .listRowInsets(EdgeInsets())
                 }
+                .background(appTheme.backgroundColor.color)
                 .listSectionSeparator(.hidden)
 
                 Section(
@@ -38,10 +40,13 @@ struct ChatListView: View {
                         }
                     }
                 }
+                .background(appTheme.backgroundColor.color)
                 .listSectionSeparator(.hidden)
             }
             .listStyle(.plain)
+            .scrollContentBackground(.hidden)
         }
+        .background(appTheme.backgroundColor.color)
         .safeAreaInset(edge: .top, spacing: 0) {
             if serviceContainer.isConnected == false {
                 APIStatusBanner()
@@ -92,6 +97,8 @@ struct CharacterCardsListView: View {
 
 // MARK: - Character Card View
 struct CharacterCardView: View {
+    @Environment(\.appTheme) private var appTheme
+
     let character: CharacterCardModel
 
     var body: some View {
@@ -102,7 +109,7 @@ struct CharacterCardView: View {
             Text(character.name ?? "Unknown")
                 .font(.caption)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundColor(appTheme.primaryText.color)
                 .lineLimit(1)
         }
     }
@@ -111,28 +118,29 @@ struct CharacterCardView: View {
 // MARK: - Add Character Button
 struct AddCharacterButton: View {
     @Environment(NavigationManager.self) var navManager
+    @Environment(\.appTheme) private var appTheme
 
     var body: some View {
         VStack(spacing: 8) {
             Circle()
-                .fill(Color.gray.opacity(0.2))
+                .fill(appTheme.secondaryAction.color)
                 .frame(width: 80, height: 80)
                 .overlay(
                     Image(systemName: "plus")
-                        .foregroundColor(.gray)
+                        .foregroundColor(appTheme.secondaryText.color)
                         .font(.title2)
                 )
                 .overlay(
                     Circle()
                         .stroke(
-                            Color.gray.opacity(0.5),
+                            appTheme.borderColor.color,
                             style: StrokeStyle(lineWidth: 2, dash: [5]))
                 )
 
             Text("Add")
                 .font(.caption)
                 .fontWeight(.medium)
-                .foregroundColor(.gray)
+                .foregroundColor(appTheme.secondaryText.color)
         }
         .onTapGesture {
             // Navigate to add character
@@ -144,6 +152,7 @@ struct AddCharacterButton: View {
 // MARK: - Recent Chat Row
 struct RecentChatRow: View {
     @Environment(NavigationManager.self) var navManager
+    @Environment(\.appTheme) private var appTheme
     let chat: ChatModel
 
     var body: some View {
@@ -154,14 +163,15 @@ struct RecentChatRow: View {
                 // Character Name
                 Text(chat.chatTitle)
                     .fontWeight(.medium)
+                    .foregroundColor(appTheme.primaryText.color)
 
                 if chat.status != .idle {
-                    LoadingIndicator(color: .secondary, size: 15)
+                    LoadingIndicator(color: appTheme.secondaryText.color, size: 15)
                 } else {
                     if let lastMessage = chat.messages.last {
                         Text(lastMessage.getRolePlayText(cardName: chat.chatTitle))
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(appTheme.secondaryText.color)
                             .lineLimit(1)
                     }
                 }
@@ -172,7 +182,7 @@ struct RecentChatRow: View {
             // Timestamp
             Text(getFormattedTimestamp())
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundColor(appTheme.secondaryText.color)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

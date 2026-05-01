@@ -3,6 +3,7 @@ import SwiftUI
 struct SamplerSettingsView: View {
 
     @Environment(ServiceContainer.self) private var serviceContainer
+    @Environment(\.appTheme) private var appTheme
     @State private var userStopSequenceText = ""
     @State private var botStopSequenceText = ""
     @State private var systemStopSequenceText = ""
@@ -99,7 +100,7 @@ struct SamplerSettingsView: View {
                 SettingsCard("Sampling") {
                     Text("Temperature is the main control most people should adjust. Advanced controls can stay at their defaults unless you are tuning a specific model.")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(appTheme.secondaryText.color)
 
                     SamplerSlider(
                         title: "Temperature",
@@ -191,14 +192,14 @@ struct SamplerSettingsView: View {
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Advanced Sampling Controls")
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(appTheme.primaryText.color)
 
                             Text("Top-p, min-p, repetition, and sampler order.")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(appTheme.secondaryText.color)
                         }
                     }
-                    .tint(.primary)
+                    .tint(appTheme.tintColor.color)
                 }
 
                 SettingsCard("Sequences") {
@@ -209,7 +210,7 @@ struct SamplerSettingsView: View {
                 // caption description
                 Text("Include any escape sequences for newlines, tabs, and carriage returns.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(appTheme.secondaryText.color)
                     .padding(.horizontal, 16)
 
                 SettingsCard("Reasoning") {
@@ -217,11 +218,12 @@ struct SamplerSettingsView: View {
                     sequenceField(title: "Thinking Stop Sequence", text: $thinkingStopSequenceText)
                     Toggle(isOn: forceThinkingBinding) {
                         Text("Force Thinking")
-                            .foregroundColor(.primary)
+                            .foregroundColor(appTheme.primaryText.color)
                     }
                     .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
+                    .background(appTheme.secondaryBackgroundColor.color)
                     .cornerRadius(12)
+                    .tint(appTheme.tintColor.color)
 
                     if forceThinkingBinding.wrappedValue {
                         sequenceField(title: "Force Thinking Instruct", text: $forceThinkingInstructText)
@@ -229,11 +231,12 @@ struct SamplerSettingsView: View {
                 }
                 Text("You may find if the model does not close the \(connectionManager.connectionSettings.thinkingStopSequence.encodeEscapedSequence()) tag, the response does not stream. It should still load when complete.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(appTheme.secondaryText.color)
                     .padding(.horizontal, 16)
             }
         }
         .padding(.horizontal, 16)
+        .background(appTheme.backgroundColor.color)
         .scrollIndicators(.hidden)
         .navigationTitle("Sampler Settings")
         .navigationBarTitleDisplayMode(.inline)
@@ -274,6 +277,7 @@ struct SamplerSettingsView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.subheadline.weight(.medium))
+                .foregroundStyle(appTheme.primaryText.color)
 
             TextField(title, text: text)
                 .styledFormField()

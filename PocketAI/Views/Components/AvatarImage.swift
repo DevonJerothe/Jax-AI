@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct AvatarImage: View {
+    @Environment(\.appTheme) private var appTheme
+
     let image: Image?
     let size: CGFloat
 
@@ -13,11 +15,11 @@ struct AvatarImage: View {
                 .clipShape(Circle())
         } else {
             Circle() 
-                .fill(Color.gray.opacity(0.3))
+                .fill(appTheme.secondaryAction.color)
                 .frame(width: size, height: size)
                 .overlay(
                     Image(systemName: "person.fill")
-                        .foregroundColor(.gray)
+                        .foregroundColor(appTheme.secondaryText.color)
                         .font(.title2)
                 )
         }

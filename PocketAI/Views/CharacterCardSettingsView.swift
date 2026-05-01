@@ -1,11 +1,14 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 struct CharacterCardSettingsView: View {
     @Environment(NavigationManager.self) var navManager
     @Environment(ServiceContainer.self) private var serviceContainer
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appTheme) private var appTheme
     @State private var characterCard: CharacterCardModel
+    @State private var setPrivate: Bool
 
     @State private var selectedImage: PhotosPickerItem?
     @State private var descriptionPreviewExpanded = false
@@ -15,10 +18,21 @@ struct CharacterCardSettingsView: View {
     @State private var firstMessageExpanded = false
     @State private var altGreetingsExpanded = false
     @State private var configuredInitialExpansion = false
+    @FocusState private var focusedField: FocusedField?
 
     private let characterID: UUID?
     private let dismissOnSave: Bool
     var isNew: Bool = false
+
+    private enum FocusedField: Hashable {
+        case name
+        case descriptionPreview
+        case description
+        case personality
+        case scenario
+        case firstMessage
+        case altGreeting(Int)
+    }
 
     private var shouldHidePrivateContent: Bool {
         serviceContainer.getConnectionStatusManager().connectionSettings.locked && characterCard.isPrivate
@@ -33,6 +47,7 @@ struct CharacterCardSettingsView: View {
         self.characterID = characterID
         self.dismissOnSave = dismissOnSave
         _characterCard = State(initialValue: characterCard)
+        _setPrivate = State(initialValue: characterCard.isPrivate)
         self.isNew = isNew
     }
 
@@ -51,99 +66,124 @@ struct CharacterCardSettingsView: View {
     }
 
     private var settingsContent: some View {
-        ScrollView {
-            VStack(alignment: .leading) {
-                HStack(alignment: .center) {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading) {
+                    HStack(alignment: .center) {
 
-                    PhotosPicker(
-                        selection: $selectedImage,
-                        matching: .images, 
-                        photoLibrary: .shared()
-                    ) {
-                        AvatarImage(image: characterCard.getAvatarImg(), size: 100)
+                        PhotosPicker(
+                            selection: $selectedImage,
+                            matching: .images,
+                            photoLibrary: .shared()
+                        ) {
+                            AvatarImage(image: characterCard.getAvatarImg(), size: 100)
+                        }
+                        .padding(.trailing, 12)
+
+                        VStack(alignment: .leading) {
+                            Text("Name")
+                                .foregroundColor(appTheme.primaryText.color)
+
+                            TextField(
+                                "Name",
+                                text: Binding(
+                                    get: { characterCard.name ?? "" },
+                                    set: { characterCard.name = $0 }
+                                )
+                            )
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                            .focused($focusedField, equals: .name)
+                            .styledFormField()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .id(FocusedField.name)
                     }
-                    .padding(.trailing, 12)
+                    .padding(.top, 24)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
 
-                    FormField(
-                        title: "Name", 
-                        textBinding: Binding(
-                            get: { characterCard.name ?? "" },
-                            set: { characterCard.name = $0 }
-                        )
+                    Toggle(isOn: $setPrivate) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Private Character")
+                                .foregroundColor(appTheme.primaryText.color)
+
+                            Text("Hide this character while the app is locked.")
+                                .font(.caption)
+                                .foregroundStyle(appTheme.secondaryText.color)
+                        }
+                    }
+                    .padding()
+                    .background(appTheme.secondaryBackgroundColor.color)
+                    .cornerRadius(12)
+                    .tint(appTheme.tintColor.color)
+                    .padding(.horizontal, 16)
+
+                    collapsibleField(
+                        title: "Description Preview",
+                        text: Binding(
+                            get: { characterCard.cardTagline ?? "" },
+                            set: { characterCard.cardTagline = $0 }
+                        ),
+                        isExpanded: $descriptionPreviewExpanded,
+                        field: .descriptionPreview
                     )
+
+                    collapsibleEditor(
+                        title: "Description",
+                        placeholder: "Detailed description of the character...",
+                        text: Binding(
+                            get: { characterCard.description ?? "" },
+                            set: { characterCard.description = $0 }
+                        ),
+                        isExpanded: $descriptionExpanded,
+                        field: .description
+                    )
+
+                    collapsibleEditor(
+                        title: "Personality",
+                        placeholder: "The character's personality and traits...",
+                        text: Binding(
+                            get: { characterCard.personality ?? "" },
+                            set: { characterCard.personality = $0 }
+                        ),
+                        isExpanded: $personalityExpanded,
+                        field: .personality
+                    )
+
+                    collapsibleEditor(
+                        title: "Scenario",
+                        placeholder: "The setting or situation...",
+                        text: Binding(
+                            get: { characterCard.scenario ?? "" },
+                            set: { characterCard.scenario = $0 }
+                        ),
+                        isExpanded: $scenarioExpanded,
+                        field: .scenario
+                    )
+
+                    collapsibleEditor(
+                        title: "First Message",
+                        placeholder: "The first message to kick off the conversation...",
+                        text: Binding(
+                            get: { characterCard.firstMessage ?? "" },
+                            set: { characterCard.firstMessage = $0 }
+                        ),
+                        isExpanded: $firstMessageExpanded,
+                        field: .firstMessage
+                    )
+
+                    altGreetingsSection
                 }
-                .padding(.top, 24)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-
-                Toggle(isOn: $characterCard.isPrivate) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Private Character")
-                            .foregroundColor(.primary)
-
-                        Text("Hide this character while the app is locked.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding()
-                .background(Color(.systemGray6).opacity(0.6))
-                .cornerRadius(12)
-                .padding(.horizontal, 16)
-
-                collapsibleField(
-                    title: "Description Preview",
-                    text: Binding(
-                        get: { characterCard.cardTagline ?? "" },
-                        set: { characterCard.cardTagline = $0 }
-                    ),
-                    isExpanded: $descriptionPreviewExpanded
-                )
-
-                collapsibleEditor(
-                    title: "Description",
-                    placeholder: "Detailed description of the character...",
-                    text: Binding(
-                        get: { characterCard.description ?? "" },
-                        set: { characterCard.description = $0 }
-                    ),
-                    isExpanded: $descriptionExpanded
-                )
-
-                collapsibleEditor(
-                    title: "Personality",
-                    placeholder: "The character's personality and traits...",
-                    text: Binding(
-                        get: { characterCard.personality ?? "" },
-                        set: { characterCard.personality = $0 }
-                    ),
-                    isExpanded: $personalityExpanded
-                )
-
-                collapsibleEditor(
-                    title: "Scenario",
-                    placeholder: "The setting or situation...",
-                    text: Binding(
-                        get: { characterCard.scenario ?? "" },
-                        set: { characterCard.scenario = $0 }
-                    ),
-                    isExpanded: $scenarioExpanded
-                )
-
-                collapsibleEditor(
-                    title: "First Message",
-                    placeholder: "The first message to kick off the conversation...",
-                    text: Binding(
-                        get: { characterCard.firstMessage ?? "" },
-                        set: { characterCard.firstMessage = $0 }
-                    ),
-                    isExpanded: $firstMessageExpanded
-                )
-
-                altGreetingsSection
+                .padding(.bottom, 24)
+            }
+            .onChange(of: focusedField) { _, field in
+                scrollFocusedFieldIntoView(field, proxy: proxy)
             }
         }
         .navigationTitle(characterCard.name ?? "New Character")
+        .background(appTheme.backgroundColor.color)
         .navigationBarTitleDisplayMode(.inline)
         .scrollDismissesKeyboard(.immediately)
         .scrollIndicators(.hidden)
@@ -152,7 +192,10 @@ struct CharacterCardSettingsView: View {
                 Button("Save") {
                     Task {
                         do {
+                            characterCard.isPrivate = setPrivate
                             try await ServiceContainer.shared.getCharacterStore().saveCharacterCard(characterCard)
+                            focusedField = nil
+                            UIApplication.shared.endEditing()
                             if dismissOnSave {
                                 dismiss()
                             } else {
@@ -190,20 +233,23 @@ struct CharacterCardSettingsView: View {
     private func collapsibleField(
         title: String,
         text: Binding<String>,
-        isExpanded: Binding<Bool>
+        isExpanded: Binding<Bool>,
+        field: FocusedField
     ) -> some View {
         DisclosureGroup(isExpanded: isExpanded) {
             TextField(title, text: text)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
+                .focused($focusedField, equals: field)
                 .styledFormField()
                 .padding(.top, 8)
         } label: {
             Text(title)
-                .foregroundColor(.primary)
+                .foregroundColor(appTheme.primaryText.color)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+        .id(field)
     }
 
     @ViewBuilder
@@ -211,29 +257,24 @@ struct CharacterCardSettingsView: View {
         title: String,
         placeholder: String,
         text: Binding<String>,
-        isExpanded: Binding<Bool>
+        isExpanded: Binding<Bool>,
+        field: FocusedField
     ) -> some View {
         DisclosureGroup(isExpanded: isExpanded) {
-            ZStack(alignment: .topLeading) {
-                if text.wrappedValue.isEmpty {
-                    Text(placeholder)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 8)
-                        .padding(.leading, 5)
-                }
-
-                TextEditor(text: text)
-                    .frame(height: 220)
-                    .scrollContentBackground(.hidden)
-            }
-            .styledFormField()
+            settingsTextEditor(
+                text: text,
+                placeholder: placeholder,
+                field: field,
+                height: 220
+            )
             .padding(.top, 8)
         } label: {
             Text(title)
-                .foregroundColor(.primary)
+                .foregroundColor(appTheme.primaryText.color)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+        .id(field)
     }
 
     private var altGreetingsSection: some View {
@@ -244,7 +285,7 @@ struct CharacterCardSettingsView: View {
                         HStack {
                             Text("Greeting \(index + 1)")
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(appTheme.secondaryText.color)
 
                             Spacer()
 
@@ -256,20 +297,14 @@ struct CharacterCardSettingsView: View {
                             .buttonStyle(.plain)
                         }
 
-                        ZStack(alignment: .topLeading) {
-                            if altGreetingBinding(at: index).wrappedValue.isEmpty {
-                                Text("Alternate opening message...")
-                                    .foregroundColor(.secondary)
-                                    .padding(.top, 8)
-                                    .padding(.leading, 5)
-                            }
-
-                            TextEditor(text: altGreetingBinding(at: index))
-                                .frame(height: 160)
-                                .scrollContentBackground(.hidden)
-                        }
-                        .styledFormField()
+                        settingsTextEditor(
+                            text: altGreetingBinding(at: index),
+                            placeholder: "Alternate opening message...",
+                            field: .altGreeting(index),
+                            height: 160
+                        )
                     }
+                    .id(FocusedField.altGreeting(index))
                 }
 
                 Button {
@@ -287,15 +322,54 @@ struct CharacterCardSettingsView: View {
                     .contentShape(Capsule())
                 }
                 .frame(maxWidth: .infinity)
+                .foregroundStyle(appTheme.tintColor.color)
                 .glassEffect(.regular.interactive(), in: Capsule())
             }
             .padding(.top, 8)
         } label: {
             Text("Alternate Greetings")
-                .foregroundColor(.primary)
+                .foregroundColor(appTheme.primaryText.color)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+    }
+
+    private func settingsTextEditor(
+        text: Binding<String>,
+        placeholder: String,
+        field: FocusedField,
+        height: CGFloat
+    ) -> some View {
+        EnhancedTextEditor(
+            text: text,
+            placeholder: placeholder,
+            maxHeight: height,
+            minHeight: height,
+            textColor: UIColor(appTheme.primaryText.color),
+            placeholderColor: UIColor(appTheme.secondaryText.color)
+        )
+        .focused($focusedField, equals: field)
+        .frame(height: height)
+        .foregroundStyle(appTheme.primaryText.color)
+        .background(appTheme.secondaryBackgroundColor.color)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func scrollFocusedFieldIntoView(_ field: FocusedField?, proxy: ScrollViewProxy) {
+        guard let field else { return }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                proxy.scrollTo(field, anchor: .center)
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                proxy.scrollTo(field, anchor: .center)
+            }
+        }
     }
 
     private func altGreetingBinding(at index: Int) -> Binding<String> {

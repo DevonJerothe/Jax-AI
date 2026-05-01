@@ -12,6 +12,7 @@ struct ChatSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(NavigationManager.self) var navManager
     @Environment(ServiceContainer.self) private var serviceContainer
+    @Environment(\.appTheme) private var appTheme
 
     @State private var viewModel: ChatViewModel
     @State private var characterCard: CharacterCardModel
@@ -96,15 +97,16 @@ struct ChatSettingsView: View {
                         set: { connectionManager.update(\.forceThinking, to: $0) }
                     )) {
                         Text("Force Thinking")
-                            .foregroundColor(.primary)
+                            .foregroundColor(appTheme.primaryText.color)
                     }
                     .padding()
-                    .background(Color(.systemGray6).opacity(0.6))
+                    .background(appTheme.secondaryBackgroundColor.color)
                     .cornerRadius(12)
+                    .tint(appTheme.tintColor.color)
 
                     Text("You may find if the model does not close the \(connectionManager.connectionSettings.thinkingStopSequence.encodeEscapedSequence()) tag, the response does not stream. It should still load when complete.")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(appTheme.secondaryText.color)
                 }
                 .padding(.horizontal, 16)
 
@@ -113,7 +115,7 @@ struct ChatSettingsView: View {
                     Text("Card Settings")
                         .font(.title2)
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary) 
+                        .foregroundColor(appTheme.primaryText.color)
                     Spacer()
                 }
                 .padding(.top, 24)
@@ -122,16 +124,17 @@ struct ChatSettingsView: View {
                 Toggle(isOn: $chatIsPrivate) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Private Chat")
-                            .foregroundColor(.primary)
+                            .foregroundColor(appTheme.primaryText.color)
 
                         Text("Hide this chat while the app is locked.")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(appTheme.secondaryText.color)
                     }
                 }
                 .padding()
-                .background(Color(.systemGray6).opacity(0.6))
+                .background(appTheme.secondaryBackgroundColor.color)
                 .cornerRadius(12)
+                .tint(appTheme.tintColor.color)
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
 
@@ -143,20 +146,20 @@ struct ChatSettingsView: View {
                         Text(characterCard.name ?? "")
                             .font(.headline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary) 
+                            .foregroundColor(appTheme.primaryText.color)
 
                         Text(characterCard.cardTagline ?? "")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(appTheme.secondaryText.color)
                     }
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(appTheme.secondaryText.color)
                 }
                 .padding()
-                .background(Color(.systemGray6).opacity(0.6))
+                .background(appTheme.secondaryBackgroundColor.color)
                 .cornerRadius(12)
                 .padding(.horizontal, 16)
                 .onTapGesture {
@@ -168,21 +171,21 @@ struct ChatSettingsView: View {
                         Text("Template Settings")
                             .font(.title2)
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary) 
+                            .foregroundColor(appTheme.primaryText.color)
                         Spacer()
 
                         Button(action: {
                             navManager.showNewTemplateView()
                         }) {
                             Image(systemName: "plus.circle")
-                                .foregroundColor(.primary)
+                                .foregroundColor(appTheme.tintColor.color)
                                 .font(.title2)
                         }
                     }
 
                     Text("Templates can be used to set instructions on how the model should responed and in what format / style. This will be added to the memory and used for every message.")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(appTheme.secondaryText.color)
                     
                 }
                 .padding(.top, 24)
@@ -199,7 +202,7 @@ struct ChatSettingsView: View {
                         Spacer() 
                         Text("No templates added.")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(appTheme.secondaryText.color)
                         Spacer() 
                     }
                     .padding(.vertical, 24)
@@ -216,7 +219,7 @@ struct ChatSettingsView: View {
                             Image(systemName: "trash")
                             Text("Clear Chat")
                         }
-                        .foregroundColor(.red)
+                        .foregroundColor(appTheme.destructiveAction.color)
                         .padding()
                     }
                     Spacer()
@@ -242,6 +245,7 @@ struct ChatSettingsView: View {
                 }
             }
         }
+        .background(appTheme.backgroundColor.color)
         .onAppear {
             if let card = viewModel.fetchCharacterCard() {
                 self.characterCard = card

@@ -18,12 +18,21 @@ struct BubbleHeightKey: PreferenceKey {
 struct ChatBubbleView: View {
 
     @Environment(\.colorScheme) var colorScheme: ColorScheme
+    @Environment(\.appTheme) private var appTheme
 
     var message: MessageModel
     var viewModel: ChatViewModel
     @State private var isEditing = false
     @State private var bubbleHeight: CGFloat = 0
     @State private var editedText: String = ""
+
+    private var editorMaxHeight: CGFloat {
+        min(UIScreen.main.bounds.height * 0.45, 360)
+    }
+
+    private var editorMinHeight: CGFloat {
+        max(44, min(bubbleHeight, editorMaxHeight))
+    }
 
     var body: some View {
         switch message.actor {
@@ -36,33 +45,12 @@ struct ChatBubbleView: View {
                                 .padding(.trailing, 5)
                         }
                         .padding(10)
-//                        .background(Color(.secondarySystemBackground))
                         .cornerRadius(15)
                         .frame(alignment: .leading)
                         .transition(.opacity.combined(with: .scale(scale: 0.98)))
                     } else {
                         if isEditing {
-                            TextEditor(text: $editedText)
-                                .padding(
-                                    EdgeInsets(
-                                        top: 8, leading: 10, bottom: 8,
-                                        trailing: 10)
-                                )
-                                .background(Color(.clear))
-                                .cornerRadius(15)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .stroke(Color.accentColor, lineWidth: 1)
-                                )
-                                .frame(minHeight: bubbleHeight + 30)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(
-                                    maxWidth: UIScreen.main.bounds.width * 1,
-                                    alignment: .leading
-                                )
-                                .onChange(of: editedText) {
-                                    viewModel.updateScrollView.toggle()
-                                }
+                            editingTextView(maxWidth: UIScreen.main.bounds.width)
                         } else {
                             Markdown(
                                 message.getRolePlayText(
@@ -88,7 +76,7 @@ struct ChatBubbleView: View {
                                         .padding(4)
                                     }
                                     .background(
-                                        Color(UIColor.secondarySystemFill))
+                                        appTheme.secondaryAction.color)
                                     ScrollView(.horizontal) {
                                         configuration.label
                                             .padding(10)
@@ -99,14 +87,13 @@ struct ChatBubbleView: View {
                                         FontSize(.em(0.65))
                                     })
                                     .background(
-                                        Color(UIColor.secondarySystemBackground)
+                                        appTheme.secondaryBackgroundColor.color
                                     )
                                 }
                                 .cornerRadius(8)
                             }
-                            .markdownTheme(.rolePlay)
+                            .markdownTheme(.rolePlay(appTheme))
                             .padding()
-//                            .background(Color(.secondarySystemBackground))
                             .cornerRadius(15)
                             .frame(
                                 maxWidth: UIScreen.main.bounds.width * 1,
@@ -121,7 +108,7 @@ struct ChatBubbleView: View {
                             )
                         }
                     }
-                    if viewModel.shouldShowToolbar(message) {
+                    if viewModel.shouldShowToolbar(message) && isEditing == false {
                         HStack(spacing: 16) {
                             // Delete
                             Button(action: {
@@ -133,12 +120,12 @@ struct ChatBubbleView: View {
                                 Image(systemName: "trash.fill")
                                     .resizable()
                                     .frame(width: 10, height: 10)
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(appTheme.destructiveAction.color)
                                     .padding(5)
                                     .background(
                                         Circle()
                                             .stroke(
-                                                Color.accentColor,
+                                                appTheme.destructiveAction.color,
                                                 lineWidth: 0.5)
                                     )
                                     .frame(width: 15, height: 15)
@@ -155,12 +142,12 @@ struct ChatBubbleView: View {
                                 Image(systemName: "repeat")
                                     .resizable()
                                     .frame(width: 10, height: 10)
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(appTheme.tintColor.color)
                                     .padding(5)
                                     .background(
                                         Circle()
                                             .stroke(
-                                                Color.accentColor,
+                                                appTheme.tintColor.color,
                                                 lineWidth: 0.5)
                                     )
                                     .frame(width: 15, height: 15)
@@ -177,12 +164,12 @@ struct ChatBubbleView: View {
                                 )
                                 .resizable()
                                 .frame(width: 10, height: 10)
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(appTheme.tintColor.color)
                                 .padding(5)
                                 .background(
                                     Circle()
                                         .stroke(
-                                            Color.accentColor,
+                                            appTheme.tintColor.color,
                                             lineWidth: 0.5)
                                 )
                                 .frame(width: 15, height: 15)
@@ -200,18 +187,39 @@ struct ChatBubbleView: View {
                                 Image(systemName: "play.fill")
                                     .resizable()
                                     .frame(width: 10, height: 10)
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(appTheme.tintColor.color)
                                     .padding(5)
                                     .background(
                                         Circle()
                                             .stroke(
-                                                Color.accentColor,
+                                                appTheme.tintColor.color,
                                                 lineWidth: 0.5)
                                     )
                                     .frame(width: 15, height: 15)
                                     .padding(.leading, 4)
                                     .padding(.top, 4)
                             }
+                        }
+                    } else if isEditing == true {
+                        Button(action: {
+                            toggleEditing()
+                        }) {
+                            Image(
+                                systemName: "checkmark.circle.fill"
+                            )
+                            .resizable()
+                            .frame(width: 10, height: 10)
+                            .foregroundStyle(appTheme.tintColor.color)
+                            .padding(5)
+                            .background(
+                                Circle()
+                                    .stroke(
+                                        appTheme.tintColor.color,
+                                        lineWidth: 0.5)
+                            )
+                            .frame(width: 15, height: 15)
+                            .padding(.leading, 4)
+                            .padding(.top, 4)
                         }
                     }
                 }
@@ -229,27 +237,7 @@ struct ChatBubbleView: View {
                 Spacer()
                 VStack(alignment: .trailing) {
                     if isEditing {
-                        TextEditor(text: $editedText)
-                            .padding(
-                                EdgeInsets(
-                                    top: 8, leading: 10, bottom: 8,
-                                    trailing: 10)
-                            )
-                            .background(Color(.clear))
-                            .cornerRadius(15)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 15)
-                                    .stroke(Color.accentColor, lineWidth: 1)
-                            )
-                            .frame(minHeight: bubbleHeight + 30)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(
-                                maxWidth: UIScreen.main.bounds.width * 0.80,
-                                alignment: .leading
-                            )
-                            .onChange(of: editedText) {
-                                viewModel.updateScrollView.toggle()
-                            }
+                        editingTextView(maxWidth: UIScreen.main.bounds.width * 0.80)
                     } else {
                         VStack(alignment: .trailing) {
                             Markdown(
@@ -257,10 +245,10 @@ struct ChatBubbleView: View {
                                     cardName: viewModel.model?.characterCards.first?.name
                                         ?? "")
                             )
-                            .foregroundStyle(.black)
-                            .markdownTheme(.userRolePlay)
+                            .foregroundStyle(appTheme.primaryText.color)
+                            .markdownTheme(.userRolePlay(appTheme))
                             .padding()
-                            .background(Color(.secondarySystemFill))
+                            .background(appTheme.secondaryAction.color)
                             .clipShape(
                                 UnevenRoundedRectangle(
                                     topLeadingRadius: 15,
@@ -293,12 +281,12 @@ struct ChatBubbleView: View {
                                     Image(systemName: "trash.fill")
                                         .resizable()
                                         .frame(width: 10, height: 10)
-                                        .foregroundStyle(Color.accentColor)
+                                        .foregroundStyle(appTheme.destructiveAction.color)
                                         .padding(5)
                                         .background(
                                             Circle()
                                                 .stroke(
-                                                    Color.accentColor,
+                                                    appTheme.destructiveAction.color,
                                                     lineWidth: 0.5)
                                         )
                                         .frame(width: 15, height: 15)
@@ -315,12 +303,12 @@ struct ChatBubbleView: View {
                                 )
                                 .resizable()
                                 .frame(width: 10, height: 10)
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(appTheme.tintColor.color)
                                 .padding(5) 
                                 .background(
                                     Circle()
                                         .stroke(
-                                            Color.accentColor,
+                                            appTheme.tintColor.color,
                                             lineWidth: 0.5)
                                 )
                                 .frame(width: 15, height: 15)
@@ -343,6 +331,27 @@ struct ChatBubbleView: View {
         message.status != .done && message.text.isEmpty
     }
 
+    private func editingTextView(maxWidth: CGFloat) -> some View {
+        EnhancedTextEditor(
+            text: $editedText,
+            placeholder: "",
+            maxHeight: editorMaxHeight,
+            minHeight: editorMinHeight,
+            textColor: UIColor(appTheme.primaryText.color)
+        )
+        .padding(.vertical, 2)
+        .background(appTheme.secondaryBackgroundColor.color.opacity(0.35))
+        .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .stroke(appTheme.tintColor.color.opacity(0.55), lineWidth: 1)
+        )
+        .frame(maxWidth: maxWidth, alignment: .leading)
+        .onChange(of: editedText) {
+            scrollToEditedMessage()
+        }
+    }
+
     private func toggleEditing() {
         if isEditing {
             Task {
@@ -353,7 +362,11 @@ struct ChatBubbleView: View {
         } else {
             editedText = message.text
             isEditing = true
-            viewModel.editingMessageID = message.id
+            scrollToEditedMessage()
         }
+    }
+
+    private func scrollToEditedMessage() {
+        viewModel.editingMessageID = message.id
     }
 }

@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct SettingsCard<Content: View>: View {
+    @Environment(\.appTheme) private var appTheme
+
     let title: String?
     @ViewBuilder let content: Content
 
@@ -15,7 +17,7 @@ struct SettingsCard<Content: View>: View {
                 Text(title)
                     .font(.title2)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
                     .padding(.horizontal, 16)
             }
 
@@ -24,13 +26,15 @@ struct SettingsCard<Content: View>: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.systemGray6).opacity(0.6))
+            .background(appTheme.secondaryBackgroundColor.color)
             .cornerRadius(12)
         }
     }
 }
 
 struct SettingsNavigationRow: View {
+    @Environment(\.appTheme) private var appTheme
+
     let title: String
     let subtitle: String
     let systemImage: String
@@ -39,31 +43,33 @@ struct SettingsNavigationRow: View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
                 .font(.headline)
-                .foregroundStyle(.primary)
+                .foregroundStyle(appTheme.primaryText.color)
                 .frame(width: 30, height: 30)
-                .background(Color(.systemGray6))
+                .background(appTheme.secondaryAction.color)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(appTheme.primaryText.color)
 
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(appTheme.secondaryText.color)
             }
 
             Spacer()
 
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(appTheme.borderColor.color)
         }
         .contentShape(Rectangle())
     }
 }
 
 struct SamplerSlider: View {
+    @Environment(\.appTheme) private var appTheme
+
     var title: String
     var value: Binding<Double> 
     var range: ClosedRange<Double>
@@ -74,16 +80,17 @@ struct SamplerSlider: View {
         VStack(alignment: .leading) {
             HStack {
                 Text(title)
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
 
                 Spacer()
 
                 Text(displayValue)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(appTheme.secondaryText.color)
                     .font(.subheadline)
             }
 
             Slider(value: value, in: range, step: step)
+                .tint(appTheme.tintColor.color)
         }
     }
 }

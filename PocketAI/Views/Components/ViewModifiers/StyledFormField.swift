@@ -1,10 +1,13 @@
 import SwiftUI
 
 public struct StyledFormField: ViewModifier {
+    @Environment(\.appTheme) private var appTheme
+
     public func body(content: Content) -> some View {
         content
             .padding()
-            .background(Color(.systemGray6).opacity(0.6))
+            .foregroundStyle(appTheme.primaryText.color)
+            .background(appTheme.secondaryBackgroundColor.color)
             .cornerRadius(12)
     }
 }

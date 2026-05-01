@@ -92,10 +92,15 @@ struct KoboldPromptContextBuilder {
                 continue
             }
 
+            // TODO: Pull the username from custom character persona
             let text: String
             switch message.actor {
             case .user:
-                var userText = "\(message.text)\(settings.botStopSequence)"
+                let messageText = message.text
+                    .replacingOccurrences(of: "{{char}}", with: chat.chatTitle)
+                    .replacingOccurrences(of: "{{user}}", with: "Devon")
+                
+                var userText = "\(messageText)\(settings.botStopSequence)"
                 if settings.botStopSequence.isEmpty == false {
                     userText += " "
                 }
@@ -105,14 +110,18 @@ struct KoboldPromptContextBuilder {
                 text = userText
 
             case .bot:
+                let messageText = message.text
+                    .replacingOccurrences(of: "{{char}}", with: chat.chatTitle)
+                    .replacingOccurrences(of: "{{user}}", with: "Devon")
+                
                 guard message.status == .done || continueResponse else {
                     continue
                 }
                 let suffix = continueResponse ? "" : settings.userStopSequence
                 let prefix = firstBotID == message.id ? settings.botStopSequence : "" 
-                text = "\(prefix)\(message.text)\(suffix)"
+                text = "\(prefix)\(messageText)\(suffix)"
             }
-
+            
             blocks.append(
                 MessageBlock(
                     id: message.id,

@@ -8,6 +8,12 @@
 import SwiftUI
 import UIKit
 
+private final class BoundedTextView: UITextView {
+    override var intrinsicContentSize: CGSize {
+        CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
+    }
+}
+
 struct RepresentableTextView: UIViewRepresentable {
 
     // MARK: - Properties
@@ -21,15 +27,22 @@ struct RepresentableTextView: UIViewRepresentable {
     // MARK: - UIViewRepresentable Methods
 
     func makeUIView(context: Context) -> UITextView {
-        let textView = UITextView()
+        let textView = BoundedTextView()
 
         // --- Configuration ---
         textView.delegate = context.coordinator
         textView.font = font
+        textView.textColor = textColor
         textView.isScrollEnabled = false  // Disable scrolling initially
         textView.backgroundColor = .clear
         textView.textContainerInset = UIEdgeInsets(
             top: 8, left: 5, bottom: 8, right: 5)  // Default padding
+        textView.contentInsetAdjustmentBehavior = .never
+        textView.clipsToBounds = true
+        textView.layer.masksToBounds = true
+        textView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        textView.setContentCompressionResistancePriority(
+            .defaultLow, for: .vertical)
         textView.setContentCompressionResistancePriority(
             .defaultLow, for: .horizontal)  // Allow horizontal compression
 
@@ -64,6 +77,18 @@ struct RepresentableTextView: UIViewRepresentable {
             uiView.font = self.font
         }
 
+        if uiView.textColor != self.textColor {
+            uiView.textColor = self.textColor
+        }
+
+        if uiView.contentInsetAdjustmentBehavior != .never {
+            uiView.contentInsetAdjustmentBehavior = .never
+        }
+
+        if uiView.clipsToBounds == false {
+            uiView.clipsToBounds = true
+        }
+
         // Recalculate height (deferred to avoid state modification during view update)
         DispatchQueue.main.async {
             context.coordinator.recalculateHeight(textView: uiView)
@@ -72,6 +97,23 @@ struct RepresentableTextView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
+    }
+
+    func sizeThatFits(
+        _ proposal: ProposedViewSize,
+        uiView: UITextView,
+        context: Context
+    ) -> CGSize? {
+        let width = proposal.width ?? uiView.bounds.width
+        let measuredSize = uiView.sizeThatFits(
+            CGSize(
+                width: max(width, 1),
+                height: CGFloat.greatestFiniteMagnitude
+            )
+        )
+        let height = min(maxHeight, measuredSize.height)
+
+        return CGSize(width: width, height: height)
     }
 
     // MARK: - Coordinator Class
@@ -105,7 +147,8 @@ struct RepresentableTextView: UIViewRepresentable {
             // Ensure layout is up-to-date before calculating size
             textView.layoutIfNeeded()
 
-            let newSize = textView.sizeThatFits(CGSize(width: textView.frame.width, height: CGFloat.greatestFiniteMagnitude))
+            let width = max(textView.bounds.width, textView.frame.width, 1)
+            let newSize = textView.sizeThatFits(CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
             let targetHeight = min(newSize.height, parent.maxHeight)
 
             // Update height binding only if changed
@@ -129,7 +172,6 @@ struct RepresentableTextView: UIViewRepresentable {
             // This action should only be triggered if scrolling is disabled,
             // enforced by gestureRecognizerShouldBegin.
             guard let textView = gesture.view as? UITextView else { return }
-             print("Swipe Down Action Triggered (isScrollEnabled: \(textView.isScrollEnabled))") // Debugging
             if !textView.isScrollEnabled {
                 textView.resignFirstResponder() // Dismiss keyboard
             }
@@ -137,7 +179,6 @@ struct RepresentableTextView: UIViewRepresentable {
         
         @objc func handleSwipeUp(_ gesture: UISwipeGestureRecognizer) {
             guard let textView = gesture.view as? UITextView else { return }
-            print("Swipe Up Action Triggered (isFirstResponder: \(textView.isFirstResponder))") // Debugging
             // Present keyboard only if it's not already the first responder
             if !textView.isFirstResponder {
                 textView.becomeFirstResponder()
@@ -154,7 +195,6 @@ struct RepresentableTextView: UIViewRepresentable {
                 // if the text view is NOT scrollable. Otherwise, let the default
                 // scroll pan gesture handle the swipe down.
                 let shouldBegin = !textView.isScrollEnabled
-                 print("Swipe Down Should Begin Check: \(shouldBegin) (isScrollEnabled: \(textView.isScrollEnabled))") // Debugging
                 return shouldBegin
             }
             // Allow other gestures (like swipe up or the internal pan gesture) to begin
@@ -226,15 +266,17 @@ struct EnhancedTextEditor: View {
             textColor: textColor,
             calculatedHeight: $calculatedHeight
         )
-        .overlay(alignment: .leading, content: {
-            if text.isEmpty {
-                Text("Send a Message...")
-                    .foregroundStyle(.placeholder)
+        .overlay(alignment: .topLeading, content: {
+            if text.isEmpty && placeholder.isEmpty == false {
+                Text(placeholder)
+                    .foregroundStyle(Color(placeholderColor))
                     .padding(.leading, 14)
-                    .padding(.bottom, 6)
+                    .padding(.top, 14)
+                    .allowsHitTesting(false)
             }
         })
-        .frame(height: max(minHeight, calculatedHeight))  // Use calculated height, but not less than minHeight
+        .frame(height: min(maxHeight, max(minHeight, calculatedHeight)))  // Use calculated height within bounds
         .cornerRadius(8)
+        .clipped()
     }
 }

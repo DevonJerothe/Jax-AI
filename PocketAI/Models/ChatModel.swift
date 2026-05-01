@@ -104,8 +104,12 @@ struct ChatModel: Hashable {
         if let scenario = characterCards.first?.scenario {
             fullMemory += "\nScenario: \(scenario)\n"
         }
-        
-        
+
+        // TODO: Replace user name with custom user persona
+        fullMemory = fullMemory
+            .replacingOccurrences(of: "{{char}}", with: chatTitle)
+            .replacingOccurrences(of: "{{user}}", with: "Devon")
+    
         return fullMemory
     }
 

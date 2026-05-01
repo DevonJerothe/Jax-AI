@@ -4,6 +4,7 @@ import Collections
 struct NewTemplateView: View {
     @Environment(NavigationManager.self) var navManger
     @Environment(ServiceContainer.self) private var serviceContainer
+    @Environment(\.appTheme) private var appTheme
     var templateKey: String?
 
     @State private var templateName: String = ""
@@ -32,10 +33,10 @@ struct NewTemplateView: View {
                     updateEditTemplate()
                 } label: {
                     Text("Save")
-                        .foregroundColor(.primary)
+                        .foregroundColor(appTheme.primaryText.color)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(.secondary)
+                        .background(appTheme.primaryAction.color)
                         .cornerRadius(12)
                 }
                 .padding(.horizontal, 16)
@@ -52,7 +53,7 @@ struct NewTemplateView: View {
                         Text("Delete")
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
-                            .foregroundColor(.red)
+                            .foregroundColor(appTheme.destructiveAction.color)
                     }
                 }
 
@@ -63,11 +64,11 @@ struct NewTemplateView: View {
                     Text("\(isEnabled ? "Enabled" : "Disabled")")
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)                     
-                        .background(isEnabled ? Color(.blue).opacity(0.6) : Color(.systemGray6).opacity(0.6))
+                        .background(isEnabled ? appTheme.tintColor.color.opacity(0.6) : appTheme.secondaryBackgroundColor.color)
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(isEnabled ? Color.blue : Color.secondary, lineWidth: 1)
+                                .stroke(isEnabled ? appTheme.tintColor.color : appTheme.borderColor.color, lineWidth: 1)
                         ) 
                 }
                 .padding(.horizontal, 16)
@@ -171,6 +172,7 @@ struct TemplateEditor: View {
     }
 }
 struct TemplateItem: View {
+    @Environment(\.appTheme) private var appTheme
 
     let name: String
     var isEnabled: Bool
@@ -180,22 +182,22 @@ struct TemplateItem: View {
             HStack {
                 Spacer() 
                 Text(name) 
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
                 Spacer() 
             }
 
             // checkmark or enabled
             VStack {
                 Image(systemName: isEnabled ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isEnabled ? .blue : .secondary)
+                    .foregroundColor(isEnabled ? appTheme.tintColor.color : appTheme.secondaryText.color)
             }
         }
         .padding(16)
-        .background(Color(.systemGray6).opacity(0.6))
+        .background(appTheme.secondaryBackgroundColor.color)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isEnabled ? Color.blue : Color.secondary, lineWidth: 1)
+                .stroke(isEnabled ? appTheme.tintColor.color : appTheme.borderColor.color, lineWidth: 1)
         ) 
     }
 }

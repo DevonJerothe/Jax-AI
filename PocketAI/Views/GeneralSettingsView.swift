@@ -2,6 +2,7 @@ import SwiftUI
 
 struct GeneralSettingsView: View {
     @Environment(ServiceContainer.self) private var serviceContainer
+    @Environment(\.appTheme) private var appTheme
     @State private var booruViewModel: BotBooruViewModel = .init(loadPosts: false)
     @State private var chubViewModel: ChubAIViewModel = .init(loadCards: false)
     @State private var passcode = ""
@@ -85,14 +86,15 @@ struct GeneralSettingsView: View {
                             Text("Auto-Connect on Reopen")
                             Text("Connect to the last used service when the app is opened again.")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(appTheme.secondaryText.color)
                         }
                     }
+                    .tint(appTheme.tintColor.color)
                 }
             }
             .padding(16)
         }
-        .background(Color(.systemBackground))
+        .background(appTheme.backgroundColor.color)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -137,18 +139,18 @@ struct GeneralSettingsView: View {
             HStack(spacing: 12) {
                 Image(systemName: connectionManager.connectionSettings.locked ? "lock.fill" : "lock.open")
                     .font(.headline)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(appTheme.primaryText.color)
                     .frame(width: 30, height: 30)
-                    .background(Color(.systemGray6))
+                    .background(appTheme.secondaryAction.color)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(connectionManager.connectionSettings.locked ? "App Locked" : "App Unlocked")
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(appTheme.primaryText.color)
 
                     Text("Private chats and characters are hidden while locked.")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(appTheme.secondaryText.color)
                 }
             }
 
@@ -162,10 +164,11 @@ struct GeneralSettingsView: View {
                     Label("Set Passcode and Lock App", systemImage: "lock")
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(appTheme.primaryAction.color)
 
                 Text("Passcodes cannot be reset without resetting the app.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(appTheme.secondaryText.color)
             } else {
                 Button {
                     handleLockButtonTapped()
@@ -176,6 +179,7 @@ struct GeneralSettingsView: View {
                     )
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(appTheme.primaryAction.color)
 
                 Toggle(isOn: Binding(
                     get: { connectionManager.connectionSettings.autoLock },
@@ -185,15 +189,16 @@ struct GeneralSettingsView: View {
                         Text("Auto-Lock on Reopen")
                         Text("Lock the app whenever it is opened again.")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(appTheme.secondaryText.color)
                     }
                 }
+                .tint(appTheme.tintColor.color)
             }
 
             if let passcodeError {
                 Text(passcodeError)
                     .font(.caption)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(appTheme.destructiveAction.color)
             }
         }
     }

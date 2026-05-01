@@ -9,36 +9,37 @@ import SwiftUI
 
 struct APIStatusBanner: View {
     @Environment(NavigationManager.self) var navManager
+    @Environment(\.appTheme) private var appTheme
     var stayOnPath: Bool = false
     
     var body: some View {
         HStack {
             Image(systemName: "wifi.slash")
-                .foregroundColor(.red)
+                .foregroundColor(appTheme.destructiveAction.color)
                 .font(.title3)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text("API Disconnected")
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(appTheme.primaryText.color)
                 
                 Text("Tap to connect in Settings")
                     .font(.subheadline)
-                    .foregroundColor(.red.opacity(0.6))
+                    .foregroundColor(appTheme.destructiveAction.color.opacity(0.75))
             }
             
             Spacer()
             
             Image(systemName: "chevron.right")
-                .foregroundColor(.red)
+                .foregroundColor(appTheme.destructiveAction.color)
                 .font(.caption)
         }
         .padding(16)
-        .background(Color.red.opacity(0.2))
+        .background(appTheme.destructiveAction.color.opacity(0.18))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                .stroke(appTheme.destructiveAction.color.opacity(0.3), lineWidth: 1)
         )
         .onTapGesture {
             navManager.navigateToConnectionSettings(keepCurrentPath: self.stayOnPath)

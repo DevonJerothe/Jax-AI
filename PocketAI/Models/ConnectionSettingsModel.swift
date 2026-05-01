@@ -55,6 +55,7 @@ public struct ConnectionSettingsModel: Codable {
     var locked: Bool = false 
     var autoLock: Bool = false
     var autoConnect: Bool = false 
+    var currentTheme: AppTheme = AppTheme.defaultTheme
 
     init(
         host: String? = nil,
@@ -88,7 +89,8 @@ public struct ConnectionSettingsModel: Codable {
         systemStopSequence: String = ConnectionSettingsModel.defaultSystemStopSequence,
         thinkingStartSequence: String = ConnectionSettingsModel.defaultThinkingStartSequence,
         thinkingStopSequence: String = ConnectionSettingsModel.defaultThinkingStopSequence,
-        forceThinkingInstruct: String = ConnectionSettingsModel.defaultForceThinkingInstruct
+        forceThinkingInstruct: String = ConnectionSettingsModel.defaultForceThinkingInstruct,
+        currentTheme: AppTheme = AppTheme.defaultTheme
     ) {
         self.host = host
         self.port = port
@@ -121,6 +123,7 @@ public struct ConnectionSettingsModel: Codable {
         self.thinkingStartSequence = thinkingStartSequence
         self.thinkingStopSequence = thinkingStopSequence
         self.forceThinkingInstruct = forceThinkingInstruct
+        self.currentTheme = currentTheme
         self.ensureNonEmptySequences()
     }
 
@@ -156,6 +159,7 @@ public struct ConnectionSettingsModel: Codable {
         case thinkingStartSequence
         case thinkingStopSequence
         case forceThinkingInstruct
+        case currentTheme
     }
 
     public init(from decoder: Decoder) throws {
@@ -193,6 +197,7 @@ public struct ConnectionSettingsModel: Codable {
         self.thinkingStartSequence = try container.decodeIfPresent(String.self, forKey: .thinkingStartSequence) ?? defaults.thinkingStartSequence
         self.thinkingStopSequence = try container.decodeIfPresent(String.self, forKey: .thinkingStopSequence) ?? defaults.thinkingStopSequence
         self.forceThinkingInstruct = try container.decodeIfPresent(String.self, forKey: .forceThinkingInstruct) ?? defaults.forceThinkingInstruct
+        self.currentTheme = try container.decodeIfPresent(AppTheme.self, forKey: .currentTheme) ?? defaults.currentTheme
         self.ensureNonEmptySequences()
     }
 }
@@ -230,7 +235,8 @@ extension ConnectionSettingsModel {
         systemStopSequence: defaultSystemStopSequence,
         thinkingStartSequence: defaultThinkingStartSequence,
         thinkingStopSequence: defaultThinkingStopSequence,
-        forceThinkingInstruct: defaultForceThinkingInstruct
+        forceThinkingInstruct: defaultForceThinkingInstruct,
+        currentTheme: AppTheme.defaultTheme
     )
 
     static let defaultUserTemplates: OrderedDictionary<String, TemplateModel> = [
