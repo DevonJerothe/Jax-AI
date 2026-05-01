@@ -8,6 +8,12 @@
 import SwiftUI
 import UIKit
 
+private final class BoundedTextView: UITextView {
+    override var intrinsicContentSize: CGSize {
+        CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
+    }
+}
+
 struct RepresentableTextView: UIViewRepresentable {
 
     // MARK: - Properties
@@ -21,7 +27,7 @@ struct RepresentableTextView: UIViewRepresentable {
     // MARK: - UIViewRepresentable Methods
 
     func makeUIView(context: Context) -> UITextView {
-        let textView = UITextView()
+        let textView = BoundedTextView()
 
         // --- Configuration ---
         textView.delegate = context.coordinator
@@ -31,6 +37,12 @@ struct RepresentableTextView: UIViewRepresentable {
         textView.backgroundColor = .clear
         textView.textContainerInset = UIEdgeInsets(
             top: 8, left: 5, bottom: 8, right: 5)  // Default padding
+        textView.contentInsetAdjustmentBehavior = .never
+        textView.clipsToBounds = true
+        textView.layer.masksToBounds = true
+        textView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        textView.setContentCompressionResistancePriority(
+            .defaultLow, for: .vertical)
         textView.setContentCompressionResistancePriority(
             .defaultLow, for: .horizontal)  // Allow horizontal compression
 
@@ -69,6 +81,14 @@ struct RepresentableTextView: UIViewRepresentable {
             uiView.textColor = self.textColor
         }
 
+        if uiView.contentInsetAdjustmentBehavior != .never {
+            uiView.contentInsetAdjustmentBehavior = .never
+        }
+
+        if uiView.clipsToBounds == false {
+            uiView.clipsToBounds = true
+        }
+
         // Recalculate height (deferred to avoid state modification during view update)
         DispatchQueue.main.async {
             context.coordinator.recalculateHeight(textView: uiView)
@@ -77,6 +97,23 @@ struct RepresentableTextView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
+    }
+
+    func sizeThatFits(
+        _ proposal: ProposedViewSize,
+        uiView: UITextView,
+        context: Context
+    ) -> CGSize? {
+        let width = proposal.width ?? uiView.bounds.width
+        let measuredSize = uiView.sizeThatFits(
+            CGSize(
+                width: max(width, 1),
+                height: CGFloat.greatestFiniteMagnitude
+            )
+        )
+        let height = min(maxHeight, measuredSize.height)
+
+        return CGSize(width: width, height: height)
     }
 
     // MARK: - Coordinator Class
@@ -110,7 +147,8 @@ struct RepresentableTextView: UIViewRepresentable {
             // Ensure layout is up-to-date before calculating size
             textView.layoutIfNeeded()
 
-            let newSize = textView.sizeThatFits(CGSize(width: textView.frame.width, height: CGFloat.greatestFiniteMagnitude))
+            let width = max(textView.bounds.width, textView.frame.width, 1)
+            let newSize = textView.sizeThatFits(CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
             let targetHeight = min(newSize.height, parent.maxHeight)
 
             // Update height binding only if changed
@@ -228,15 +266,17 @@ struct EnhancedTextEditor: View {
             textColor: textColor,
             calculatedHeight: $calculatedHeight
         )
-        .overlay(alignment: .leading, content: {
-            if text.isEmpty {
+        .overlay(alignment: .topLeading, content: {
+            if text.isEmpty && placeholder.isEmpty == false {
                 Text(placeholder)
-                    .foregroundStyle(.placeholder)
+                    .foregroundStyle(Color(placeholderColor))
                     .padding(.leading, 14)
-                    .padding(.bottom, 6)
+                    .padding(.top, 14)
+                    .allowsHitTesting(false)
             }
         })
-        .frame(height: max(minHeight, calculatedHeight))  // Use calculated height, but not less than minHeight
+        .frame(height: min(maxHeight, max(minHeight, calculatedHeight)))  // Use calculated height within bounds
         .cornerRadius(8)
+        .clipped()
     }
 }

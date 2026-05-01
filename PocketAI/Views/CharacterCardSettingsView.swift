@@ -261,20 +261,12 @@ struct CharacterCardSettingsView: View {
         field: FocusedField
     ) -> some View {
         DisclosureGroup(isExpanded: isExpanded) {
-            ZStack(alignment: .topLeading) {
-                if text.wrappedValue.isEmpty {
-                    Text(placeholder)
-                        .foregroundColor(appTheme.secondaryText.color)
-                        .padding(.top, 8)
-                        .padding(.leading, 5)
-                }
-
-                TextEditor(text: text)
-                    .frame(height: 220)
-                    .focused($focusedField, equals: field)
-                    .scrollContentBackground(.hidden)
-            }
-            .styledFormField()
+            settingsTextEditor(
+                text: text,
+                placeholder: placeholder,
+                field: field,
+                height: 220
+            )
             .padding(.top, 8)
         } label: {
             Text(title)
@@ -305,20 +297,12 @@ struct CharacterCardSettingsView: View {
                             .buttonStyle(.plain)
                         }
 
-                        ZStack(alignment: .topLeading) {
-                            if altGreetingBinding(at: index).wrappedValue.isEmpty {
-                                Text("Alternate opening message...")
-                                    .foregroundColor(appTheme.secondaryText.color)
-                                    .padding(.top, 8)
-                                    .padding(.leading, 5)
-                            }
-
-                            TextEditor(text: altGreetingBinding(at: index))
-                                .frame(height: 160)
-                                .focused($focusedField, equals: .altGreeting(index))
-                                .scrollContentBackground(.hidden)
-                        }
-                        .styledFormField()
+                        settingsTextEditor(
+                            text: altGreetingBinding(at: index),
+                            placeholder: "Alternate opening message...",
+                            field: .altGreeting(index),
+                            height: 160
+                        )
                     }
                     .id(FocusedField.altGreeting(index))
                 }
@@ -348,6 +332,28 @@ struct CharacterCardSettingsView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+    }
+
+    private func settingsTextEditor(
+        text: Binding<String>,
+        placeholder: String,
+        field: FocusedField,
+        height: CGFloat
+    ) -> some View {
+        EnhancedTextEditor(
+            text: text,
+            placeholder: placeholder,
+            maxHeight: height,
+            minHeight: height,
+            textColor: UIColor(appTheme.primaryText.color),
+            placeholderColor: UIColor(appTheme.secondaryText.color)
+        )
+        .focused($focusedField, equals: field)
+        .frame(height: height)
+        .foregroundStyle(appTheme.primaryText.color)
+        .background(appTheme.secondaryBackgroundColor.color)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private func scrollFocusedFieldIntoView(_ field: FocusedField?, proxy: ScrollViewProxy) {
