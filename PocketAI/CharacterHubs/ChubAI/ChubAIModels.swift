@@ -129,4 +129,5 @@ public struct ChubAISettings: Codable {
     var userName: String? 
     var password: String?
     var apiKey: String?
+    var lastFetched: Date? // last time user settings were fetched
 }

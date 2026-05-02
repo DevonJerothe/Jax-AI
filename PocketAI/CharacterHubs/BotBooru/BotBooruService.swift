@@ -86,7 +86,8 @@ final public class BotBooruService {
                 var authSettings = BotBooruAuthSettings(
                     username: username,
                     password: password,
-                    token: response.accessToken
+                    token: response.accessToken,
+                    lastFetched: Date()
                 )
                 self.authSettings = authSettings // save so we get auth header access
 

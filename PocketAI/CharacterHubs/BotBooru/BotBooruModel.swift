@@ -83,4 +83,5 @@ public struct BotBooruAuthSettings: Codable {
     // Settings
     var showNSFW: Bool = false 
     var hideAI: Bool = false
+    var lastFetched: Date? // last time user settings were fetched
 }

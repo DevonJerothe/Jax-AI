@@ -13,7 +13,8 @@ public struct BooruBrowserView: View {
             if viewModel.loggedIn == false {
                 Spacer()
                 ContentUnavailableView {
-                    Label("Log in to BotBooru", systemImage: "person.crop.circle.badge.questionmark")
+                    Label(
+                        "Log in to BotBooru", systemImage: "person.crop.circle.badge.questionmark")
                 } description: {
                     Text("Open settings to connect your BotBooru account.")
                 } actions: {
@@ -23,7 +24,7 @@ public struct BooruBrowserView: View {
                     .padding(.horizontal, 18)
                     .padding(.vertical, 10)
                     .glassEffect(.regular.interactive(), in: Capsule())
-                }    
+                }
                 Spacer()
             } else {
                 if viewModel.posts.isEmpty == false {
@@ -98,7 +99,7 @@ public struct BooruBrowserView: View {
                         Image(systemName: "line.3.horizontal.decrease")
                             .foregroundColor(appTheme.secondaryText.color)
                             .glassCapsule()
-                    }               
+                    }
                     .buttonStyle(.plain)
                     .padding(.trailing, showsSortTimeMenu ? 4 : 19)
 
@@ -172,7 +173,8 @@ struct BooruBrowserSettingsView: View {
                     HStack {
                         Label(
                             viewModel.loggedIn ? "Logged In" : "Logged Out",
-                            systemImage: viewModel.loggedIn ? "checkmark.circle.fill" : "xmark.circle"
+                            systemImage: viewModel.loggedIn
+                                ? "checkmark.circle.fill" : "xmark.circle"
                         )
                         Spacer()
                         Text(viewModel.authSettings.username ?? "")
@@ -180,21 +182,48 @@ struct BooruBrowserSettingsView: View {
                             .foregroundStyle(appTheme.secondaryText.color)
                     }
                     if viewModel.loggedIn {
-                        Button {
-                            viewModel.logout()
-                        } label: {
-                            HStack {
-                                Spacer() 
-                                Text("Logout")
-                                    .foregroundStyle(appTheme.primaryText.color)
-                                Spacer()
+                        HStack(spacing: 12) {
+                            Button {
+                                viewModel.logout()
+                            } label: {
+                                HStack {
+                                    Spacer()
+                                    Text("Logout")
+                                        .foregroundStyle(appTheme.primaryText.color)
+                                    Spacer()
+                                }
                             }
+                            .padding(.vertical, 10)
+                            .buttonStyle(.plain)
+                            .background(appTheme.destructiveAction.color.opacity(0.6))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .glassEffect(
+                                .regular.interactive(), in: RoundedRectangle(cornerRadius: 16))
+
+                            Button {
+                                Task { await viewModel.refreshLogin() }
+                            } label: {
+                                HStack {
+                                    Spacer()
+                                    if viewModel.isLoading {
+                                        ProgressView()
+                                            .tint(appTheme.primaryText.color)
+                                    } else {
+                                        Text("Refresh Login")
+                                            .foregroundStyle(appTheme.primaryText.color)
+                                    }
+                                    Spacer()
+                                }
+                            }
+                            .padding(.vertical, 10)
+                            .buttonStyle(.plain)
+                            .background(appTheme.primaryAction.color.opacity(0.6))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .glassEffect(
+                                .regular.interactive(), in: RoundedRectangle(cornerRadius: 16)
+                            )
+                            .disabled(viewModel.isLoading)
                         }
-                        .padding(.vertical, 10)
-                        .buttonStyle(.plain)
-                        .background(appTheme.destructiveAction.color.opacity(0.6))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 16))
                     }
                 }
 
@@ -253,7 +282,9 @@ struct BooruBrowserSettingsView: View {
         }
     }
 
-    private func authBinding(_ keyPath: WritableKeyPath<BotBooruAuthSettings, Bool>) -> Binding<Bool> {
+    private func authBinding(_ keyPath: WritableKeyPath<BotBooruAuthSettings, Bool>) -> Binding<
+        Bool
+    > {
         Binding {
             viewModel.authSettings[keyPath: keyPath]
         } set: { value in
@@ -270,16 +301,16 @@ struct BooruBrowserResultsView: View {
 
     var body: some View {
         PaginatedResultsGridView(
-            items: viewModel.posts, 
-            isLoading: viewModel.isLoading, 
-            canLoadMore: viewModel.posts.count < viewModel.count, 
+            items: viewModel.posts,
+            isLoading: viewModel.isLoading,
+            canLoadMore: viewModel.posts.count < viewModel.count,
             loadMore: {
-                await viewModel.loadMore() 
-            }, 
-            cardBuilder: { post in 
+                await viewModel.loadMore()
+            },
+            cardBuilder: { post in
                 BooruBrowserPostCard(post: post)
                     .onTapGesture {
-                        Task { 
+                        Task {
                             if let characterCard = await viewModel.getCharacter(post: post) {
                                 onSelectCharacter(characterCard)
                             }
@@ -340,20 +371,20 @@ struct BooruBrowserPostCard: View {
                     .font(.headline)
                     .foregroundColor(appTheme.primaryText.color)
 
-                Spacer() 
+                Spacer()
                 HStack {
                     Text(post.tags.map { $0.name ?? "" }.prefix(3).joined(separator: ", "))
                         .font(.caption2)
                         .foregroundColor(appTheme.secondaryText.color)
                         .truncationMode(.tail)
-                    
+
                     Spacer()
 
                     Text(post.createdAt.formatted(date: .abbreviated, time: .omitted))
                         .font(.caption2)
                         .foregroundColor(appTheme.secondaryText.color)
                         .lineLimit(3)
-                }    
+                }
             }
             .padding([.leading, .trailing, .bottom], 12)
             .padding(.top, 8)

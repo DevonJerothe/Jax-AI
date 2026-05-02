@@ -35,9 +35,18 @@ final class ChubAIViewModel {
 
         loggedIn = self.chubSettings.apiKey != nil
 
-        if loggedIn && loadCards {
-            Task {
-                await searchCards()
+        if loggedIn {
+            if let lastFetched = self.chubSettings.lastFetched, Date().timeIntervalSince(lastFetched) > 24 * 60 * 60 {
+                guard let username = self.chubSettings.userName, let password = self.chubSettings.password else { return }
+                Task {
+                    await login(username: username, password: password)
+                }
+            }
+
+            if loadCards {
+                Task {
+                    await searchCards()
+                } 
             }
         }
 
@@ -46,6 +55,11 @@ final class ChubAIViewModel {
         //     await searchCards(initLoad: true)
         //     isLoading = false
         // }
+    }
+
+    func refreshLogin() async {
+        guard let username = self.chubSettings.userName, let password = self.chubSettings.password else { return }
+        await login(username: username, password: password)
     }
 
     func login(username: String, password: String) async {

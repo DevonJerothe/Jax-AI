@@ -125,6 +125,8 @@ final public class ChubService {
                         // JaxAI has no control over enabling these filters. 
                         chubSettings.showNSFL = !user.noNsfl
                         chubSettings.showNSFW = !user.noNsfw
+                        chubSettings.userName = username
+                        chubSettings.password = password
                         updateChubSettings(chubSettings)
                         return .success(true)
                     case .failure(let error):

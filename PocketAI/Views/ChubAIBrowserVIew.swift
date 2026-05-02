@@ -1,5 +1,5 @@
-import SwiftUI 
 import SwiftLLMSDK
+import SwiftUI
 
 public struct ChubAIBrowserView: View {
     @Environment(\.appTheme) private var appTheme
@@ -13,7 +13,7 @@ public struct ChubAIBrowserView: View {
     public var body: some View {
         VStack {
             if viewModel.loggedIn == false {
-                Spacer() 
+                Spacer()
                 ContentUnavailableView {
                     Label("Log in to Chub AI", systemImage: "person.crop.circle.badge.questionmark")
                 } description: {
@@ -30,17 +30,19 @@ public struct ChubAIBrowserView: View {
             } else {
                 if viewModel.cards.isEmpty == false {
                     PaginatedResultsGridView(
-                        items: viewModel.cards, 
-                        isLoading: viewModel.isLoading, 
-                        canLoadMore: viewModel.hasMore, 
+                        items: viewModel.cards,
+                        isLoading: viewModel.isLoading,
+                        canLoadMore: viewModel.hasMore,
                         loadMore: {
                             await viewModel.loadMore()
-                        }, 
-                        cardBuilder: { card in 
+                        },
+                        cardBuilder: { card in
                             ChubBrowserCard(card: card)
                                 .onTapGesture {
-                                    Task { 
-                                        if let characterCard = await viewModel.getCharacter(card: card) {
+                                    Task {
+                                        if let characterCard = await viewModel.getCharacter(
+                                            card: card)
+                                        {
                                             selectedCharacterCard = characterCard
                                             showCharacterEditor = true
                                         }
@@ -69,7 +71,7 @@ public struct ChubAIBrowserView: View {
                     showSettings = true
                 } label: {
                     Image(systemName: "gearshape")
-                    .foregroundColor(appTheme.primaryText.color)
+                        .foregroundColor(appTheme.primaryText.color)
                 }
             }
         }
@@ -91,7 +93,7 @@ public struct ChubAIBrowserView: View {
         .task {
             await viewModel.getTags()
         }
-        .onChange(of: showSettings) { old, new in 
+        .onChange(of: showSettings) { old, new in
             guard old == true, new == false else { return }
             Task { await viewModel.searchCards(refresh: true) }
         }
@@ -112,17 +114,17 @@ public struct ChubAIBrowserView: View {
                             .regular.interactive(),
                             in: RoundedRectangle(cornerRadius: 12)
                         )
-                        .padding(.leading, 14) 
+                        .padding(.leading, 14)
                         .padding(.trailing, 8)
-    
+
                     Menu {
-                        Picker("Sort", selection: sortSelection) { 
-                            ForEach(ChubSort.allCases) { sort in 
+                        Picker("Sort", selection: sortSelection) {
+                            ForEach(ChubSort.allCases) { sort in
                                 Text(sort.title)
                                     .tag(sort)
                             }
                         }
-    
+
                     } label: {
                         Image(systemName: "line.3.horizontal.decrease")
                             .foregroundColor(appTheme.secondaryText.color)
@@ -130,8 +132,8 @@ public struct ChubAIBrowserView: View {
                     }
                     .buttonStyle(.plain)
                     .padding(.trailing, 4)
-    
-                    // Tag selection menu 
+
+                    // Tag selection menu
                     Menu {
                         ForEach(viewModel.selectedTopics) { tag in
                             Button {
@@ -141,7 +143,7 @@ public struct ChubAIBrowserView: View {
                                 Label(tag.name, systemImage: "xmark.circle")
                             }
                         }
-    
+
                         Button {
                             showTopicSearch = true
                         } label: {
@@ -163,8 +165,7 @@ public struct ChubAIBrowserView: View {
     private var sortSelection: Binding<ChubSort> {
         Binding {
             viewModel.sort
-        }
-        set: { sort in
+        } set: { sort in
             guard viewModel.sort != sort else { return }
             withAnimation(.snappy(duration: 0.22)) {
                 viewModel.sort = sort
@@ -177,35 +178,35 @@ public struct ChubAIBrowserView: View {
 struct ChubBrowserCard: View {
     @Environment(\.appTheme) private var appTheme
 
-    let card: ChubCardNode 
+    let card: ChubCardNode
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            AsyncImage(url: card.thumbnail) { state in 
+            AsyncImage(url: card.thumbnail) { state in
                 switch state {
-                    case .empty: 
-                        HStack {
-                            Spacer() 
-                            LoadingIndicator(size: 30)
-                            Spacer() 
-                        }
+                case .empty:
+                    HStack {
+                        Spacer()
+                        LoadingIndicator(size: 30)
+                        Spacer()
+                    }
+                    .frame(height: 150)
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
                         .frame(height: 150)
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(height: 150)
-                            .frame(maxWidth: 195)
-                            .clipped()
-                    default: 
-                        Rectangle() 
-                            .fill(appTheme.secondaryAction.color)
-                            .frame(height: 150)
-                            .overlay(
-                                Image(systemName: "photo")
-                                    .font(.largeTitle)
-                                    .foregroundStyle(appTheme.secondaryText.color)
-                            )
+                        .frame(maxWidth: 195)
+                        .clipped()
+                default:
+                    Rectangle()
+                        .fill(appTheme.secondaryAction.color)
+                        .frame(height: 150)
+                        .overlay(
+                            Image(systemName: "photo")
+                                .font(.largeTitle)
+                                .foregroundStyle(appTheme.secondaryText.color)
+                        )
                 }
             }
 
@@ -219,7 +220,7 @@ struct ChubBrowserCard: View {
                     .foregroundColor(appTheme.secondaryText.color)
                     .lineLimit(3)
 
-                Spacer() 
+                Spacer()
 
                 HStack {
                     Text(card.topics?.prefix(3).joined(separator: ", ") ?? "")
@@ -228,7 +229,7 @@ struct ChubBrowserCard: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
 
-                    Spacer() 
+                    Spacer()
 
                     Text(getFormattedTimestamp(stringDate: card.createdAt ?? ""))
                         .font(.caption2)
@@ -243,7 +244,6 @@ struct ChubBrowserCard: View {
         .cornerRadius(12)
         .contentShape(RoundedRectangle(cornerRadius: 12))
     }
-
 
     private func getFormattedTimestamp(stringDate: String) -> String {
         // Format the timestamp of the last message
@@ -280,7 +280,10 @@ struct ChubAITopicSearchView: View {
 
     var body: some View {
         let filteredTags = viewModel.tags
-            .filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) || $0.title.localizedCaseInsensitiveContains(search) }
+            .filter {
+                search.isEmpty || $0.name.localizedCaseInsensitiveContains(search)
+                    || $0.title.localizedCaseInsensitiveContains(search)
+            }
             .filter { tag in !viewModel.selectedTopics.contains { $0.id == tag.id } }
 
         List(filteredTags.prefix(50)) { tag in
@@ -310,7 +313,10 @@ struct ChubAISettingsView: View {
 
     var body: some View {
         let filteredTags = viewModel.tags
-            .filter { tagSearch.isEmpty || $0.name.localizedCaseInsensitiveContains(tagSearch) || $0.title.localizedCaseInsensitiveContains(tagSearch) }
+            .filter {
+                tagSearch.isEmpty || $0.name.localizedCaseInsensitiveContains(tagSearch)
+                    || $0.title.localizedCaseInsensitiveContains(tagSearch)
+            }
             .filter { tag in !viewModel.excludedTopics.contains { $0.id == tag.id } }
 
         ScrollView {
@@ -318,30 +324,58 @@ struct ChubAISettingsView: View {
                 SettingsCard {
                     HStack {
                         Label(
-                            viewModel.loggedIn ? "Logged In" : "Logged Out", 
-                            systemImage: viewModel.loggedIn ? "checkmark.circle.fill" : "xmark.circle"
+                            viewModel.loggedIn ? "Logged In" : "Logged Out",
+                            systemImage: viewModel.loggedIn
+                                ? "checkmark.circle.fill" : "xmark.circle"
                         )
-                        Spacer() 
+                        Spacer()
                         Text(viewModel.chubSettings.userName ?? "")
                             .font(.caption)
                             .foregroundColor(appTheme.secondaryText.color)
                     }
                     if viewModel.loggedIn {
-                        Button {
-                            viewModel.logout()
-                        } label: {
-                            HStack {
-                                Spacer() 
-                                Text("Logout")
-                                    .foregroundStyle(appTheme.primaryText.color)
-                                Spacer()
+                        HStack(spacing: 12) {
+                            Button {
+                                viewModel.logout()
+                            } label: {
+                                HStack {
+                                    Spacer()
+                                    Text("Logout")
+                                        .foregroundStyle(appTheme.primaryText.color)
+                                    Spacer()
+                                }
                             }
+                            .padding(.vertical, 10)
+                            .buttonStyle(.plain)
+                            .background(appTheme.destructiveAction.color.opacity(0.6))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .glassEffect(
+                                .regular.interactive(), in: RoundedRectangle(cornerRadius: 16))
+
+                            Button {
+                                Task { await viewModel.refreshLogin() }
+                            } label: {
+                                HStack {
+                                    Spacer()
+                                    if viewModel.isLoading {
+                                        ProgressView()
+                                            .tint(appTheme.primaryText.color)
+                                    } else {
+                                        Text("Refresh Login")
+                                            .foregroundStyle(appTheme.primaryText.color)
+                                    }
+                                    Spacer()
+                                }
+                            }
+                            .padding(.vertical, 10)
+                            .buttonStyle(.plain)
+                            .background(appTheme.primaryAction.color.opacity(0.6))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .glassEffect(
+                                .regular.interactive(), in: RoundedRectangle(cornerRadius: 16)
+                            )
+                            .disabled(viewModel.isLoading)
                         }
-                        .padding(.vertical, 10)
-                        .buttonStyle(.plain)
-                        .background(appTheme.destructiveAction.color.opacity(0.6))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 16))
                     }
                 }
 
@@ -382,7 +416,7 @@ struct ChubAISettingsView: View {
                         .disabled(username.isEmpty || password.isEmpty || viewModel.isLoading)
                     }
                 }
-                
+
                 SettingsCard("Excluded Topics") {
                     TextField("Search tags", text: $tagSearch)
                         .textInputAutocapitalization(.never)

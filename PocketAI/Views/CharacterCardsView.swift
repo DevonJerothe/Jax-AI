@@ -48,7 +48,7 @@ struct CharacterCardsView: View {
                     Button("Browse ChubAI") {
                         navManager.navigateToChubAIBrowser(keepCurrentPath: true) 
                     }
-                    Button("Browse the Hub") {
+                    Button("Browse BotBooru") {
                         navManager.navigateToHubArchive(keepCurrentPath: true) 
                     }
                 } label: {
