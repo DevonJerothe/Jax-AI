@@ -34,6 +34,13 @@ final public class ChubService {
             baseUrl: "https://gateway.chub.ai/",
             decoder: JSONDecoder()
         )
+
+        self.client.defaultHeaders = { [weak self] in 
+            guard let apiKey = self?.chubSettings?.apiKey else { return [:] }
+            return [
+                "CH-API-KEY": apiKey
+            ]
+        }
     }
 
     public func updateChubSettings(_ settings: ChubAISettings) {
@@ -57,6 +64,75 @@ final public class ChubService {
         switch result {
             case .success(let response):
                 return .success(response)
+            case .failure(let error):
+                return .failure(error)
+        }
+    }
+
+
+    public func login(username: String, password: String) async -> Result<Bool, APIError> {
+
+        // fetch csrf token
+        let csrfResult = await client.sendRequest(
+            forType: ChubTokenResponse.self,
+            path: "authentication/token"
+        )
+
+        switch csrfResult {
+            case .success(let response):
+                guard let csrfToken = response.csrfToken else {
+                    return .failure(.invalidResponse)
+                }
+
+                return await authenticateUser(username: username, password: password, csrfToken: csrfToken)
+            case .failure(let error):
+                return .failure(error)
+        }
+    }
+
+    private func authenticateUser(username: String, password: String, csrfToken: String) async -> Result<Bool, APIError> {
+        let requestBody = ChubloginRequest(
+            csrfToken: csrfToken, emailOrUsername: username, password: password
+        )
+
+        let result = await client.sendRequest(
+            forType: ChubloginResponse.self, 
+            path: "authentication/login", 
+            method: "POST", 
+            requestBody: try? JSONEncoder().encode(requestBody)
+        )
+
+        switch result {
+            case .success(let response):
+                guard let apiKey = response.samwise else {
+                    return .failure(APIError.invalidResponse)
+                }
+
+                var chubSettings = chubSettings ?? ChubAISettings()
+                chubSettings.apiKey = apiKey
+                updateChubSettings(chubSettings)
+
+                // Fetch User Info  
+                let userRequest = await client.sendRequest(
+                    forType: ChubAIUser.self,
+                    path: "api/self"
+                )
+
+                switch userRequest {
+                    case .success(let user):
+                        // Update filters based on user preferences. 
+                        // Just like botBooru, all content filters are toggle via the user preference on the website. 
+                        // JaxAI has no control over enabling these filters. 
+                        chubSettings.showNSFL = !user.noNsfl
+                        chubSettings.showNSFW = !user.noNsfw
+                        updateChubSettings(chubSettings)
+                        return .success(true)
+                    case .failure(let error):
+                        // clear api key on failure
+                        chubSettings.apiKey = nil
+                        updateChubSettings(chubSettings)
+                        return .failure(error)
+                }
             case .failure(let error):
                 return .failure(error)
         }

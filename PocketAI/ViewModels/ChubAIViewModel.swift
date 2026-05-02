@@ -14,6 +14,9 @@ final class ChubAIViewModel {
     var page: Int = 1
     var count: Int = 20
     var isLoading: Bool = false 
+    var tagsLoading: Bool = false
+    var loggedIn: Bool = false
+    var loginError: String = ""
     var searchQuery: String = "" 
     var sort: ChubSort = .defaultSort
 
@@ -30,13 +33,42 @@ final class ChubAIViewModel {
         self.chubSettings = chubAIService.chubSettings ?? ChubAISettings()
         self.excludedTopics = chubSettings.excludedTopics
 
-        guard loadCards else { return }
+        loggedIn = self.chubSettings.apiKey != nil
 
-        Task {
-            isLoading = true
-            await searchCards(initLoad: true)
-            isLoading = false
+        if loggedIn && loadCards {
+            Task {
+                await searchCards()
+            }
         }
+
+        // Task {
+        //     isLoading = true
+        //     await searchCards(initLoad: true)
+        //     isLoading = false
+        // }
+    }
+
+    func login(username: String, password: String) async {
+        isLoading = true 
+        loginError = "" 
+        let result = await chubAIService.login(username: username, password: password)
+        switch result {
+            case .success: 
+                chubSettings = chubAIService.chubSettings ?? chubSettings
+                loggedIn = true
+                await searchCards()
+            case .failure(let error):
+                loginError = "Invalid credentials"
+                loggedIn = false 
+        }
+        isLoading = false 
+    }
+
+    func logout() {
+        chubSettings = ChubAISettings()
+        chubAIService.updateChubSettings(chubSettings)
+        loggedIn = false
+        cards = []
     }
 
     func updateChubSettings(_ settings: ChubAISettings) {
@@ -60,13 +92,11 @@ final class ChubAIViewModel {
             case .failure(let error):
                 print("Error: \(error.localizedDescription)")
         }
+        isLoadingTags = false
     }
 
-    func searchCards(refresh: Bool = false, initLoad: Bool = false) async {
-        if isLoading {
-            guard initLoad else { return }
-        }
-        
+    func searchCards(refresh: Bool = false) async {
+        guard isLoading == false else { return }
         isLoading = true
 
         if refresh {
@@ -86,19 +116,23 @@ final class ChubAIViewModel {
             case .success(let response): 
                 guard let nodes = response.nodes else {
                     hasMore = false
-                    if initLoad == false {
-                        isLoading = false
-                    }
+                    // if initLoad == false {
+                    //     isLoading = false
+                    // }
+                    isLoading = false
                     return
                 }
                 cards.append(contentsOf: nodes)
                 hasMore = nodes.count == count 
-            case .failure(let error): 
+            case .failure(let error):
+                cards = []
+                hasMore = false
                 print("Error: \(error.localizedDescription)")
         }
-        if initLoad == false {
-            isLoading = false
-        }
+        // if initLoad == false {
+        //     isLoading = false
+        // }
+        isLoading = false
     }
 
     func getCharacter(card: ChubCardNode) async -> CharacterCardModel? {

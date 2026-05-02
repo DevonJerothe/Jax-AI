@@ -36,9 +36,9 @@ public struct BotBooruPostItem: Codable, Identifiable {
 }
 public struct BotBooruTagModel: Codable {
     var id: Int?
-    var name: String 
-    var category: String
-    var count: Int
+    var name: String? 
+    var category: String?
+    var count: Int?
     var aliasOf: String?
 
     enum CodingKeys: String, CodingKey {

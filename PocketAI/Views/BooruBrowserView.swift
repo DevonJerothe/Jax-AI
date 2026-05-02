@@ -287,6 +287,7 @@ struct BooruBrowserResultsView: View {
                     }
             }
         )
+        .padding(.horizontal, 16)
     }
 }
 
@@ -341,7 +342,7 @@ struct BooruBrowserPostCard: View {
 
                 Spacer() 
                 HStack {
-                    Text(post.tags.map { $0.name }.prefix(3).joined(separator: ", "))
+                    Text(post.tags.map { $0.name ?? "" }.prefix(3).joined(separator: ", "))
                         .font(.caption2)
                         .foregroundColor(appTheme.secondaryText.color)
                         .truncationMode(.tail)
