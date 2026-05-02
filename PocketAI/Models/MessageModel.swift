@@ -38,8 +38,8 @@ struct MessageModel: Identifiable, Hashable {
     
     var status: MessageStatus = .done
 
-    func getRolePlayText(cardName: String) -> String {
-        MessageDisplayFormatter.rolePlayText(for: self, characterName: cardName)
+    func getRolePlayText(cardName: String, personaName: String) -> String {
+        MessageDisplayFormatter.rolePlayText(for: self, characterName: cardName, userName: personaName)
     }
 }
 

@@ -92,7 +92,7 @@ struct ChatModel: Hashable {
         characterCards = [newCard]
     }
 
-    func getFullMemory() -> String {
+    func getFullMemory(userPersona: UserPersonaModel?) -> String {
         guard var fullMemory = characterCards.first?.description else {
             return self.memory
         }
@@ -105,10 +105,14 @@ struct ChatModel: Hashable {
             fullMemory += "\nScenario: \(scenario)\n"
         }
 
+        if let personaDescription = userPersona?.description {
+            fullMemory += "\nPersona: \(personaDescription)\n"
+        }
+
         // TODO: Replace user name with custom user persona
         fullMemory = fullMemory
             .replacingOccurrences(of: "{{char}}", with: chatTitle)
-            .replacingOccurrences(of: "{{user}}", with: "Devon")
+            .replacingOccurrences(of: "{{user}}", with: userPersona?.name ?? "User")
     
         return fullMemory
     }

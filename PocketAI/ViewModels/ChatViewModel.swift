@@ -256,6 +256,8 @@ final class ChatViewModel {
         trimmedPrompt: String
     ) {
         Task {
+            let userPersona = ServiceContainer.shared.getPersona
+            
             do {
                 try chatStore.setChatStatus(for: chatID, to: .loading)
             } catch {
@@ -277,6 +279,7 @@ final class ChatViewModel {
             )
             let stream = languageModelService.sendStreamedMessage(
                 chatModel: chat,
+                userPersona: userPersona,
                 continued: isContinued,
                 trimmedPrompt: trimmedPrompt
             )
@@ -376,6 +379,7 @@ final class ChatViewModel {
         forceThinking: Bool
     ) async -> String {
         let settings = connectionManager.connectionSettings
+        let userPersona = ServiceContainer.shared.getPersona
         guard settings.connectionType == .KoboldAPI else {
             return ""
         }
@@ -387,6 +391,7 @@ final class ChatViewModel {
         ).build(
             for: chat,
             settings: settings,
+            userPersona: userPersona,
             continueResponse: continueResponse,
             forceThinking: forceThinking,
             includeTemplate: continueResponse == false

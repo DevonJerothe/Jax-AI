@@ -35,14 +35,18 @@ public struct BotBooruPostItem: Codable, Identifiable {
 
 }
 public struct BotBooruTagModel: Codable {
-    var id: Int 
-    var name: String 
-    var category: String 
+    var id: Int?
+    var name: String? 
+    var category: String?
+    var count: Int?
+    var aliasOf: String?
 
     enum CodingKeys: String, CodingKey {
         case id
         case name
         case category
+        case count
+        case aliasOf = "alias_of"
     }
 }
 
@@ -57,6 +61,20 @@ public struct BotBooruLoginResponse: Codable {
     }
 }
 
+public struct BotBooruUserModel: Codable {
+    var id: Int
+    var username: String?
+    var role: String? 
+    var showNsfl: Bool 
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case username
+        case role
+        case showNsfl = "show_nsfl"
+    }
+}
+
 public struct BotBooruAuthSettings: Codable {
     var username: String? 
     var password: String? 
@@ -65,4 +83,5 @@ public struct BotBooruAuthSettings: Codable {
     // Settings
     var showNSFW: Bool = false 
     var hideAI: Bool = false
+    var lastFetched: Date? // last time user settings were fetched
 }

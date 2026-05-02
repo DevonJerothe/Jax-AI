@@ -92,11 +92,20 @@ final class LanguageModelService {
         selectedModel = nil
     }
     
-    func sendStreamedMessage(chatModel: ChatModel, continued: Bool = false, trimmedPrompt: String) -> AsyncStream<ModelResponse> {
+    func sendStreamedMessage(
+        chatModel: ChatModel,
+        userPersona: UserPersonaModel?, 
+        continued: Bool = false,
+        trimmedPrompt: String
+    ) -> AsyncStream<ModelResponse> {
         // Map our internal message model to the request body message
         var requestMessages = chatModel.messages.map { message in
             let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
-            return RequestBodyMessages(role: role, message: message.text)
+            let messageText = message.text
+                .replacingOccurrences(of: "{{char}}", with: chatModel.chatTitle)
+                .replacingOccurrences(of: "{{user}}", with: userPersona?.name ?? "User")
+            
+            return RequestBodyMessages(role: role, message: messageText)
         }
         
         // If we are continueing a message, we need to add special instructions to the system message.
@@ -124,12 +133,10 @@ final class LanguageModelService {
             guard let koboldManager = koboldManager else {
                 fatalError("KoboldManager not connected")
             }
-
-            print("Templates used: \(runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"))") 
             
             let promptBuilder = KoboldRequestBuilder(
                 prompt: trimmedPrompt,
-                memory: chatModel.getFullMemory(),
+                memory: chatModel.getFullMemory(userPersona: userPersona),
                 maxContextLength: runtimeConnectionSettings.contextLength ?? 4096,
                 maxLength: runtimeConnectionSettings.responseLength ?? 240,
                 temperature: runtimeConnectionSettings.temperature,
@@ -152,7 +159,8 @@ final class LanguageModelService {
             guard let openRouterManager = openRouterManager else {
                 fatalError("OpenRouterManager not connected")
             }
-            
+
+            // TODO: support sending user persona description
             let promptBuilder = OpenRouterRequestBuilder(
                 model: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
                 messages: requestMessages,
@@ -196,10 +204,15 @@ final class LanguageModelService {
     
     // Put all context switching of service type in this class and out of the view models.
     func sendMessage(chatModel: ChatModel, continued: Bool = false) async -> ModelResponse? {
+        let userPersona = await ServiceContainer.shared.getPersona
+        
         // Map our internal message model to the request body message
         var requestMessages = chatModel.messages.map { message in
             let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
-            return RequestBodyMessages(role: role, message: message.text)
+            let messageText = message.text
+                .replacingOccurrences(of: "{{char}}", with: chatModel.chatTitle)
+                .replacingOccurrences(of: "{{user}}", with: userPersona?.name ?? "User")
+            return RequestBodyMessages(role: role, message: messageText)
         }
         
         // If we are continueing a message, we need to add special instructions to the system message.
@@ -230,6 +243,7 @@ final class LanguageModelService {
             ).build(
                 for: chatModel,
                 settings: runtimeConnectionSettings,
+                userPersona: userPersona,
                 continueResponse: continued,
                 forceThinking: runtimeConnectionSettings.forceThinking,
                 includeTemplate: continued == false

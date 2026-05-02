@@ -5,9 +5,10 @@ struct TokenBudget {
     let reservedResponseTokens: Int
     let memoryTokens: Int
     let templateTokens: Int
+    let personaTokens: Int
 
     var messageTokens: Int {
-        maxContextTokens - reservedResponseTokens - memoryTokens - templateTokens
+        maxContextTokens - reservedResponseTokens - memoryTokens - templateTokens - personaTokens
     }
 }
 
@@ -21,36 +22,42 @@ struct PromptContext {
 
 struct KoboldPromptContextBuilder {
     let tokenCount: (String) async -> Int
-
+    
     func build(
         for chat: ChatModel,
         settings: ConnectionSettingsModel,
+        userPersona: UserPersonaModel?,
         continueResponse: Bool,
         forceThinking: Bool,
         includeTemplate: Bool
     ) async -> PromptContext {
-        let memory = chat.getFullMemory()
+        let memory = chat.getFullMemory(userPersona: userPersona)
         let template = includeTemplate
             ? settings.userTemplates.values
                 .filter(\.isEnabled)
                 .map(\.content)
                 .joined(separator: "\n")
             : ""
+        let personaDescription = userPersona?.description ?? ""
 
         let maxContextTokens = settings.contextLength ?? 4096
         let reservedResponseTokens = settings.responseLength ?? 240
         let memoryTokens = await tokenCount(memory)
         let templateTokens = await tokenCount(template)
+        let personaTokens = await tokenCount(personaDescription)
+        
         let budget = TokenBudget(
             maxContextTokens: maxContextTokens,
             reservedResponseTokens: reservedResponseTokens,
             memoryTokens: memoryTokens,
-            templateTokens: templateTokens
+            templateTokens: templateTokens,
+            personaTokens: personaTokens
         )
 
         let blocks = await messageBlocks(
             for: chat,
             settings: settings,
+            userPersona: userPersona,
             continueResponse: continueResponse,
             forceThinking: forceThinking
         )
@@ -80,12 +87,15 @@ struct KoboldPromptContextBuilder {
     private func messageBlocks(
         for chat: ChatModel,
         settings: ConnectionSettingsModel,
+        userPersona: UserPersonaModel?,
         continueResponse: Bool,
         forceThinking: Bool
     ) async -> [MessageBlock] {
         let lastUserID = chat.messages.last(where: { $0.actor == .user })?.id
         let firstBotID = chat.messages.first(where: { $0.actor == .bot })?.id
         var blocks: [MessageBlock] = []
+
+        let personaName = userPersona?.name ?? "User"
 
         for message in chat.messages {
             guard message.exclude == false else {
@@ -98,7 +108,7 @@ struct KoboldPromptContextBuilder {
             case .user:
                 let messageText = message.text
                     .replacingOccurrences(of: "{{char}}", with: chat.chatTitle)
-                    .replacingOccurrences(of: "{{user}}", with: "Devon")
+                    .replacingOccurrences(of: "{{user}}", with: personaName)
                 
                 var userText = "\(messageText)\(settings.botStopSequence)"
                 if settings.botStopSequence.isEmpty == false {
@@ -112,7 +122,7 @@ struct KoboldPromptContextBuilder {
             case .bot:
                 let messageText = message.text
                     .replacingOccurrences(of: "{{char}}", with: chat.chatTitle)
-                    .replacingOccurrences(of: "{{user}}", with: "Devon")
+                    .replacingOccurrences(of: "{{user}}", with: personaName)
                 
                 guard message.status == .done || continueResponse else {
                     continue

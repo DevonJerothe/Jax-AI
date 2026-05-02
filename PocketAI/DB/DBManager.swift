@@ -107,6 +107,10 @@ class DBManager {
             }
         }
 
+        migrator.registerMigration("v3_user_persona") { db in
+            try UserPersonaRecord.migrateTable(db)
+        }
+
         try migrator.migrate(dbQueue)
     }
 

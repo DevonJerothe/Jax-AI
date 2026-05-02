@@ -11,6 +11,7 @@ final class BotBooruViewModel {
     var offset: Int = 0 
     var isLoading: Bool = false 
     var loggedIn: Bool
+    var loginError: String = ""
     var authSettings: BotBooruAuthSettings
     var searchQuery: String = ""
     var sort: BotBooruSort = .latest
@@ -24,15 +25,31 @@ final class BotBooruViewModel {
         // check if logged in
         loggedIn = initialAuthSettings.token != nil
         
-        if loggedIn && loadPosts {
-            Task {
-                await getPosts()
+        if loggedIn {
+            // Check if last log in was more than 24 hours ago
+            if let lastFetched = initialAuthSettings.lastFetched, Date().timeIntervalSince(lastFetched) > 24 * 60 * 60 {
+                guard let username = initialAuthSettings.username, let password = initialAuthSettings.password else { return }
+                Task {
+                    await login(username: username, password: password)
+                }
+            }
+
+            if loadPosts {
+                Task {
+                    await getPosts()
+                }
             }
         }
     }
 
+    func refreshLogin() async {
+        guard let username = authSettings.username, let password = authSettings.password else { return }
+        await login(username: username, password: password)
+    }
+
     func login(username: String, password: String) async {
         isLoading = true
+        loginError = ""
         let result = await botBooruService.login(username: username, password: password)
         switch result {
             case .success:
@@ -40,9 +57,17 @@ final class BotBooruViewModel {
                 loggedIn = true
                 await getPosts()
             case .failure:
+                // TODO: Handle proper auth error reporting
                 loggedIn = false
+                loginError = "Invalid credentials"
         }
         isLoading = false
+    }
+
+    func logout() {
+        botBooruService.logout()
+        authSettings = BotBooruAuthSettings()
+        loggedIn = false
     }
 
     func updateAuthSettings(_ settings: BotBooruAuthSettings) {
@@ -78,6 +103,8 @@ final class BotBooruViewModel {
         }
         isLoading = false
     }
+
+    func getTags() async {}
     
     func loadMore() async {
         if offset < count {

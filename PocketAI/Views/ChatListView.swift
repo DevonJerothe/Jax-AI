@@ -153,6 +153,8 @@ struct AddCharacterButton: View {
 struct RecentChatRow: View {
     @Environment(NavigationManager.self) var navManager
     @Environment(\.appTheme) private var appTheme
+
+    let userPersonaName = ServiceContainer.shared.getPersonaName
     let chat: ChatModel
 
     var body: some View {
@@ -169,7 +171,7 @@ struct RecentChatRow: View {
                     LoadingIndicator(color: appTheme.secondaryText.color, size: 15)
                 } else {
                     if let lastMessage = chat.messages.last {
-                        Text(lastMessage.getRolePlayText(cardName: chat.chatTitle))
+                        Text(lastMessage.getRolePlayText(cardName: chat.chatTitle, personaName: userPersonaName))
                             .font(.subheadline)
                             .foregroundColor(appTheme.secondaryText.color)
                             .lineLimit(1)
