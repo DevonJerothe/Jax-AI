@@ -83,13 +83,43 @@ final public class BotBooruService {
 
         switch result {
             case .success(let response): 
-                updateAuthSettings(BotBooruAuthSettings(username: username, password: password, token: response.accessToken))
+                var authSettings = BotBooruAuthSettings(
+                    username: username,
+                    password: password,
+                    token: response.accessToken
+                )
+                self.authSettings = authSettings // save so we get auth header access
+
+                // fetch the logged in user for browser settings
+                // By default no adult content is shown nore is there a toggle to enable it.
+                // Control is based solely on the logged in user view BotBooru's website interface
+                // 
+                // depending on apple's policies we may need to strip out all browser features
+                // if we cant disable this content.
+                // 
+                // Only way adult content is shown: 
+                // - the user is logged into an existing account created via BotBooru
+                // - the user has enabled NSFW content in their account settings via BotBooru's website
+                let userResult = await getLoggedInUser()
+                switch userResult {
+                    case .success(let user):
+                        authSettings.showNSFW = user.showNsfl
+                        updateAuthSettings(authSettings)
+                        return .success(true)
+                    case .failure(let error):
+                        print("BotBooruService error: \(error)")
+                        return .failure(error)
+                }
+                
             case .failure(let error):
                 print("BotBooruService error: \(error)")
                 return .failure(error)
         }
+    }
 
-        return .success(true)
+    public func logout() {
+        let authSettings = BotBooruAuthSettings()
+        updateAuthSettings(authSettings)
     }
 
     public func getPosts(
@@ -102,7 +132,7 @@ final public class BotBooruService {
         var requestParams = [
             "sort": sort.rawValue, 
             "time_window": sortTime.rawValue,
-            "sfw_only": "\(!(authSettings?.showNSFW ?? true))", // invert the value 
+            "sfw_only": "\(!(authSettings?.showNSFW ?? true))", // hide by default 
             "hide_ai": "\(authSettings?.hideAI ?? true)",
             "limit": "\(limit)",
             "offset": "\(offset)",
@@ -147,6 +177,21 @@ final public class BotBooruService {
                 return .failure(error) 
         }
 
+    }
+
+    func getLoggedInUser() async -> Result<BotBooruUserModel, APIError> {
+        let result = await client.sendRequest(
+            forType: BotBooruUserModel.self,
+            path: "auth/me"
+        )
+
+        switch result {
+            case .success(let response):
+                return .success(response)
+            case .failure(let error):
+                print("BotBooruService error: \(error)")
+                return .failure(error)
+        }
     }
 }
 

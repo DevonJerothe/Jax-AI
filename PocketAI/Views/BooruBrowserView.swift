@@ -179,6 +179,23 @@ struct BooruBrowserSettingsView: View {
                             .font(.caption)
                             .foregroundStyle(appTheme.secondaryText.color)
                     }
+                    if viewModel.loggedIn {
+                        Button {
+                            viewModel.logout()
+                        } label: {
+                            HStack {
+                                Spacer() 
+                                Text("Logout")
+                                    .foregroundStyle(appTheme.primaryText.color)
+                                Spacer()
+                            }
+                        }
+                        .padding(.vertical, 10)
+                        .buttonStyle(.plain)
+                        .background(appTheme.destructiveAction.color.opacity(0.6))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 16))
+                    }
                 }
 
                 if viewModel.loggedIn == false {
@@ -191,6 +208,12 @@ struct BooruBrowserSettingsView: View {
                         SecureField("Password", text: $password)
                             .styledFormField()
 
+                        if !viewModel.loginError.isEmpty {
+                            Text(viewModel.loginError)
+                                .foregroundStyle(.red)
+                                .font(.caption)
+                        }
+
                         Button {
                             Task { await viewModel.login(username: username, password: password) }
                         } label: {
@@ -200,19 +223,21 @@ struct BooruBrowserSettingsView: View {
                                     ProgressView()
                                 } else {
                                     Text("Login")
+                                        .foregroundStyle(appTheme.primaryText.color)
                                 }
                                 Spacer()
                             }
                         }
                         .padding(.vertical, 10)
-                        .glassEffect(.regular.interactive(), in: Capsule())
+                        .background(appTheme.primaryAction.color.opacity(0.6))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 16))
                         .disabled(username.isEmpty || password.isEmpty || viewModel.isLoading)
                     }
                 }
 
                 SettingsCard("Browsing") {
-                    Toggle("Show NSFW", isOn: authBinding(\.showNSFW))
-                    Toggle("Hide AI", isOn: authBinding(\.hideAI))
+                    Toggle("Hide AI Assisted Content", isOn: authBinding(\.hideAI))
                 }
                 .tint(appTheme.tintColor.color)
                 .disabled(viewModel.loggedIn == false)

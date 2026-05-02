@@ -11,6 +11,7 @@ final class BotBooruViewModel {
     var offset: Int = 0 
     var isLoading: Bool = false 
     var loggedIn: Bool
+    var loginError: String = ""
     var authSettings: BotBooruAuthSettings
     var searchQuery: String = ""
     var sort: BotBooruSort = .latest
@@ -33,6 +34,7 @@ final class BotBooruViewModel {
 
     func login(username: String, password: String) async {
         isLoading = true
+        loginError = ""
         let result = await botBooruService.login(username: username, password: password)
         switch result {
             case .success:
@@ -40,9 +42,17 @@ final class BotBooruViewModel {
                 loggedIn = true
                 await getPosts()
             case .failure:
+                // TODO: Handle proper auth error reporting
                 loggedIn = false
+                loginError = "Invalid credentials"
         }
         isLoading = false
+    }
+
+    func logout() {
+        botBooruService.logout()
+        authSettings = BotBooruAuthSettings()
+        loggedIn = false
     }
 
     func updateAuthSettings(_ settings: BotBooruAuthSettings) {
@@ -78,6 +88,8 @@ final class BotBooruViewModel {
         }
         isLoading = false
     }
+
+    func getTags() async {}
     
     func loadMore() async {
         if offset < count {
