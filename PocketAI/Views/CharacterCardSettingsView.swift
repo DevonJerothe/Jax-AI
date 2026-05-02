@@ -215,6 +215,8 @@ struct CharacterCardSettingsView: View {
             }
 
             characterCard = storedCharacter
+            setPrivate = storedCharacter.isPrivate
+        
             configureInitialExpansion()
         }
         .onAppear {
