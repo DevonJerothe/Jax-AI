@@ -181,6 +181,8 @@ final class ChatViewModel {
             return
         }
 
+        disableWhileEditing = false
+
         do {
             try await chatStore.deleteMessage(message, from: chat.id)
         } catch {
