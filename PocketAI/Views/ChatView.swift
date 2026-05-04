@@ -16,6 +16,8 @@ struct ChatView: View {
 
     @State var viewModel: ChatViewModel
     @State var textPrompt: String = ""
+    @State private var isAutoScrollEnabled = true
+    @State private var autoScrollGeneration = 0
     @FocusState private var isInputFocused: Bool
 
     init(chatID: UUID) {
@@ -39,50 +41,78 @@ struct ChatView: View {
 
     private var chatContent: some View {
         ScrollViewReader { proxy in
-            ScrollView {
+            ZStack(alignment: .bottomTrailing) {
+                ScrollView {
+                    Color.clear
+                        .frame(height: 8)
+                        .id("topAnchor")
 
-                Color.clear
-                    .frame(height: 8)
-                    .id("topAnchor")
-
-                if let chat = viewModel.model {
-                    ForEach(chat.messages, id: \.self) { message in
-                        HStack {
-                            ChatBubbleView(
-                                message: message,
-                                viewModel: viewModel
-                            )
-                            .padding(.top, 4)
-                            .padding(.bottom, 4)
-                            .id(message.id)
+                    if let chat = viewModel.model {
+                        ForEach(chat.messages, id: \.self) { message in
+                            HStack {
+                                ChatBubbleView(
+                                    message: message,
+                                    viewModel: viewModel
+                                )
+                                .padding(.top, 4)
+                                .padding(.bottom, 4)
+                                .id(message.id)
+                            }
                         }
+                    }
+
+                    Color.clear
+                        .frame(height: 8)
+                        .id("bottomAnchor")
+                }
+                .padding(.horizontal)
+                .scrollIndicators(.hidden)
+                .scrollDismissesKeyboard(.interactively)
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 10)
+                        .onChanged { _ in
+                            disableAutoScroll()
+                        }
+                        .onEnded { _ in
+                            disableAutoScroll()
+                        }
+                )
+                .onChange(
+                    of: viewModel.updateScrollView,
+                    ({
+                        guard isAutoScrollEnabled else { return }
+                        scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.05)
+                    })
+                )
+                .onChange(of: viewModel.editingMessageID) { _, messageID in
+                    if let messageID {
+                        scrollToBottom(proxy: proxy, anchor: messageID, delay: 0.35)
+                        viewModel.editingMessageID = nil
+                    }
+                }
+                .onChange(of: isInputFocused) { _, isFocused in
+                    if isFocused && isAutoScrollEnabled {
+                        scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.2)
                     }
                 }
 
-                Color.clear
-                    .frame(height: 8)
-                    .id("bottomAnchor")
-            }
-            .padding(.horizontal)
-            .scrollIndicators(.hidden)
-            .scrollDismissesKeyboard(.interactively)
-            .onChange(
-                of: viewModel.updateScrollView,
-                ({
-                    scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.2)
-                })
-            )
-            .onChange(of: viewModel.editingMessageID) { _, messageID in
-                if let messageID {
-                    scrollToBottom(proxy: proxy, anchor: messageID, delay: 0.35)
-                    viewModel.editingMessageID = nil
+                if isAutoScrollEnabled == false {
+                    Button {
+                        isAutoScrollEnabled = true
+                        viewModel.updateScrollView.toggle()
+                    } label: {
+                        Image(systemName: "arrow.down")
+                            // .font(.system(size: 12))
+                            .foregroundColor(appTheme.secondaryText.color)                 
+                            .glassCapsule()
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 18)
+                    .padding(.bottom, 14)
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
                 }
             }
-            .onChange(of: isInputFocused) { _, isFocused in
-                if isFocused {
-                    scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.2)
-                }
-            }
+            .animation(.easeOut(duration: 0.16), value: isAutoScrollEnabled)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if viewModel.isConnected == false {
@@ -132,6 +162,7 @@ struct ChatView: View {
                     Button {
                         let promptText = self.textPrompt
                         self.textPrompt = ""
+                        isAutoScrollEnabled = true
                         Task {
                             await self.viewModel.sendMessage(
                                 prompt: promptText)
@@ -167,6 +198,7 @@ struct ChatView: View {
         }
         .background(appTheme.backgroundColor.color)
         .onAppear {
+            isAutoScrollEnabled = true
             self.viewModel.updateScrollView.toggle()
             self.viewModel.isViewActive = true
         }
@@ -177,11 +209,35 @@ struct ChatView: View {
         }
     }
 
-    private func scrollToBottom(proxy: ScrollViewProxy, anchor: any Hashable, delay: Double = 0.0) {
+    private func scrollToBottom(
+        proxy: ScrollViewProxy,
+        anchor: any Hashable,
+        delay: Double = 0.0,
+        requiresAutoScroll: Bool = true
+    ) {
+        let generation = autoScrollGeneration
+
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            withAnimation {
+            guard generation == autoScrollGeneration else {
+                return
+            }
+
+            guard requiresAutoScroll == false || isAutoScrollEnabled else {
+                return
+            }
+
+            withAnimation(.easeOut(duration: 0.2)) {
                 proxy.scrollTo(anchor, anchor: .bottom)
             }
         }
+    }
+
+    private func disableAutoScroll() {
+        guard isAutoScrollEnabled else {
+            return
+        }
+
+        isAutoScrollEnabled = false
+        autoScrollGeneration += 1
     }
 }
