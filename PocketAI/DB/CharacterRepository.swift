@@ -110,6 +110,29 @@ class CharacterRepository: Repository {
                 return
             }
 
+            // Check for any chats associated with and only with this character. 
+            // we want to delete these as well. The join record cascade will not delete them.
+            let chatAlias = TableAlias()
+            let chatsWithOtherAssociations = ChatCharacterJoinRecord
+                .filter(Column("characterCardId") != item.id.uuidString)
+                .filter(Column("chatId") == chatAlias[Column("id")])
+                .exists()
+
+            let chatsToDelete = try ChatRecord
+                .aliased(chatAlias)
+                .filter(
+                    ChatCharacterJoinRecord
+                        .filter(Column("characterCardId") == item.id.uuidString)
+                        .filter(Column("chatId") == chatAlias[Column("id")])
+                        .exists()
+                )
+                .filter(!chatsWithOtherAssociations)
+                .fetchAll(db)
+
+            try chatsToDelete.forEach { chat in
+                try chat.delete(db)
+            }
+
             try record.delete(db)
         }
     }
