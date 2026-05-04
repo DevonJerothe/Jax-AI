@@ -86,7 +86,7 @@ struct ChatView: View {
                 )
                 .onChange(of: viewModel.editingMessageID) { _, messageID in
                     if let messageID {
-                        scrollToBottom(proxy: proxy, anchor: messageID, delay: 0.35)
+                        scrollToBottom(proxy: proxy, anchor: messageID, delay: 0.35, requiresAutoScroll: false)
                         viewModel.editingMessageID = nil
                     }
                 }
