@@ -360,10 +360,12 @@ struct ChatBubbleView: View {
                 await viewModel.updateMessage(message, newText: editedText)
             }
             isEditing = false
+            viewModel.disableWhileEditing = false
             viewModel.updateScrollView.toggle()
         } else {
             editedText = message.text
             isEditing = true
+            viewModel.disableWhileEditing = true
             scrollToEditedMessage()
         }
     }

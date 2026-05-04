@@ -141,7 +141,7 @@ struct ChatView: View {
                             .font(.system(size: 26))
                             .foregroundColor(viewModel.isConnected ? appTheme.tintColor.color : appTheme.secondaryText.color)
                     }
-                    .disabled(viewModel.isConnected == false || viewModel.isStreaming == true)
+                    .disabled(viewModel.isConnected == false || viewModel.isStreaming == true || viewModel.disableWhileEditing == true)
                     .padding(.bottom, 8)
                     .padding(.trailing, 16)
                 }

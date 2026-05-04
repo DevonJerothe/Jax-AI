@@ -50,6 +50,8 @@ final class ChatViewModel {
     var newInstance: Bool = true
     var isViewActive: Bool = false
 
+    var disableWhileEditing: Bool = false
+
     private var lastHapticTriggerAt: Date?
 
     init(
@@ -178,6 +180,8 @@ final class ChatViewModel {
         guard let chat = model else {
             return
         }
+
+        disableWhileEditing = false
 
         do {
             try await chatStore.deleteMessage(message, from: chat.id)
