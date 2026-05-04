@@ -50,6 +50,8 @@ final class ChatViewModel {
     var newInstance: Bool = true
     var isViewActive: Bool = false
 
+    var disableWhileEditing: Bool = false
+
     private var lastHapticTriggerAt: Date?
 
     init(
