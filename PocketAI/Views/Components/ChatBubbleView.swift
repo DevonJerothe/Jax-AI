@@ -313,8 +313,7 @@ struct ChatBubbleView: View {
     }
 
     private func navigateGeneration(forward: Bool) {
-        guard isEditing == false,
-            message.hasMoreGenerations(before: forward == false) else {
+        guard isEditing == false, message.status == .done, message.hasMoreGenerations(before: forward == false) else {
             return
         }
 
