@@ -120,6 +120,15 @@ class DBManager {
             }
         }
 
+        migrator.registerMigration("v5_message_text_generation_history") { db in
+            let messageColumns = try db.columns(in: MessageRecord.databaseTableName).map(\.name)
+            if messageColumns.contains("textGenerationHistoryJSON") == false {
+                try db.alter(table: MessageRecord.databaseTableName) { t in
+                    t.add(column: "textGenerationHistoryJSON", .text)
+                }
+            }
+        }
+
         try migrator.migrate(dbQueue)
     }
 

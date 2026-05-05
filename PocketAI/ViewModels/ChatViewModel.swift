@@ -114,6 +114,7 @@ final class ChatViewModel {
         }
 
         var updatedMessage = message
+        updatedMessage.addNewGeneration()
         updatedMessage.error = .none
         updatedMessage.status = .loading
 
@@ -127,6 +128,25 @@ final class ChatViewModel {
             await generateResponse(for: updatedMessage.id, isContinued: continueResponse)
         } catch {
             print("Failed to regenerate message: \(error)")
+        }
+    }
+
+    func navigateGeneration(_ message: MessageModel, forward: Bool) async {
+        guard let chat = model else {
+            return
+        }
+
+        var updatedMessage = message
+        if forward {
+            updatedMessage.nextGeneration()
+        } else {
+            updatedMessage.previousGeneration()
+        }
+
+        do {
+            try await chatStore.updateMessage(updatedMessage, in: chat.id)
+        } catch {
+            print("Failed to navigate message generation: \(error)")
         }
     }
 
@@ -167,11 +187,10 @@ final class ChatViewModel {
         }
 
         var updatedMessage = message
-        updatedMessage.text = newText
 
         // for KoboldAPI we need to update token count after any edit - openRouter will return 0 
-        let tokenCount = await languageModelService.getTokenCount(string: updatedMessage.text)
-        updatedMessage.tokenCount = tokenCount
+        let tokenCount = await languageModelService.getTokenCount(string: newText)
+        updatedMessage.updateCurrentGeneration(text: newText, tokenCount: tokenCount)
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id)
