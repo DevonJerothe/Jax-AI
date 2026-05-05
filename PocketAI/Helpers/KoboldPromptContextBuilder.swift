@@ -21,6 +21,8 @@ struct PromptContext {
 }
 
 struct KoboldPromptContextBuilder {
+
+    // used for memory context and fallback message token count in case message content contains 0
     let tokenCount: (String) async -> Int
     
     func build(
@@ -98,11 +100,14 @@ struct KoboldPromptContextBuilder {
         let personaName = userPersona?.name ?? "User"
 
         for message in chat.messages {
+            var message = message
             guard message.exclude == false else {
                 continue
             }
 
-            // TODO: Pull the username from custom character persona
+            // NOTE: Token count may not be accurate depending on personal and character names. This may be negligible, but we may want
+            // to seperately count persona tokens later. 
+            // In most cases the char and user names will be included in the LLM response. This is likely to only affect memory and initial messages. 
             let text: String
             switch message.actor {
             case .user:
@@ -131,12 +136,25 @@ struct KoboldPromptContextBuilder {
                 let prefix = firstBotID == message.id ? settings.botStopSequence : "" 
                 text = "\(prefix)\(messageText)\(suffix)"
             }
+
+            // try and pull token count if message counter is 0
+            if message.tokenCount == 0 {
+                let tokens = await tokenCount(text)
+                // save new value to record 
+                message.tokenCount = tokens
+
+                do {
+                    try await ServiceContainer.shared.getChatStore().updateMessage(message, in: chat.id)
+                } catch {
+                    print("Failed to update message token count: \(error)")
+                }
+            }
             
             blocks.append(
                 MessageBlock(
                     id: message.id,
                     text: text,
-                    tokens: await tokenCount(text)
+                    tokens: message.tokenCount
                 )
             )
         }
