@@ -105,8 +105,9 @@ struct KoboldPromptContextBuilder {
                 continue
             }
 
-            // NOTE: Token count may not be accurate depending on personal and character names. This may be negligible, but we may want
-            // to seperately count persona tokens later. 
+            // NOTE: Token count may not be accurate depending on stop sequences, and personas. This may be negligible, but we may want
+            // to seperately count these. We need to really re-work our entire context management logic. Especially once we implement notes / lorebooks
+            // 
             // In most cases the char and user names will be included in the LLM response. This is likely to only affect memory and initial messages. 
             let text: String
             switch message.actor {
@@ -115,7 +116,7 @@ struct KoboldPromptContextBuilder {
                     .replacingOccurrences(of: "{{char}}", with: chat.chatTitle)
                     .replacingOccurrences(of: "{{user}}", with: personaName)
                 
-                var userText = "\(messageText)\(settings.botStopSequence)"
+                var userText = "\(messageText)\(settings.botStopSequence)" // + botSequenceTokens
                 if settings.botStopSequence.isEmpty == false {
                     userText += " "
                 }
