@@ -28,6 +28,10 @@ final class ServiceContainer {
     var maxContextLength: Int? {
         connectionStatusManager.maxContextLength
     }
+
+    var selectedConnectionType: APITypeSelection {
+        connectionStatusManager.connectionSettings.connectionType
+    }
     
     var selectedModelName: String? {
         self.languageModelService.selectedModel

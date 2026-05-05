@@ -36,6 +36,10 @@ struct MessageModel: Identifiable, Hashable {
     var error: MessageError = .none
     var tokenCount: Int = 0
     
+    // model name for the last token count call. 
+    // changing models may change tokenizer, so we should invalidate old token counts.
+    var tokenCountModel: String? 
+    
     var status: MessageStatus = .done
 
     func getRolePlayText(cardName: String, personaName: String) -> String {
@@ -53,6 +57,7 @@ extension MessageModel {
         self.error = MessageError(rawValue: record.error) ?? .none
         self.createdAt = record.createdAt
         self.tokenCount = record.tokenCount
+        self.tokenCountModel = record.tokenCountModel
     }
 
     var record: MessageRecord {
@@ -64,7 +69,8 @@ extension MessageModel {
             exclude: exclude,
             error: error.rawValue,
             createdAt: createdAt,
-            tokenCount: tokenCount
+            tokenCount: tokenCount,
+            tokenCountModel: tokenCountModel
         )
     }
 }
@@ -82,6 +88,7 @@ struct MessageRecord: Codable, FetchableRecord, MutablePersistableRecord, Sendab
     var error: Int 
     var createdAt: Date 
     var tokenCount: Int 
+    var tokenCountModel: String?
 
     public static func migrateTable(_ db: Database) throws {
         try db.create(table: "messages", ifNotExists: true) { t in
@@ -93,6 +100,7 @@ struct MessageRecord: Codable, FetchableRecord, MutablePersistableRecord, Sendab
             t.column("createdAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
             t.column("error", .integer).notNull().defaults(to: 0)
             t.column("tokenCount", .integer).notNull().defaults(to: 0)
+            t.column("tokenCountModel", .text)
         }
     }
 }

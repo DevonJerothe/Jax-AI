@@ -169,6 +169,10 @@ final class ChatViewModel {
         var updatedMessage = message
         updatedMessage.text = newText
 
+        // for KoboldAPI we need to update token count after any edit - openRouter will return 0 
+        let tokenCount = await languageModelService.getTokenCount(string: updatedMessage.text)
+        updatedMessage.tokenCount = tokenCount
+
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id)
         } catch {
@@ -223,7 +227,7 @@ final class ChatViewModel {
                 for: messageID,
                 chat: chat,
                 isContinued: isContinued,
-                excludeThinking: excludeThinking,
+                excludeThinking: true, // OpenRouter is sometimes passing <think> tags. We should just open this up as a setting
                 trimmedPrompt: trimmedPrompt
             )
             return
@@ -274,7 +278,7 @@ final class ChatViewModel {
             var rawAccumulator = StreamAccumulator()
             let visibleAccumulator = StreamAccumulator(
                 originalText: originalText,
-                continuationSeparator: ""
+                continuationSeparator: " "
             )
             var reasoningParser = ReasoningStreamParser(
                 startsInsideReasoning: connectionManager.connectionSettings.forceThinking,
@@ -338,6 +342,15 @@ final class ChatViewModel {
         updatedMessage.status = isFinal
             ? .done
             : (shouldShowThinking ? .thinking : .streaming)
+
+        // for KoboldAPI we need to fetch token count after full message is received
+        let currentModel = ServiceContainer.shared.selectedModelName
+        let currentConnectionType = ServiceContainer.shared.selectedConnectionType
+        if isFinal && currentConnectionType == .KoboldAPI {
+            let tokenCount = await languageModelService.getTokenCount(string: updatedMessage.text)
+            updatedMessage.tokenCount = tokenCount
+            updatedMessage.tokenCountModel = currentModel
+        }
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id, save: isFinal)

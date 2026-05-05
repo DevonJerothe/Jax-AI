@@ -111,6 +111,15 @@ class DBManager {
             try UserPersonaRecord.migrateTable(db)
         }
 
+        migrator.registerMigration("v4_message_token_count") { db in
+            let messageColumns = try db.columns(in: MessageRecord.databaseTableName).map(\.name)
+            if messageColumns.contains("tokenCountModel") == false {
+                try db.alter(table: MessageRecord.databaseTableName) { t in 
+                    t.add(column: "tokenCountModel", .text)
+                }
+            }
+        }
+
         try migrator.migrate(dbQueue)
     }
 

@@ -21,6 +21,8 @@ struct PromptContext {
 }
 
 struct KoboldPromptContextBuilder {
+
+    // used for memory context and fallback message token count in case message content contains 0
     let tokenCount: (String) async -> Int
     
     func build(
@@ -98,11 +100,15 @@ struct KoboldPromptContextBuilder {
         let personaName = userPersona?.name ?? "User"
 
         for message in chat.messages {
+            var message = message
             guard message.exclude == false else {
                 continue
             }
 
-            // TODO: Pull the username from custom character persona
+            // NOTE: Token count may not be accurate depending on stop sequences, and personas. This may be negligible, but we may want
+            // to seperately count these. We need to really re-work our entire context management logic. Especially once we implement notes / lorebooks
+            // 
+            // In most cases the char and user names will be included in the LLM response. This is likely to only affect memory and initial messages. 
             let text: String
             switch message.actor {
             case .user:
@@ -110,7 +116,7 @@ struct KoboldPromptContextBuilder {
                     .replacingOccurrences(of: "{{char}}", with: chat.chatTitle)
                     .replacingOccurrences(of: "{{user}}", with: personaName)
                 
-                var userText = "\(messageText)\(settings.botStopSequence)"
+                var userText = "\(messageText)\(settings.botStopSequence)" // + botSequenceTokens
                 if settings.botStopSequence.isEmpty == false {
                     userText += " "
                 }
@@ -131,12 +137,31 @@ struct KoboldPromptContextBuilder {
                 let prefix = firstBotID == message.id ? settings.botStopSequence : "" 
                 text = "\(prefix)\(messageText)\(suffix)"
             }
+
+            // fetch token count if needed. 
+            let currentModel = await ServiceContainer.shared.selectedModelName
+            let needsTokenRefresh = message.tokenCountModel == nil
+                || (currentModel != nil && message.tokenCountModel != currentModel)
+                || message.tokenCount == 0
+
+            if needsTokenRefresh {
+                let tokens = await tokenCount(text)
+                // save new value to record 
+                message.tokenCount = tokens
+                message.tokenCountModel = currentModel
+
+                do {
+                    try await ServiceContainer.shared.getChatStore().updateMessage(message, in: chat.id)
+                } catch {
+                    print("Failed to update message token count: \(error)")
+                }
+            }
             
             blocks.append(
                 MessageBlock(
                     id: message.id,
                     text: text,
-                    tokens: await tokenCount(text)
+                    tokens: message.tokenCount
                 )
             )
         }
