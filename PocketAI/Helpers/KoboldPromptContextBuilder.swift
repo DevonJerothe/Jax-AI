@@ -137,11 +137,17 @@ struct KoboldPromptContextBuilder {
                 text = "\(prefix)\(messageText)\(suffix)"
             }
 
-            // try and pull token count if message counter is 0
-            if message.tokenCount == 0 {
+            // fetch token count if needed. 
+            let currentModel = await ServiceContainer.shared.selectedModelName
+            let needsTokenRefresh = message.tokenCountModel == nil
+                || (currentModel != nil && message.tokenCountModel != currentModel)
+                || message.tokenCount == 0
+
+            if needsTokenRefresh {
                 let tokens = await tokenCount(text)
                 // save new value to record 
                 message.tokenCount = tokens
+                message.tokenCountModel = currentModel
 
                 do {
                     try await ServiceContainer.shared.getChatStore().updateMessage(message, in: chat.id)

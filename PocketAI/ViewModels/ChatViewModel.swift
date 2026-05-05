@@ -344,9 +344,12 @@ final class ChatViewModel {
             : (shouldShowThinking ? .thinking : .streaming)
 
         // for KoboldAPI we need to fetch token count after full message is received
-        if isFinal {
+        let currentModel = ServiceContainer.shared.selectedModelName
+        let currentConnectionType = ServiceContainer.shared.selectedConnectionType
+        if isFinal && currentConnectionType == .KoboldAPI {
             let tokenCount = await languageModelService.getTokenCount(string: updatedMessage.text)
             updatedMessage.tokenCount = tokenCount
+            updatedMessage.tokenCountModel = currentModel
         }
 
         do {
