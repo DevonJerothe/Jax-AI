@@ -218,7 +218,7 @@ struct ChatBubbleView: View {
     private var messageToolbar: some View {
         let actions = toolbarActions
 
-        if actions.isEmpty == false {
+        if actions.isEmpty == false || (message.textGenerationHistory.isEmpty == false && viewModel.model?.messages.count == 1) {
             toolbarContent(actions)
         }
     }
