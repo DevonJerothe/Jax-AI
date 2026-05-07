@@ -6,6 +6,7 @@
 //
 
 import MarkdownUI
+import NetworkImage
 import SwiftUI
 
 struct BubbleHeightKey: PreferenceKey {
@@ -62,7 +63,7 @@ struct ChatBubbleView: View {
     }
 
     private var editorMaxHeight: CGFloat {
-        min(UIScreen.main.bounds.height * 0.45, 360)
+        min(UIApplication.currentScreenHeight * 0.45, 360)
     }
 
     private var editorMinHeight: CGFloat {
@@ -85,7 +86,7 @@ struct ChatBubbleView: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.98)))
                     } else {
                         if isEditing {
-                            editingTextView(maxWidth: UIScreen.main.bounds.width)
+                            editingTextView(maxWidth: UIApplication.currentScreenWidth)
                         } else {
                             Markdown(
                                 message.getRolePlayText(
@@ -102,6 +103,11 @@ struct ChatBubbleView: View {
                             .markdownBlockStyle(\.codeBlock) { configuration in
                                 VStack(spacing: 0) {
                                     HStack {
+                                        Text(configuration.language ?? "")
+                                            .foregroundColor(appTheme.primaryText.color)
+                                            .font(.caption)
+                                            .padding(4)
+                                            .padding(.leading, 8)
                                         Spacer()
                                         Button {
                                             UIPasteboard.general.string =
@@ -129,10 +135,12 @@ struct ChatBubbleView: View {
                                 .cornerRadius(8)
                             }
                             .markdownTheme(.rolePlay(appTheme))
+                            .markdownImageProvider(AsyncImageProvider())
+                            .markdownInlineImageProvider(AsyncInlineImageProvider())
                             .padding()
                             .cornerRadius(15)
                             .frame(
-                                maxWidth: UIScreen.main.bounds.width * 1,
+                                maxWidth: UIApplication.currentScreenWidth * 1,
                                 alignment: .leading
                             )
                             .background(
@@ -163,7 +171,7 @@ struct ChatBubbleView: View {
                 Spacer()
                 VStack(alignment: .trailing) {
                     if isEditing {
-                        editingTextView(maxWidth: UIScreen.main.bounds.width * 0.80)
+                        editingTextView(maxWidth: UIApplication.currentScreenWidth * 0.80)
                     } else {
                         VStack(alignment: .trailing) {
                             Markdown(
@@ -184,7 +192,7 @@ struct ChatBubbleView: View {
                                     topTrailingRadius: 15)
                             )
                             .frame(
-                                maxWidth: UIScreen.main.bounds.width * 0.75,
+                                maxWidth: UIApplication.currentScreenWidth * 0.75,
                                 alignment: .trailing
                             )
                             .background(
@@ -375,9 +383,9 @@ struct ChatBubbleView: View {
     private var toolbarMaxWidth: CGFloat {
         switch message.actor {
         case .bot:
-            return UIScreen.main.bounds.width
+            return UIApplication.currentScreenWidth
         case .user:
-            return UIScreen.main.bounds.width * 0.75
+            return UIApplication.currentScreenWidth * 0.75
         }
     }
 

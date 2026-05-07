@@ -67,3 +67,17 @@ extension UIApplication {
         sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
+
+extension UIApplication {
+    static var currentScreenWidth: CGFloat {
+        let scenes = UIApplication.shared.connectedScenes
+        let windowScene = scenes.first { $0.activationState == .foregroundActive } as? UIWindowScene
+        return windowScene?.screen.bounds.width ?? 0
+    }
+
+    static var currentScreenHeight: CGFloat {
+        let scenes = UIApplication.shared.connectedScenes
+        let windowScene = scenes.first { $0.activationState == .foregroundActive } as? UIWindowScene
+        return windowScene?.screen.bounds.height ?? 0
+    }
+}
