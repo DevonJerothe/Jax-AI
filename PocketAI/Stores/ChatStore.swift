@@ -92,11 +92,17 @@ final class ChatStore {
     func addChat(_ chat: ChatModel) async throws {
         var chat = chat
         chat.isPrivate = chat.characterCards.contains(where: \.isPrivate)
+
+        // create alt greetings text history
+        let altGreetings = chat.characterCards.first?.altGreetings?.compactMap { greeting in 
+            TextGenerationHistory(text: greeting, tokenCount: 0)
+        }
         
         let initialMessage = MessageModel(
             chatId: chat.id.uuidString,
             actor: .bot,
-            text: chat.characterCards.first?.firstMessage ?? ""
+            text: chat.characterCards.first?.firstMessage ?? "",
+            textGenerationHistory: altGreetings ?? []
         )
         
         try chatRepository.save(chat)
