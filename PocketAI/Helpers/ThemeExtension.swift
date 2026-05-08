@@ -35,10 +35,6 @@ extension Theme {
         }
 
     static let userRolePlay = Theme()
-//        .paragraph { config in
-//            config.label
-//                .foregroundStyle(.primary)
-//        }
         .code {
             FontStyle(.italic)
             FontWeight(.bold)
