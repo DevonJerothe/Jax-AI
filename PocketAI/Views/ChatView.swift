@@ -10,12 +10,6 @@ import SwiftLLMSDK
 import SwiftUI
 import UIKit
 
-private struct ScrollBottomPositionKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
 
 struct ChatView: View {
     @Environment(NavigationManager.self) var navManager
@@ -28,6 +22,7 @@ struct ChatView: View {
     @FocusState private var isInputFocused: Bool
 
     @State private var scrollViewHelper: UIScrollView?
+    @State private var viewportHeight: CGFloat = 0
 
     init(chatID: UUID) {
         _viewModel = State(initialValue: ChatViewModel(chatID: chatID))
@@ -50,7 +45,6 @@ struct ChatView: View {
 
     private var chatContent: some View {
         ScrollViewReader { proxy in
-            GeometryReader { scrollGeometry in
                 ZStack(alignment: .bottomTrailing) {
                     ScrollView {
                         Color.clear
@@ -58,12 +52,38 @@ struct ChatView: View {
                             .id("topAnchor")
 
                         if let chat = viewModel.model {
+
+                            let cardName = chat.characterCards.first?.name ?? ""
+                            let personaName = ServiceContainer.shared.getPersonaName
+                            let chatIsIdle = chat.status == .idle
+                            let lastMessageID = chat.messages.last?.id
+                            let messageCount = chat.messages.count
+                            let isOnlyMessage = messageCount == 1
+
                             LazyVStack {
-                                ForEach(chat.messages, id: \.self) { message in
+                                ForEach(chat.messages, id: \.id) { message in
+                                    let showToolbar = chatIsIdle && messageCount > 1 && message.id == lastMessageID && message.status == .done
+                                
                                     HStack {
                                         ChatBubbleView(
                                             message: message,
-                                            viewModel: viewModel
+                                            cardName: cardName,
+                                            personaName: personaName,
+                                            showToolbar: showToolbar,
+                                            isOnlyMessage: isOnlyMessage,
+                                            onDelete: { Task { await viewModel.deleteMessage(message) } },
+                                            onRegenerate: { Task { await viewModel.regenerateMessage(message) } },
+                                            onContinue: { Task { await viewModel.regenerateMessage(message, continueResponse: true) } },
+                                            onSaveEdit: { newText in Task { await viewModel.updateMessage(message, newText: newText) } },
+                                            onNavigateGeneration: { forward in
+                                                Task {
+                                                    await viewModel.navigateGeneration(message, forward: forward)
+                                                    viewModel.updateScrollView.toggle()
+                                                }
+                                            },
+                                            onScrollToMessage: { viewModel.editingMessageID = message.id },
+                                            onSetEditing: { enabled in viewModel.disableWhileEditing = enabled },
+                                            onScrollViewUpdate: { viewModel.updateScrollView.toggle() }
                                         )
                                     }
                                     .padding(.top, 4)
@@ -76,14 +96,11 @@ struct ChatView: View {
                         Color.clear
                             .frame(height: 8)
                             .id("bottomAnchor")
-                            .background(
-                                GeometryReader { markerGeometry in
-                                    Color.clear.preference(
-                                        key: ScrollBottomPositionKey.self,
-                                        value: markerGeometry.frame(in: .named("chatScroll")).maxY
-                                    )
-                                }
-                            )
+                            .onGeometryChange(for: CGFloat.self) { geo in 
+                                geo.frame(in: .named("chatScroll")).maxY
+                            } action: { newPosition in
+                                updateScrollBottomState(bottomPosition: newPosition)
+                            }
                             .background{
                                 ScrollViewHelper { scrollView in 
                                     scrollViewHelper = scrollView 
@@ -103,12 +120,6 @@ struct ChatView: View {
                                 disableAutoScroll()
                             }
                     )
-                    .onPreferenceChange(ScrollBottomPositionKey.self) { bottomPosition in
-                        updateScrollBottomState(
-                            bottomPosition: bottomPosition,
-                            viewportHeight: scrollGeometry.size.height
-                        )
-                    }
                     .onChange(
                         of: viewModel.updateScrollView,
                         ({
@@ -134,7 +145,7 @@ struct ChatView: View {
                             
                             // Stop scroll view if in mostion before scrolling to bottom
                             scrollViewHelper?.setContentOffset(scrollViewHelper?.contentOffset ?? .zero, animated: false)
-                            scrolltoBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.05)
+                            scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.05)
                         } label: {
                             Image(systemName: "arrow.down")
                                 // .font(.system(size: 12))
@@ -147,7 +158,11 @@ struct ChatView: View {
                         .transition(.scale(scale: 0.9).combined(with: .opacity))
                     }
                 }
-            }
+                .onGeometryChange(for: CGFloat.self) { geo in
+                    geo.size.height
+                } action: { newHeight in
+                    viewportHeight = newHeight
+                }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if viewModel.isConnected == false {
@@ -276,11 +291,13 @@ struct ChatView: View {
         autoScrollGeneration += 1
     }
 
-    private func updateScrollBottomState(bottomPosition: CGFloat, viewportHeight: CGFloat) {
-        let isAtBottom = bottomPosition <= viewportHeight + 24
-        isScrollViewAtBottom = isAtBottom
+    private func updateScrollBottomState(bottomPosition: CGFloat) {
+        let newIsAtBottom = bottomPosition <= viewportHeight + 24
+        guard newIsAtBottom != isScrollViewAtBottom else { return }
 
-        if isAtBottom && viewModel.isAutoScrollEnabled == false {
+        isScrollViewAtBottom = newIsAtBottom
+
+        if newIsAtBottom && viewModel.isAutoScrollEnabled == false {
             viewModel.isAutoScrollEnabled = true
         }
     }

@@ -125,6 +125,7 @@ final class ChatViewModel {
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id, save: false)
+            isAutoScrollEnabled = true 
             updateScrollView.toggle()
             await generateResponse(for: updatedMessage.id, isContinued: continueResponse)
         } catch {
@@ -146,6 +147,8 @@ final class ChatViewModel {
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id)
+            isAutoScrollEnabled = true 
+            updateScrollView.toggle()
         } catch {
             print("Failed to navigate message generation: \(error)")
         }
@@ -209,6 +212,8 @@ final class ChatViewModel {
 
         do {
             try await chatStore.deleteMessage(message, from: chat.id)
+            isAutoScrollEnabled = true 
+            updateScrollView.toggle()
         } catch {
             print("Failed to delete message: \(error)")
         }
