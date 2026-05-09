@@ -49,6 +49,7 @@ final class ChatViewModel {
     var editingMessageID: UUID?
     var newInstance: Bool = true
     var isViewActive: Bool = false
+    var isAutoScrollEnabled: Bool = true
 
     var disableWhileEditing: Bool = false
 
@@ -381,7 +382,7 @@ final class ChatViewModel {
             print("Failed to update streamed response: \(error)")
         }
 
-        if responseText.isEmpty == false || isFinal {
+        if (responseText.isEmpty == false && isAutoScrollEnabled) || isFinal {
             updateScrollView.toggle()
         }
 

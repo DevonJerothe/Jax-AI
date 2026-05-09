@@ -23,10 +23,11 @@ struct ChatView: View {
 
     @State var viewModel: ChatViewModel
     @State var textPrompt: String = ""
-    @State private var isAutoScrollEnabled = true
     @State private var isScrollViewAtBottom = true
     @State private var autoScrollGeneration = 0
     @FocusState private var isInputFocused: Bool
+
+    @State private var scrollViewHelper: UIScrollView?
 
     init(chatID: UUID) {
         _viewModel = State(initialValue: ChatViewModel(chatID: chatID))
@@ -57,12 +58,14 @@ struct ChatView: View {
                             .id("topAnchor")
 
                         if let chat = viewModel.model {
-                            ForEach(chat.messages, id: \.self) { message in
-                                HStack {
-                                    ChatBubbleView(
-                                        message: message,
-                                        viewModel: viewModel
-                                    )
+                            LazyVStack {
+                                ForEach(chat.messages, id: \.self) { message in
+                                    HStack {
+                                        ChatBubbleView(
+                                            message: message,
+                                            viewModel: viewModel
+                                        )
+                                    }
                                     .padding(.top, 4)
                                     .padding(.bottom, 4)
                                     .id(message.id)
@@ -81,6 +84,11 @@ struct ChatView: View {
                                     )
                                 }
                             )
+                            .background{
+                                ScrollViewHelper { scrollView in 
+                                    scrollViewHelper = scrollView 
+                                }
+                            }
                     }
                     .coordinateSpace(name: "chatScroll")
                     .padding(.horizontal)
@@ -104,7 +112,7 @@ struct ChatView: View {
                     .onChange(
                         of: viewModel.updateScrollView,
                         ({
-                            guard isAutoScrollEnabled else { return }
+                            guard viewModel.isAutoScrollEnabled else { return }
                             scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.05)
                         })
                     )
@@ -115,15 +123,18 @@ struct ChatView: View {
                         }
                     }
                     .onChange(of: isInputFocused) { _, isFocused in
-                        if isFocused && isAutoScrollEnabled {
+                        if isFocused && viewModel.isAutoScrollEnabled {
                             scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.2)
                         }
                     }
 
-                    if isAutoScrollEnabled == false && isScrollViewAtBottom == false {
+                    if viewModel.isAutoScrollEnabled == false && isScrollViewAtBottom == false {
                         Button {
-                            isAutoScrollEnabled = true
-                            viewModel.updateScrollView.toggle()
+                            viewModel.isAutoScrollEnabled = true
+                            
+                            // Stop scroll view if in mostion before scrolling to bottom
+                            scrollViewHelper?.setContentOffset(scrollViewHelper?.contentOffset ?? .zero, animated: false)
+                            scrolltoBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.05)
                         } label: {
                             Image(systemName: "arrow.down")
                                 // .font(.system(size: 12))
@@ -137,8 +148,6 @@ struct ChatView: View {
                     }
                 }
             }
-            .animation(.easeOut(duration: 0.16), value: isAutoScrollEnabled)
-            .animation(.easeOut(duration: 0.16), value: isScrollViewAtBottom)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if viewModel.isConnected == false {
@@ -188,7 +197,7 @@ struct ChatView: View {
                     Button {
                         let promptText = self.textPrompt
                         self.textPrompt = ""
-                        isAutoScrollEnabled = true
+                        viewModel.isAutoScrollEnabled = true
                         Task {
                             await self.viewModel.sendMessage(
                                 prompt: promptText)
@@ -224,7 +233,7 @@ struct ChatView: View {
         }
         .background(appTheme.backgroundColor.color)
         .onAppear {
-            isAutoScrollEnabled = true
+            viewModel.isAutoScrollEnabled = true
             self.viewModel.updateScrollView.toggle()
             self.viewModel.isViewActive = true
         }
@@ -248,7 +257,7 @@ struct ChatView: View {
                 return
             }
 
-            guard requiresAutoScroll == false || isAutoScrollEnabled else {
+            guard requiresAutoScroll == false || viewModel.isAutoScrollEnabled else {
                 return
             }
 
@@ -259,11 +268,11 @@ struct ChatView: View {
     }
 
     private func disableAutoScroll() {
-        guard isAutoScrollEnabled else {
+        guard viewModel.isAutoScrollEnabled else {
             return
         }
 
-        isAutoScrollEnabled = false
+        viewModel.isAutoScrollEnabled = false
         autoScrollGeneration += 1
     }
 
@@ -271,8 +280,8 @@ struct ChatView: View {
         let isAtBottom = bottomPosition <= viewportHeight + 24
         isScrollViewAtBottom = isAtBottom
 
-        if isAtBottom && isAutoScrollEnabled == false {
-            isAutoScrollEnabled = true
+        if isAtBottom && viewModel.isAutoScrollEnabled == false {
+            viewModel.isAutoScrollEnabled = true
         }
     }
 }

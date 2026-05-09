@@ -144,12 +144,16 @@ struct ChatBubbleView: View {
                                 alignment: .leading
                             )
                             .background(
-                                GeometryReader { geo in
-                                    Color.clear
-                                        .preference(
-                                            key: BubbleHeightKey.self,
-                                            value: geo.size.height
-                                        )
+                                Group {
+                                    if message.status == .done {
+                                        GeometryReader { geo in
+                                            Color.clear
+                                                .preference(
+                                                    key: BubbleHeightKey.self,
+                                                    value: geo.size.height
+                                                )
+                                        }
+                                    }
                                 }
                             )
                         }
@@ -196,12 +200,16 @@ struct ChatBubbleView: View {
                                 alignment: .trailing
                             )
                             .background(
-                                GeometryReader { geo in
-                                    Color.clear
-                                        .preference(
-                                            key: BubbleHeightKey.self,
-                                            value: geo.size.height
-                                        )
+                                Group {
+                                    if message.status == .done {
+                                        GeometryReader { geo in
+                                            Color.clear
+                                                .preference(
+                                                    key: BubbleHeightKey.self,
+                                                    value: geo.size.height
+                                                )
+                                        }
+                                    }
                                 }
                             )
                         }
