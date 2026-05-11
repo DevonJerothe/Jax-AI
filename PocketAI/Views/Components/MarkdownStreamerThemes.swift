@@ -18,7 +18,7 @@ struct MarkdownStreamerSettings {
             inlineCodeBackground: .secondary.opacity(0.14),
             quoteHighlightFont: .body.italic(),
             quoteHighlightForeground: actor == .user ? appTheme.userQuoteText.color : appTheme.botQuoteText.color,
-            codeBlockBackground: .black.opacity(0.88),
+            codeBlockBackground: appTheme.secondaryBackgroundColor.color,
             regexHighlights: [
                 .standardQuotedSpeech
             ]

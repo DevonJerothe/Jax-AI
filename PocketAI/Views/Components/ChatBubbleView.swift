@@ -5,7 +5,6 @@
 //  Created by devon jerothe on 3/13/25.
 //
 
-import MarkdownUI
 import NetworkImage
 import SwiftUI
 import MarkdownStreamer
@@ -137,69 +136,7 @@ struct ChatBubbleView: View {
                                             bubbleHeight = newHeight
                                         }
                                     }
-                            }
-                            // Markdown(
-                            //     message.getRolePlayText(
-                            //         cardName: cardName,
-                            //         personaName: personaName
-                            //     )
-                            // )
-                            // .markdownCodeSyntaxHighlighter(
-                            //     .splash(
-                            //         theme: colorScheme == .dark
-                            //             ? .wwdc17(withFont: .init(size: 16))
-                            //             : .sunset(withFont: .init(size: 16)))
-                            // )
-                            // .markdownBlockStyle(\.codeBlock) { configuration in
-                            //     VStack(spacing: 0) {
-                            //         HStack {
-                            //             Text(configuration.language ?? "")
-                            //                 .foregroundColor(appTheme.primaryText.color)
-                            //                 .font(.caption)
-                            //                 .padding(4)
-                            //                 .padding(.leading, 8)
-                            //             Spacer()
-                            //             Button {
-                            //                 UIPasteboard.general.string =
-                            //                     configuration.content
-                            //             } label: {
-                            //                 Image(systemName: "doc.on.doc")
-                            //             }
-                            //             .padding(4)
-                            //         }
-                            //         .background(
-                            //             appTheme.secondaryAction.color)
-                            //         ScrollView(.horizontal) {
-                            //             configuration.label
-                            //                 .padding(10)
-                            //                 .padding(.trailing, 20)
-                            //         }
-                            //         .markdownTextStyle(textStyle: {
-                            //             FontFamilyVariant(.monospaced)
-                            //             FontSize(.em(0.65))
-                            //         })
-                            //         .background(
-                            //             appTheme.secondaryBackgroundColor.color
-                            //         )
-                            //     }
-                            //     .cornerRadius(8)
-                            // }
-                            // .markdownTheme(.rolePlay(appTheme))
-                            // .markdownImageProvider(AsyncImageProvider())
-                            // .markdownInlineImageProvider(AsyncInlineImageProvider())
-                            // .padding()
-                            // .cornerRadius(15)
-                            // .frame(
-                            //     maxWidth: UIApplication.currentScreenWidth * 1,
-                            //     alignment: .leading
-                            // )
-                            // .onGeometryChange(for: CGFloat.self) { geo in
-                            //     geo.size.height
-                            // } action: { newHeight in
-                            //     if newHeight > 0 && isEditing == false {
-                            //         bubbleHeight = newHeight
-                            //     }
-                            // }
+                            }                        
                         }
                     }
                     messageToolbar
@@ -216,12 +153,6 @@ struct ChatBubbleView: View {
                         editingTextView(maxWidth: UIApplication.currentScreenWidth * 0.80)
                     } else {
                         VStack(alignment: .trailing) {
-                            // Markdown(
-                            //     message.getRolePlayText(
-                            //         cardName: cardName,
-                            //         personaName: personaName
-                            //     )
-                            // )
                             StreamingMarkdownView(
                                 markdown: message.getRolePlayText(
                                     cardName: cardName,
@@ -230,7 +161,6 @@ struct ChatBubbleView: View {
                                 theme: MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .user)
                             )
                             .foregroundStyle(appTheme.primaryText.color)
-                            .markdownTheme(.userRolePlay(appTheme))
                             .padding()
                             .background(appTheme.secondaryAction.color)
                             .clipShape(
