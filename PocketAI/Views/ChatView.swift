@@ -76,15 +76,19 @@ struct ChatView: View {
                                             onDelete: { Task { await viewModel.deleteMessage(message) } },
                                             onRegenerate: { Task { await viewModel.regenerateMessage(message) } },
                                             onContinue: { Task { await viewModel.regenerateMessage(message, continueResponse: true) } },
-                                            onSaveEdit: { newText in Task { await viewModel.updateMessage(message, newText: newText) } },
+                                            onSaveEdit: { newText in 
+                                                Task { await viewModel.updateMessage(message, newText: newText) } 
+                                            },
                                             onNavigateGeneration: { forward in
                                                 Task {
                                                     await viewModel.navigateGeneration(message, forward: forward)
                                                 }
                                             },
                                             onScrollToMessage: { viewModel.editingMessageID = message.id },
-                                            onSetEditing: { enabled in viewModel.disableWhileEditing = enabled },
-                                            onScrollViewUpdate: { viewModel.updateScrollView.toggle() }
+                                            onSetEditing: { enabled in 
+                                                viewModel.disableWhileEditing = enabled 
+                                            },
+                                            onScrollViewUpdate: { viewModel.updateScrollView.toggle() },
                                         )
                                     }
                                     .padding(.top, 4)
@@ -101,6 +105,7 @@ struct ChatView: View {
                             .onGeometryChange(for: CGFloat.self) { geo in 
                                 geo.frame(in: .named("chatScroll")).maxY
                             } action: { newPosition in
+                                guard viewModel.isViewActive else { return }
                                 updateScrollBottomState(bottomPosition: newPosition)
                             }
                             .background{
@@ -135,8 +140,7 @@ struct ChatView: View {
                     )
                     .onChange(of: viewModel.editingMessageID) { _, messageID in
                         if let messageID {
-                            scrollToBottom(proxy: proxy, anchor: messageID, delay: 0.35, requiresAutoScroll: false)
-                            viewModel.editingMessageID = nil
+                            scrollToBottom(proxy: proxy, anchor: messageID, delay: 0.1, requiresAutoScroll: false, animated: false)
                         }
                     }
                     .onChange(of: isInputFocused) { _, isFocused in
@@ -167,6 +171,7 @@ struct ChatView: View {
                 .onGeometryChange(for: CGFloat.self) { geo in
                     geo.size.height
                 } action: { newHeight in
+                    guard viewModel.isViewActive else { return }
                     viewportHeight = newHeight
                 }
         }
@@ -255,8 +260,13 @@ struct ChatView: View {
         .background(appTheme.backgroundColor.color)
         .onAppear {
             viewModel.isAutoScrollEnabled = true
-            self.viewModel.updateScrollView.toggle()
             self.viewModel.isViewActive = true
+            print("chat view appeared")
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                print("scrolling to bottom - onAppear")
+                self.viewModel.updateScrollView.toggle()
+            }
         }
         .onDisappear {
             isInputFocused = false
@@ -269,7 +279,8 @@ struct ChatView: View {
         proxy: ScrollViewProxy,
         anchor: any Hashable,
         delay: Double = 0.0,
-        requiresAutoScroll: Bool = true
+        requiresAutoScroll: Bool = true,
+        animated: Bool = true
     ) {
         let generation = autoScrollGeneration
 
@@ -281,8 +292,12 @@ struct ChatView: View {
             guard requiresAutoScroll == false || viewModel.isAutoScrollEnabled else {
                 return
             }
-
-            withAnimation(.easeOut(duration: 0.2)) {
+  
+            if animated {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    proxy.scrollTo(anchor, anchor: .bottom)
+                }
+            } else {
                 proxy.scrollTo(anchor, anchor: .bottom)
             }
         }

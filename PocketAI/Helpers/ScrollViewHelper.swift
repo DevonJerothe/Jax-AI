@@ -20,5 +20,16 @@ struct ScrollViewHelper: UIViewRepresentable {
         return view
     }
     
-    func updateUIView(_ uiView: UIView, context: Context) {}
+    func updateUIView(_ uiView: UIView, context: Context) {
+        DispatchQueue.main.async {
+            var current = uiView as UIView? 
+            while let parent = current?.superview {
+                if let scollView = parent as? UIScrollView {
+                    self.onFound(scollView)
+                    break
+                }
+                current = parent
+            }
+        }
+    }
 }

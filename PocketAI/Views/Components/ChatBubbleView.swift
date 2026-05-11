@@ -5,9 +5,9 @@
 //  Created by devon jerothe on 3/13/25.
 //
 
-import NetworkImage
 import SwiftUI
 import MarkdownStreamer
+import MarkdownUI
 
 struct ChatBubbleView: View {
 
@@ -109,13 +109,6 @@ struct ChatBubbleView: View {
                                     )
                                     .accessibilityElement(children: .ignore)
                                     .accessibilityLabel("Streaming message")
-                                    .onGeometryChange(for: CGFloat.self) { geo in
-                                        geo.size.height
-                                    } action: { newHeight in
-                                        if newHeight > 0 && isEditing == false {
-                                            bubbleHeight = newHeight
-                                        }
-                                    }
                             } else {
                                 let rpText = message.getRolePlayText(cardName: cardName, personaName: personaName)                               
                                 StreamingMarkdownView(
@@ -132,11 +125,11 @@ struct ChatBubbleView: View {
                                     .onGeometryChange(for: CGFloat.self) { geo in
                                         geo.size.height
                                     } action: { newHeight in
-                                        if newHeight > 0 && isEditing == false {
-                                            bubbleHeight = newHeight
-                                        }
+                                        guard newHeight > 0 && isEditing == false else { return }
+
+                                        bubbleHeight = newHeight
                                     }
-                            }                        
+                            }   
                         }
                     }
                     messageToolbar
@@ -177,9 +170,8 @@ struct ChatBubbleView: View {
                             .onGeometryChange(for: CGFloat.self) { geo in
                                 geo.size.height
                             } action: { newHeight in
-                                if newHeight > 0 && isEditing == false {
-                                    bubbleHeight = newHeight
-                                }
+                                guard newHeight > 0 && isEditing == false else { return }
+                                bubbleHeight = newHeight
                             }
                         }
                     }
