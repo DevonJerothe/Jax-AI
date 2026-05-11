@@ -52,6 +52,8 @@ final class ChatViewModel {
 
     var updateScrollView: Bool = false
     var scrollAfterLayout: Bool = false
+    var scrollReloadToggle: Int = 0
+    
     var showSettings: Bool = false
     var editingMessageID: UUID?
     var newInstance: Bool = true
@@ -134,6 +136,7 @@ final class ChatViewModel {
             try await chatStore.updateMessage(updatedMessage, in: chat.id, save: false)
             isAutoScrollEnabled = true 
             scrollAfterLayout.toggle()
+            scrollReloadToggle += 1
             await generateResponse(for: updatedMessage.id, isContinued: continueResponse)
         } catch {
             print("Failed to regenerate message: \(error)")
@@ -223,6 +226,7 @@ final class ChatViewModel {
             try await chatStore.deleteMessage(message, from: chat.id)
             isAutoScrollEnabled = true 
             scrollAfterLayout.toggle()
+            scrollReloadToggle += 1
         } catch {
             print("Failed to delete message: \(error)")
         }

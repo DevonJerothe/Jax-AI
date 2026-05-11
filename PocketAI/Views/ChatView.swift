@@ -18,7 +18,6 @@ struct ChatView: View {
     @State var textPrompt: String = ""
     @State private var isScrollViewAtBottom = true
     @State private var autoScrollGeneration = 0
-    @State private var contentHeight: CGFloat = 0
     @FocusState private var isInputFocused: Bool
 
     @State private var scrollViewHelper: UIScrollView?
@@ -93,15 +92,7 @@ struct ChatView: View {
                                     .id(message.id)
                                 }
                             }
-                            .onGeometryChange(for: CGFloat.self) { geo in
-                                geo.size.height
-                            } action: { newHeight in 
-                                let didShrink = newHeight > 0 && newHeight < contentHeight
-                                contentHeight = newHeight
-                                if didShrink {
-                                    scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0)
-                                }
-                            }
+                            .id(viewModel.scrollReloadToggle)
                         }
 
                         Color.clear
@@ -123,11 +114,8 @@ struct ChatView: View {
                     .scrollIndicators(.hidden)
                     .scrollDismissesKeyboard(.interactively)
                     .simultaneousGesture(
-                        DragGesture(minimumDistance: 10)
+                        DragGesture(minimumDistance: 5)
                             .onChanged { _ in
-                                disableAutoScroll()
-                            }
-                            .onEnded { _ in
                                 disableAutoScroll()
                             }
                     )
@@ -141,13 +129,8 @@ struct ChatView: View {
                     .onChange(
                         of: viewModel.scrollAfterLayout,
                         ({
-                            // longer delay for layout changes so geoChange is complete
                             guard viewModel.isAutoScrollEnabled else { return }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                guard let scrollView = scrollViewHelper else { return }
-                                let maxOffset = max(0, scrollView.contentSize.height - scrollView.bounds.height)
-                                scrollView.setContentOffset(CGPoint(x: 0, y: maxOffset), animated: true)
-                            }
+                            scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.3)
                         })
                     )
                     .onChange(of: viewModel.editingMessageID) { _, messageID in
