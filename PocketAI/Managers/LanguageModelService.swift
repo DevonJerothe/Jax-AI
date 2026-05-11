@@ -348,7 +348,7 @@ final class LanguageModelService {
 
     // MARK: - Kobold Functions
     func getMaxContextLength() async -> Int? {
-        guard let manager = koboldManager else {
+        guard let manager = koboldManager, runtimeConnectionSettings.connectionType == .KoboldAPI else {
             print("No Kobold Manager")
             return nil
         }
@@ -363,7 +363,7 @@ final class LanguageModelService {
     }
 
     func getTokenCount(string: String) async -> Int {
-        guard let manager = koboldManager else {
+        guard let manager = koboldManager, runtimeConnectionSettings.connectionType == .KoboldAPI else {
             print("No Kobold Manager")
             return 0
         }
@@ -379,7 +379,7 @@ final class LanguageModelService {
 
     // MARK: - OpenRouter Functions
     func getAvailableModels() async {
-        guard let manager = openRouterManager else {
+        guard let manager = openRouterManager, runtimeConnectionSettings.connectionType == .OpenRouter else {
             print("No OpenRouter Manager")
             return
         }

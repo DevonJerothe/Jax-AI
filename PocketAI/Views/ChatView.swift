@@ -5,7 +5,6 @@
 //  Created by devon jerothe on 3/11/25.
 //
 
-import MarkdownUI
 import SwiftLLMSDK
 import SwiftUI
 import UIKit
@@ -19,6 +18,7 @@ struct ChatView: View {
     @State var textPrompt: String = ""
     @State private var isScrollViewAtBottom = true
     @State private var autoScrollGeneration = 0
+    @State private var contentHeight: CGFloat = 0
     @FocusState private var isInputFocused: Bool
 
     @State private var scrollViewHelper: UIScrollView?
@@ -63,10 +63,13 @@ struct ChatView: View {
                             LazyVStack {
                                 ForEach(chat.messages, id: \.id) { message in
                                     let showToolbar = chatIsIdle && messageCount > 1 && message.id == lastMessageID && message.status == .done
+                                    let isStreaming = message.id == viewModel.streamingMessageID
                                 
                                     HStack {
                                         ChatBubbleView(
                                             message: message,
+                                            isStreaming: isStreaming, 
+                                            mdReader: isStreaming ? viewModel.mdReader : nil,
                                             cardName: cardName,
                                             personaName: personaName,
                                             showToolbar: showToolbar,
@@ -78,7 +81,6 @@ struct ChatView: View {
                                             onNavigateGeneration: { forward in
                                                 Task {
                                                     await viewModel.navigateGeneration(message, forward: forward)
-                                                    viewModel.updateScrollView.toggle()
                                                 }
                                             },
                                             onScrollToMessage: { viewModel.editingMessageID = message.id },
@@ -89,6 +91,15 @@ struct ChatView: View {
                                     .padding(.top, 4)
                                     .padding(.bottom, 4)
                                     .id(message.id)
+                                }
+                            }
+                            .onGeometryChange(for: CGFloat.self) { geo in
+                                geo.size.height
+                            } action: { newHeight in 
+                                let didShrink = newHeight > 0 && newHeight < contentHeight
+                                contentHeight = newHeight
+                                if didShrink {
+                                    scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0)
                                 }
                             }
                         }
@@ -124,7 +135,19 @@ struct ChatView: View {
                         of: viewModel.updateScrollView,
                         ({
                             guard viewModel.isAutoScrollEnabled else { return }
-                            scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.05)
+                            scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.1)
+                        })
+                    )
+                    .onChange(
+                        of: viewModel.scrollAfterLayout,
+                        ({
+                            // longer delay for layout changes so geoChange is complete
+                            guard viewModel.isAutoScrollEnabled else { return }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                guard let scrollView = scrollViewHelper else { return }
+                                let maxOffset = max(0, scrollView.contentSize.height - scrollView.bounds.height)
+                                scrollView.setContentOffset(CGPoint(x: 0, y: maxOffset), animated: true)
+                            }
                         })
                     )
                     .onChange(of: viewModel.editingMessageID) { _, messageID in

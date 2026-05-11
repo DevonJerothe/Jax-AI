@@ -9,6 +9,7 @@ import Foundation
 import SwiftLLMSDK
 import SwiftUI
 import UIKit
+import MarkdownStreamer
 
 @MainActor
 @Observable
@@ -17,6 +18,11 @@ final class ChatViewModel {
     private let connectionManager: ConnectionStatusManager
     private let chatStore: ChatStore
     private let characterStore: CharacterStore
+    private let appTheme: AppTheme = ServiceContainer.shared.currentTheme
+
+    // Markdown streaming
+    private(set) var mdReader: MarkdownReader = MarkdownReader()
+    private(set) var streamingMessageID: UUID?
 
     let chatID: UUID
 
@@ -45,6 +51,7 @@ final class ChatViewModel {
     }
 
     var updateScrollView: Bool = false
+    var scrollAfterLayout: Bool = false
     var showSettings: Bool = false
     var editingMessageID: UUID?
     var newInstance: Bool = true
@@ -126,7 +133,7 @@ final class ChatViewModel {
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id, save: false)
             isAutoScrollEnabled = true 
-            updateScrollView.toggle()
+            scrollAfterLayout.toggle()
             await generateResponse(for: updatedMessage.id, isContinued: continueResponse)
         } catch {
             print("Failed to regenerate message: \(error)")
@@ -134,7 +141,8 @@ final class ChatViewModel {
     }
 
     func navigateGeneration(_ message: MessageModel, forward: Bool) async {
-        guard let chat = model else {
+        // check if message is the last message in the chat
+        guard let chat = model, message.id == chat.messages.last?.id else {
             return
         }
 
@@ -148,7 +156,7 @@ final class ChatViewModel {
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id)
             isAutoScrollEnabled = true 
-            updateScrollView.toggle()
+            scrollAfterLayout.toggle()
         } catch {
             print("Failed to navigate message generation: \(error)")
         }
@@ -192,11 +200,12 @@ final class ChatViewModel {
 
         var updatedMessage = message
 
-        // for KoboldAPI we need to update token count after any edit - openRouter will return 0 
+        // for KoboldAPI we need to update token count after any edit
         let tokenCount = await languageModelService.getTokenCount(string: newText)
         updatedMessage.updateCurrentGeneration(text: newText, tokenCount: tokenCount)
 
         do {
+            print("updating message")
             try await chatStore.updateMessage(updatedMessage, in: chat.id)
         } catch {
             print("Failed to update message: \(error)")
@@ -213,20 +222,10 @@ final class ChatViewModel {
         do {
             try await chatStore.deleteMessage(message, from: chat.id)
             isAutoScrollEnabled = true 
-            updateScrollView.toggle()
+            scrollAfterLayout.toggle()
         } catch {
             print("Failed to delete message: \(error)")
         }
-    }
-
-    func shouldShowToolbar(_ message: MessageModel) -> Bool {
-        guard let chat = model else {
-            return false
-        }
-
-        return chat.messages.count > 1 &&
-            chat.messages.last?.id == message.id &&
-        chat.status == .idle && message.status == .done
     }
 
     private func generateResponse(for messageID: UUID, isContinued: Bool = false, streamed: Bool = true) async {
@@ -241,7 +240,6 @@ final class ChatViewModel {
         }
 
         if streamed {
-            let excludeThinking = connectionManager.connectionSettings.connectionType == .KoboldAPI
             let trimmedPrompt = await autoTrimPrompt(
                 for: chat,
                 continueResponse: isContinued,
@@ -375,6 +373,19 @@ final class ChatViewModel {
             let tokenCount = await languageModelService.getTokenCount(string: updatedMessage.text)
             updatedMessage.tokenCount = tokenCount
             updatedMessage.tokenCountModel = currentModel
+        }
+
+        // Messages that are streaming should be read from our mdReader.
+        let mdTheme = MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .bot)
+        if isFinal {
+            await mdReader.finish(theme: mdTheme)
+            streamingMessageID = nil
+        } else if responseText.isEmpty == false {
+            if streamingMessageID != messageID {
+                mdReader = MarkdownReader()
+                streamingMessageID = messageID
+            }
+            await mdReader.appendAccumulated(responseText, theme: mdTheme)
         }
 
         do {

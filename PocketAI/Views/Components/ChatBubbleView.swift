@@ -8,13 +8,16 @@
 import MarkdownUI
 import NetworkImage
 import SwiftUI
+import MarkdownStreamer
 
 struct ChatBubbleView: View {
 
     @Environment(\.colorScheme) var colorScheme: ColorScheme
     @Environment(\.appTheme) private var appTheme
 
-    var message: MessageModel
+    let message: MessageModel
+    let isStreaming: Bool
+    let mdReader: MarkdownReader?
     let cardName: String
     let personaName: String
     let showToolbar: Bool
@@ -94,73 +97,113 @@ struct ChatBubbleView: View {
                         if isEditing {
                             editingTextView(maxWidth: UIApplication.currentScreenWidth)
                         } else {
-                            Markdown(
-                                message.getRolePlayText(
-                                    cardName: cardName,
-                                    personaName: personaName
+                            if isStreaming, let mdReader = mdReader {
+                                StreamingMarkdownView(
+                                    blocks: mdReader.blocks
                                 )
-                            )
-                            .markdownCodeSyntaxHighlighter(
-                                .splash(
-                                    theme: colorScheme == .dark
-                                        ? .wwdc17(withFont: .init(size: 16))
-                                        : .sunset(withFont: .init(size: 16)))
-                            )
-                            .markdownBlockStyle(\.codeBlock) { configuration in
-                                VStack(spacing: 0) {
-                                    HStack {
-                                        Text(configuration.language ?? "")
-                                            .foregroundColor(appTheme.primaryText.color)
-                                            .font(.caption)
-                                            .padding(4)
-                                            .padding(.leading, 8)
-                                        Spacer()
-                                        Button {
-                                            UIPasteboard.general.string =
-                                                configuration.content
-                                        } label: {
-                                            Image(systemName: "doc.on.doc")
-                                        }
-                                        .padding(4)
-                                    }
-                                    .background(
-                                        appTheme.secondaryAction.color)
-                                    ScrollView(.horizontal) {
-                                        configuration.label
-                                            .padding(10)
-                                            .padding(.trailing, 20)
-                                    }
-                                    .markdownTextStyle(textStyle: {
-                                        FontFamilyVariant(.monospaced)
-                                        FontSize(.em(0.65))
-                                    })
-                                    .background(
-                                        appTheme.secondaryBackgroundColor.color
+                                    .markdownTokenAnimation(.fade)
+                                    .padding()
+                                    .cornerRadius(15)
+                                    .frame(
+                                        maxWidth: UIApplication.currentScreenWidth,
+                                        alignment: .leading
                                     )
-                                }
-                                .cornerRadius(8)
+                                    .accessibilityElement(children: .ignore)
+                                    .accessibilityLabel("Streaming message")
+                                    .onGeometryChange(for: CGFloat.self) { geo in
+                                        geo.size.height
+                                    } action: { newHeight in
+                                        if newHeight > 0 && isEditing == false {
+                                            bubbleHeight = newHeight
+                                        }
+                                    }
+                            } else {
+                                let rpText = message.getRolePlayText(cardName: cardName, personaName: personaName)                               
+                                StreamingMarkdownView(
+                                    markdown: rpText,
+                                    theme: MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .bot)
+                                )
+                                    .id(message.text.hashValue)
+                                    .padding()
+                                    .cornerRadius(15)
+                                    .frame(
+                                        maxWidth: UIApplication.currentScreenWidth,
+                                        alignment: .leading
+                                    )
+                                    .onGeometryChange(for: CGFloat.self) { geo in
+                                        geo.size.height
+                                    } action: { newHeight in
+                                        if newHeight > 0 && isEditing == false {
+                                            bubbleHeight = newHeight
+                                        }
+                                    }
                             }
-                            .markdownTheme(.rolePlay(appTheme))
-                            .markdownImageProvider(AsyncImageProvider())
-                            .markdownInlineImageProvider(AsyncInlineImageProvider())
-                            .padding()
-                            .cornerRadius(15)
-                            .frame(
-                                maxWidth: UIApplication.currentScreenWidth * 1,
-                                alignment: .leading
-                            )
-                            .onGeometryChange(for: CGFloat.self) { geo in
-                                geo.size.height
-                            } action: { newHeight in
-                                if newHeight > 0 && isEditing == false {
-                                    bubbleHeight = newHeight
-                                }
-                            }
+                            // Markdown(
+                            //     message.getRolePlayText(
+                            //         cardName: cardName,
+                            //         personaName: personaName
+                            //     )
+                            // )
+                            // .markdownCodeSyntaxHighlighter(
+                            //     .splash(
+                            //         theme: colorScheme == .dark
+                            //             ? .wwdc17(withFont: .init(size: 16))
+                            //             : .sunset(withFont: .init(size: 16)))
+                            // )
+                            // .markdownBlockStyle(\.codeBlock) { configuration in
+                            //     VStack(spacing: 0) {
+                            //         HStack {
+                            //             Text(configuration.language ?? "")
+                            //                 .foregroundColor(appTheme.primaryText.color)
+                            //                 .font(.caption)
+                            //                 .padding(4)
+                            //                 .padding(.leading, 8)
+                            //             Spacer()
+                            //             Button {
+                            //                 UIPasteboard.general.string =
+                            //                     configuration.content
+                            //             } label: {
+                            //                 Image(systemName: "doc.on.doc")
+                            //             }
+                            //             .padding(4)
+                            //         }
+                            //         .background(
+                            //             appTheme.secondaryAction.color)
+                            //         ScrollView(.horizontal) {
+                            //             configuration.label
+                            //                 .padding(10)
+                            //                 .padding(.trailing, 20)
+                            //         }
+                            //         .markdownTextStyle(textStyle: {
+                            //             FontFamilyVariant(.monospaced)
+                            //             FontSize(.em(0.65))
+                            //         })
+                            //         .background(
+                            //             appTheme.secondaryBackgroundColor.color
+                            //         )
+                            //     }
+                            //     .cornerRadius(8)
+                            // }
+                            // .markdownTheme(.rolePlay(appTheme))
+                            // .markdownImageProvider(AsyncImageProvider())
+                            // .markdownInlineImageProvider(AsyncInlineImageProvider())
+                            // .padding()
+                            // .cornerRadius(15)
+                            // .frame(
+                            //     maxWidth: UIApplication.currentScreenWidth * 1,
+                            //     alignment: .leading
+                            // )
+                            // .onGeometryChange(for: CGFloat.self) { geo in
+                            //     geo.size.height
+                            // } action: { newHeight in
+                            //     if newHeight > 0 && isEditing == false {
+                            //         bubbleHeight = newHeight
+                            //     }
+                            // }
                         }
                     }
                     messageToolbar
                 }
-                .animation(.easeInOut(duration: 0.5), value: message.status)
                 .simultaneousGesture(generationSwipeGesture)
                 Spacer()
             }
@@ -173,11 +216,18 @@ struct ChatBubbleView: View {
                         editingTextView(maxWidth: UIApplication.currentScreenWidth * 0.80)
                     } else {
                         VStack(alignment: .trailing) {
-                            Markdown(
-                                message.getRolePlayText(
+                            // Markdown(
+                            //     message.getRolePlayText(
+                            //         cardName: cardName,
+                            //         personaName: personaName
+                            //     )
+                            // )
+                            StreamingMarkdownView(
+                                markdown: message.getRolePlayText(
                                     cardName: cardName,
                                     personaName: personaName
-                                )
+                                ),
+                                theme: MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .user)
                             )
                             .foregroundStyle(appTheme.primaryText.color)
                             .markdownTheme(.userRolePlay(appTheme))

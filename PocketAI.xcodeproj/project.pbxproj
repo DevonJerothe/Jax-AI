@@ -11,6 +11,7 @@
 		E94CC7E32D86726D00B4AB0B /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = E94CC7E22D86726D00B4AB0B /* GRDB */; };
 		E97327162DA9B620009CEAE0 /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97327152DA9B620009CEAE0 /* SwiftLLMSDK */; };
 		E97F95802D80C2D1007C292A /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97F957F2D80C2D1007C292A /* SwiftLLMSDK */; };
+		E9A158542FAFA1AD00A6ADA1 /* MarkdownStreamer in Frameworks */ = {isa = PBXBuildFile; productRef = E9A158532FAFA1AD00A6ADA1 /* MarkdownStreamer */; };
 		E9DB2F5A2D825A67009AEF2B /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F592D825A67009AEF2B /* MarkdownUI */; };
 		E9DB2F632D826261009AEF2B /* Splash in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F622D826261009AEF2B /* Splash */; };
 		E9DB2F652D826261009AEF2B /* SplashHTMLGen in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F642D826261009AEF2B /* SplashHTMLGen */; };
@@ -86,6 +87,7 @@
 				E94CC7E32D86726D00B4AB0B /* GRDB in Frameworks */,
 				E9F4B27C2D8A3B04001549FA /* PNG in Frameworks */,
 				E9DB2F632D826261009AEF2B /* Splash in Frameworks */,
+				E9A158542FAFA1AD00A6ADA1 /* MarkdownStreamer in Frameworks */,
 				E909E8F42E5113C3009909E7 /* Collections in Frameworks */,
 				E9DB2F652D826261009AEF2B /* SplashHTMLGen in Frameworks */,
 				E9DB2F692D826261009AEF2B /* SplashMarkdown in Frameworks */,
@@ -172,6 +174,7 @@
 				E9F4B27B2D8A3B04001549FA /* PNG */,
 				E97327152DA9B620009CEAE0 /* SwiftLLMSDK */,
 				E909E8F32E5113C3009909E7 /* Collections */,
+				E9A158532FAFA1AD00A6ADA1 /* MarkdownStreamer */,
 			);
 			productName = PocketAI;
 			productReference = E9E949BA2D808E9C0008861E /* PocketAI.app */;
@@ -262,6 +265,7 @@
 				E9F4B2782D8A3B04001549FA /* XCRemoteSwiftPackageReference "swift-png" */,
 				E97327142DA9B620009CEAE0 /* XCLocalSwiftPackageReference "../SwiftLLMSDK" */,
 				E909E8F22E5113C3009909E7 /* XCRemoteSwiftPackageReference "swift-collections" */,
+				E9A158522FAFA1AD00A6ADA1 /* XCLocalSwiftPackageReference "../MarkdownStreamer" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E9E949BB2D808E9C0008861E /* Products */;
@@ -650,6 +654,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../SwiftLLMSDK;
 		};
+		E9A158522FAFA1AD00A6ADA1 /* XCLocalSwiftPackageReference "../MarkdownStreamer" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../MarkdownStreamer;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -713,6 +721,10 @@
 		E97F957F2D80C2D1007C292A /* SwiftLLMSDK */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SwiftLLMSDK;
+		};
+		E9A158532FAFA1AD00A6ADA1 /* MarkdownStreamer */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MarkdownStreamer;
 		};
 		E9DB2F592D825A67009AEF2B /* MarkdownUI */ = {
 			isa = XCSwiftPackageProductDependency;
