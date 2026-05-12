@@ -5,24 +5,32 @@
 //  Created by devon jerothe on 3/13/25.
 //
 
-import MarkdownUI
-import NetworkImage
 import SwiftUI
-
-struct BubbleHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
+import MarkdownStreamer
+import MarkdownUI
 
 struct ChatBubbleView: View {
 
     @Environment(\.colorScheme) var colorScheme: ColorScheme
     @Environment(\.appTheme) private var appTheme
 
-    var message: MessageModel
-    var viewModel: ChatViewModel
+    let message: MessageModel
+    let isStreaming: Bool
+    let mdReader: MarkdownReader?
+    let cardName: String
+    let personaName: String
+    let showToolbar: Bool
+    let isOnlyMessage: Bool
+
+    let onDelete: () -> Void
+    let onRegenerate: () -> Void
+    let onContinue: () -> Void
+    let onSaveEdit: (String) -> Void
+    let onNavigateGeneration: (Bool) -> Void
+    let onScrollToMessage: () -> Void
+    let onSetEditing: (Bool) -> Void
+    let onScrollViewUpdate: () -> Void
+
     @State private var isEditing = false
     @State private var bubbleHeight: CGFloat = 0
     @State private var editedText: String = ""
@@ -88,79 +96,43 @@ struct ChatBubbleView: View {
                         if isEditing {
                             editingTextView(maxWidth: UIApplication.currentScreenWidth)
                         } else {
-                            Markdown(
-                                message.getRolePlayText(
-                                    cardName: viewModel.model?.characterCards.first?.name ?? "",
-                                    personaName: ServiceContainer.shared.getPersonaName
+                            if isStreaming, let mdReader = mdReader {
+                                StreamingMarkdownView(
+                                    blocks: mdReader.blocks
                                 )
-                            )
-                            .markdownCodeSyntaxHighlighter(
-                                .splash(
-                                    theme: colorScheme == .dark
-                                        ? .wwdc17(withFont: .init(size: 16))
-                                        : .sunset(withFont: .init(size: 16)))
-                            )
-                            .markdownBlockStyle(\.codeBlock) { configuration in
-                                VStack(spacing: 0) {
-                                    HStack {
-                                        Text(configuration.language ?? "")
-                                            .foregroundColor(appTheme.primaryText.color)
-                                            .font(.caption)
-                                            .padding(4)
-                                            .padding(.leading, 8)
-                                        Spacer()
-                                        Button {
-                                            UIPasteboard.general.string =
-                                                configuration.content
-                                        } label: {
-                                            Image(systemName: "doc.on.doc")
-                                        }
-                                        .padding(4)
-                                    }
-                                    .background(
-                                        appTheme.secondaryAction.color)
-                                    ScrollView(.horizontal) {
-                                        configuration.label
-                                            .padding(10)
-                                            .padding(.trailing, 20)
-                                    }
-                                    .markdownTextStyle(textStyle: {
-                                        FontFamilyVariant(.monospaced)
-                                        FontSize(.em(0.65))
-                                    })
-                                    .background(
-                                        appTheme.secondaryBackgroundColor.color
+                                    .markdownTokenAnimation(.fade)
+                                    .padding()
+                                    .cornerRadius(15)
+                                    .frame(
+                                        maxWidth: UIApplication.currentScreenWidth,
+                                        alignment: .leading
                                     )
-                                }
-                                .cornerRadius(8)
-                            }
-                            .markdownTheme(.rolePlay(appTheme))
-                            .markdownImageProvider(AsyncImageProvider())
-                            .markdownInlineImageProvider(AsyncInlineImageProvider())
-                            .padding()
-                            .cornerRadius(15)
-                            .frame(
-                                maxWidth: UIApplication.currentScreenWidth * 1,
-                                alignment: .leading
-                            )
-                            .background(
-                                GeometryReader { geo in
-                                    Color.clear
-                                        .preference(
-                                            key: BubbleHeightKey.self,
-                                            value: geo.size.height
-                                        )
-                                }
-                            )
+                                    .accessibilityElement(children: .ignore)
+                                    .accessibilityLabel("Streaming message")
+                            } else {
+                                let rpText = message.getRolePlayText(cardName: cardName, personaName: personaName)                               
+                                StreamingMarkdownView(
+                                    markdown: rpText,
+                                    theme: MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .bot)
+                                )
+                                    .id(message.text.hashValue)
+                                    .padding()
+                                    .cornerRadius(15)
+                                    .frame(
+                                        maxWidth: UIApplication.currentScreenWidth,
+                                        alignment: .leading
+                                    )
+                                    .onGeometryChange(for: CGFloat.self) { geo in
+                                        geo.size.height
+                                    } action: { newHeight in
+                                        guard newHeight > 0 && isEditing == false else { return }
+
+                                        bubbleHeight = newHeight
+                                    }
+                            }   
                         }
                     }
                     messageToolbar
-                }
-                .animation(.easeInOut(duration: 0.5), value: message.status)
-                .onPreferenceChange(BubbleHeightKey.self) { height in
-                    if height > 0 && isEditing == false {
-                        self.bubbleHeight = height
-                    }
                 }
                 .simultaneousGesture(generationSwipeGesture)
                 Spacer()
@@ -174,14 +146,14 @@ struct ChatBubbleView: View {
                         editingTextView(maxWidth: UIApplication.currentScreenWidth * 0.80)
                     } else {
                         VStack(alignment: .trailing) {
-                            Markdown(
-                                message.getRolePlayText(
-                                    cardName: viewModel.model?.characterCards.first?.name ?? "",
-                                    personaName: ServiceContainer.shared.getPersonaName
-                                )
+                            StreamingMarkdownView(
+                                markdown: message.getRolePlayText(
+                                    cardName: cardName,
+                                    personaName: personaName
+                                ),
+                                theme: MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .user)
                             )
                             .foregroundStyle(appTheme.primaryText.color)
-                            .markdownTheme(.userRolePlay(appTheme))
                             .padding()
                             .background(appTheme.secondaryAction.color)
                             .clipShape(
@@ -195,23 +167,15 @@ struct ChatBubbleView: View {
                                 maxWidth: UIApplication.currentScreenWidth * 0.75,
                                 alignment: .trailing
                             )
-                            .background(
-                                GeometryReader { geo in
-                                    Color.clear
-                                        .preference(
-                                            key: BubbleHeightKey.self,
-                                            value: geo.size.height
-                                        )
-                                }
-                            )
+                            .onGeometryChange(for: CGFloat.self) { geo in
+                                geo.size.height
+                            } action: { newHeight in
+                                guard newHeight > 0 && isEditing == false else { return }
+                                bubbleHeight = newHeight
+                            }
                         }
                     }
                     messageToolbar
-                }
-                .onPreferenceChange(BubbleHeightKey.self) { height in
-                    if height > 0 && isEditing == false {
-                        self.bubbleHeight = height
-                    }
                 }
                 .simultaneousGesture(generationSwipeGesture)
             }
@@ -226,7 +190,7 @@ struct ChatBubbleView: View {
     private var messageToolbar: some View {
         let actions = toolbarActions
 
-        if actions.isEmpty == false || (message.textGenerationHistory.isEmpty == false && viewModel.model?.messages.count == 1) {
+        if actions.isEmpty == false || (message.textGenerationHistory.isEmpty == false && isOnlyMessage) {
             toolbarContent(actions)
         }
     }
@@ -257,7 +221,7 @@ struct ChatBubbleView: View {
         var actions: [ToolbarAction] = []
 
         if isEditing {
-            if message.actor == .user && viewModel.shouldShowToolbar(message) {
+            if message.actor == .user && showToolbar {
                 actions.append(.delete)
             }
 
@@ -265,7 +229,7 @@ struct ChatBubbleView: View {
             return actions
         }
 
-        guard viewModel.shouldShowToolbar(message) else {
+        guard showToolbar else {
             return actions
         }
 
@@ -286,19 +250,13 @@ struct ChatBubbleView: View {
     private func performToolbarAction(_ action: ToolbarAction) {
         switch action {
         case .delete:
-            Task {
-                await viewModel.deleteMessage(message)
-            }
+            onDelete()
         case .regenerate:
-            Task {
-                await viewModel.regenerateMessage(message)
-            }
+            onRegenerate()
         case .edit, .save:
             toggleEditing()
         case .continueResponse:
-            Task {
-                await viewModel.regenerateMessage(message, continueResponse: true)
-            }
+            onContinue()
         case .previousGeneration:
             navigateGeneration(forward: false)
         case .nextGeneration:
@@ -325,10 +283,7 @@ struct ChatBubbleView: View {
             return
         }
 
-        Task {
-            await viewModel.navigateGeneration(message, forward: forward)
-            viewModel.updateScrollView.toggle()
-        }
+        onNavigateGeneration(forward)
     }
 
     @ViewBuilder
@@ -416,21 +371,19 @@ struct ChatBubbleView: View {
 
     private func toggleEditing() {
         if isEditing {
-            Task {
-                await viewModel.updateMessage(message, newText: editedText)
-            }
+            onSaveEdit(editedText)
             isEditing = false
-            viewModel.disableWhileEditing = false
-            viewModel.updateScrollView.toggle()
+            onSetEditing(false)
+            onScrollViewUpdate()
         } else {
             editedText = message.text
             isEditing = true
-            viewModel.disableWhileEditing = true
+            onSetEditing(true)
             scrollToEditedMessage()
         }
     }
 
     private func scrollToEditedMessage() {
-        viewModel.editingMessageID = message.id
+        onScrollToMessage()
     }
 }

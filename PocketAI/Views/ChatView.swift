@@ -5,17 +5,9 @@
 //  Created by devon jerothe on 3/11/25.
 //
 
-import MarkdownUI
 import SwiftLLMSDK
 import SwiftUI
 import UIKit
-
-private struct ScrollBottomPositionKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
 
 struct ChatView: View {
     @Environment(NavigationManager.self) var navManager
@@ -23,17 +15,20 @@ struct ChatView: View {
 
     @State var viewModel: ChatViewModel
     @State var textPrompt: String = ""
-    @State private var isAutoScrollEnabled = true
     @State private var isScrollViewAtBottom = true
     @State private var autoScrollGeneration = 0
+    @State private var editScrollRequest = 0
+    @State private var editScrollMessageID: UUID?
     @FocusState private var isInputFocused: Bool
+
+    @State private var scrollViewHelper: UIScrollView?
+    @State private var viewportHeight: CGFloat = 0
 
     init(chatID: UUID) {
         _viewModel = State(initialValue: ChatViewModel(chatID: chatID))
     }
 
     var body: some View {
-
         Group {
             if viewModel.shouldHidePrivateContent {
                 ContentUnavailableView(
@@ -49,96 +44,126 @@ struct ChatView: View {
 
     private var chatContent: some View {
         ScrollViewReader { proxy in
-            GeometryReader { scrollGeometry in
-                ZStack(alignment: .bottomTrailing) {
-                    ScrollView {
-                        Color.clear
-                            .frame(height: 8)
-                            .id("topAnchor")
+            ZStack(alignment: .bottomTrailing) {
+                ScrollView {
+                    Color.clear
+                        .frame(height: 8)
+                        .id("topAnchor")
 
-                        if let chat = viewModel.model {
-                            ForEach(chat.messages, id: \.self) { message in
+                    if let chat = viewModel.model {
+                        let cardName = chat.characterCards.first?.name ?? ""
+                        let personaName = ServiceContainer.shared.getPersonaName
+                        let chatIsIdle = chat.status == .idle
+                        let lastMessageID = chat.messages.last?.id
+                        let messageCount = chat.messages.count
+                        let isOnlyMessage = messageCount == 1
+
+                        LazyVStack {
+                            ForEach(chat.messages, id: \.id) { message in
+                                let showToolbar = chatIsIdle && messageCount > 1 && message.id == lastMessageID && message.status == .done
+                                let isStreaming = message.id == viewModel.streamingMessageID
+
                                 HStack {
                                     ChatBubbleView(
                                         message: message,
-                                        viewModel: viewModel
+                                        isStreaming: isStreaming,
+                                        mdReader: isStreaming ? viewModel.mdReader : nil,
+                                        cardName: cardName,
+                                        personaName: personaName,
+                                        showToolbar: showToolbar,
+                                        isOnlyMessage: isOnlyMessage,
+                                        onDelete: { Task { await viewModel.deleteMessage(message) } },
+                                        onRegenerate: { Task { await viewModel.regenerateMessage(message) } },
+                                        onContinue: { Task { await viewModel.regenerateMessage(message, continueResponse: true) } },
+                                        onSaveEdit: { newText in
+                                            Task { await viewModel.updateMessage(message, newText: newText) }
+                                        },
+                                        onNavigateGeneration: { forward in
+                                            Task {
+                                                await viewModel.navigateGeneration(message, forward: forward)
+                                            }
+                                        },
+                                        onScrollToMessage: { requestEditScroll(to: message.id) },
+                                        onSetEditing: { enabled in
+                                            viewModel.disableWhileEditing = enabled
+                                        },
+                                        onScrollViewUpdate: { viewModel.updateScrollView.toggle() }
                                     )
-                                    .padding(.top, 4)
-                                    .padding(.bottom, 4)
-                                    .id(message.id)
                                 }
+                                .padding(.top, 4)
+                                .padding(.bottom, 4)
+                                .id(message.id)
                             }
                         }
-
-                        Color.clear
-                            .frame(height: 8)
-                            .id("bottomAnchor")
-                            .background(
-                                GeometryReader { markerGeometry in
-                                    Color.clear.preference(
-                                        key: ScrollBottomPositionKey.self,
-                                        value: markerGeometry.frame(in: .named("chatScroll")).maxY
-                                    )
-                                }
-                            )
-                    }
-                    .coordinateSpace(name: "chatScroll")
-                    .padding(.horizontal)
-                    .scrollIndicators(.hidden)
-                    .scrollDismissesKeyboard(.interactively)
-                    .simultaneousGesture(
-                        DragGesture(minimumDistance: 10)
-                            .onChanged { _ in
-                                disableAutoScroll()
-                            }
-                            .onEnded { _ in
-                                disableAutoScroll()
-                            }
-                    )
-                    .onPreferenceChange(ScrollBottomPositionKey.self) { bottomPosition in
-                        updateScrollBottomState(
-                            bottomPosition: bottomPosition,
-                            viewportHeight: scrollGeometry.size.height
-                        )
-                    }
-                    .onChange(
-                        of: viewModel.updateScrollView,
-                        ({
-                            guard isAutoScrollEnabled else { return }
-                            scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.05)
-                        })
-                    )
-                    .onChange(of: viewModel.editingMessageID) { _, messageID in
-                        if let messageID {
-                            scrollToBottom(proxy: proxy, anchor: messageID, delay: 0.35, requiresAutoScroll: false)
-                            viewModel.editingMessageID = nil
-                        }
-                    }
-                    .onChange(of: isInputFocused) { _, isFocused in
-                        if isFocused && isAutoScrollEnabled {
-                            scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.2)
-                        }
+                        .id(viewModel.scrollReloadToggle)
                     }
 
-                    if isAutoScrollEnabled == false && isScrollViewAtBottom == false {
-                        Button {
-                            isAutoScrollEnabled = true
-                            viewModel.updateScrollView.toggle()
-                        } label: {
-                            Image(systemName: "arrow.down")
-                                // .font(.system(size: 12))
-                                .foregroundColor(appTheme.secondaryText.color)
-                                .glassCapsule()
+                    Color.clear
+                        .frame(height: 8)
+                        .id("bottomAnchor")
+                        .onGeometryChange(for: CGFloat.self) { geo in
+                            geo.frame(in: .named("chatScroll")).maxY
+                        } action: { newPosition in
+                            guard viewModel.isViewActive else { return }
+                            updateScrollBottomState(bottomPosition: newPosition)
                         }
-                        .buttonStyle(.plain)
-                        .padding(.trailing, 18)
-                        .padding(.bottom, 14)
-                        .transition(.scale(scale: 0.9).combined(with: .opacity))
+                        .background {
+                            ScrollViewHelper { scrollView in
+                                scrollViewHelper = scrollView
+                            }
+                        }
+                }
+                .defaultScrollAnchor(.bottom)
+                .coordinateSpace(name: "chatScroll")
+                .padding(.horizontal)
+                .scrollIndicators(.hidden)
+                .scrollDismissesKeyboard(.interactively)
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 5)
+                        .onChanged { _ in
+                            disableAutoScroll()
+                        }
+                )
+                .onChange(of: viewModel.updateScrollView) {
+                    guard viewModel.isAutoScrollEnabled else { return }
+                    scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.1)
+                }
+                .onChange(of: viewModel.scrollAfterLayout) {
+                    guard viewModel.isAutoScrollEnabled else { return }
+                    scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.3)
+                }
+                .onChange(of: editScrollRequest) {
+                    guard let messageID = editScrollMessageID else { return }
+                    scrollToMessage(proxy: proxy, messageID: messageID)
+                }
+                .onChange(of: isInputFocused) { _, isFocused in
+                    if isFocused && viewModel.isAutoScrollEnabled {
+                        scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.2)
                     }
                 }
+
+                if viewModel.isAutoScrollEnabled == false && isScrollViewAtBottom == false {
+                    Button {
+                        viewModel.isAutoScrollEnabled = true
+                        scrollViewHelper?.stopScrolling()
+                        scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.0, requiresAutoScroll: false)
+                    } label: {
+                        Image(systemName: "arrow.down")
+                            .foregroundColor(appTheme.secondaryText.color)
+                            .glassCapsule()
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 18)
+                    .padding(.bottom, 14)
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
+                }
             }
-            .animation(.easeOut(duration: 0.16), value: isAutoScrollEnabled)
-            .animation(.easeOut(duration: 0.16), value: isScrollViewAtBottom)
+            .onGeometryChange(for: CGFloat.self) { geo in
+                geo.size.height
+            } action: { newHeight in
+                guard viewModel.isViewActive else { return }
+                viewportHeight = newHeight
+            }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if viewModel.isConnected == false {
@@ -188,10 +213,9 @@ struct ChatView: View {
                     Button {
                         let promptText = self.textPrompt
                         self.textPrompt = ""
-                        isAutoScrollEnabled = true
+                        viewModel.isAutoScrollEnabled = true
                         Task {
-                            await self.viewModel.sendMessage(
-                                prompt: promptText)
+                            await self.viewModel.sendMessage(prompt: promptText)
                         }
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
@@ -224,14 +248,30 @@ struct ChatView: View {
         }
         .background(appTheme.backgroundColor.color)
         .onAppear {
-            isAutoScrollEnabled = true
-            self.viewModel.updateScrollView.toggle()
-            self.viewModel.isViewActive = true
+            viewModel.isAutoScrollEnabled = true
+            viewModel.isViewActive = true
         }
         .onDisappear {
             isInputFocused = false
             UIApplication.shared.endEditing()
-            self.viewModel.isViewActive = false
+            viewModel.isViewActive = false
+        }
+    }
+
+    private func requestEditScroll(to messageID: UUID) {
+        viewModel.editingMessageID = messageID
+        editScrollMessageID = messageID
+        editScrollRequest += 1
+    }
+
+    private func scrollToMessage(proxy: ScrollViewProxy, messageID: UUID) {
+        autoScrollGeneration += 1
+        scrollViewHelper?.stopScrolling()
+
+        for delay in [0.0, 0.05, 0.16] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                proxy.scrollTo(messageID, anchor: .bottom)
+            }
         }
     }
 
@@ -239,7 +279,8 @@ struct ChatView: View {
         proxy: ScrollViewProxy,
         anchor: any Hashable,
         delay: Double = 0.0,
-        requiresAutoScroll: Bool = true
+        requiresAutoScroll: Bool = true,
+        animated: Bool = true
     ) {
         let generation = autoScrollGeneration
 
@@ -248,31 +289,46 @@ struct ChatView: View {
                 return
             }
 
-            guard requiresAutoScroll == false || isAutoScrollEnabled else {
+            guard requiresAutoScroll == false || viewModel.isAutoScrollEnabled else {
                 return
             }
 
-            withAnimation(.easeOut(duration: 0.2)) {
+            if animated {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    proxy.scrollTo(anchor, anchor: .bottom)
+                }
+            } else {
                 proxy.scrollTo(anchor, anchor: .bottom)
             }
         }
     }
 
     private func disableAutoScroll() {
-        guard isAutoScrollEnabled else {
+        guard viewModel.isAutoScrollEnabled else {
             return
         }
 
-        isAutoScrollEnabled = false
+        viewModel.isAutoScrollEnabled = false
         autoScrollGeneration += 1
     }
 
-    private func updateScrollBottomState(bottomPosition: CGFloat, viewportHeight: CGFloat) {
-        let isAtBottom = bottomPosition <= viewportHeight + 24
-        isScrollViewAtBottom = isAtBottom
+    private func updateScrollBottomState(bottomPosition: CGFloat) {
+        let newIsAtBottom = bottomPosition <= viewportHeight + 24
+        guard newIsAtBottom != isScrollViewAtBottom else { return }
 
-        if isAtBottom && isAutoScrollEnabled == false {
-            isAutoScrollEnabled = true
+        isScrollViewAtBottom = newIsAtBottom
+
+        if newIsAtBottom && viewModel.isAutoScrollEnabled == false {
+            viewModel.isAutoScrollEnabled = true
         }
+    }
+}
+
+private extension UIScrollView {
+    func stopScrolling() {
+        layer.removeAllAnimations()
+        setContentOffset(contentOffset, animated: false)
+        panGestureRecognizer.isEnabled = false
+        panGestureRecognizer.isEnabled = true
     }
 }

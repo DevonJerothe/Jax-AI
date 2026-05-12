@@ -1,5 +1,5 @@
 {
-  "originHash" : "c4fd1ac29956705d5c45e9fc7d25648281eed51c73ddccdc177faf321a10cfab",
+  "originHash" : "c7ca28bd94a1b61d0a1479e370a469967f6ba9d8c7d2349a7ab4816590b0d672",
   "pins" : [
     {
       "identity" : "grdb.swift",
@@ -8,6 +8,15 @@
       "state" : {
         "branch" : "master",
         "revision" : "6eba24d16952452a8a54f6a639491f3c8215527f"
+      }
+    },
+    {
+      "identity" : "markdownstreamer",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/DevonJerothe/MarkdownStreamer",
+      "state" : {
+        "revision" : "b33bb0ce3413e71b4029041803af89f3f2725c10",
+        "version" : "1.0.0"
       }
     },
     {

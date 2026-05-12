@@ -80,7 +80,10 @@ struct PocketAIApp: App {
                     return
                 }
 
-                serviceContainer.lockForAppResumeIfNeeded()
+                // Fire after any view onAppear / onDisappear
+                DispatchQueue.main.async {
+                    serviceContainer.lockForAppResumeIfNeeded()
+                }
             }
         }
         .environment(navManager)

@@ -69,15 +69,30 @@ extension UIApplication {
 }
 
 extension UIApplication {
+    private static var _cachedScreenWidth: CGFloat = 400
+    private static var _cachedScreenHeight: CGFloat = 800
+    
     static var currentScreenWidth: CGFloat {
         let scenes = UIApplication.shared.connectedScenes
-        let windowScene = scenes.first { $0.activationState == .foregroundActive } as? UIWindowScene
-        return windowScene?.screen.bounds.width ?? 0
+        if let windowScene = scenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+            let width = windowScene.screen.bounds.width
+            if width > 0 {
+                Self._cachedScreenWidth = width
+            }       
+            return Self._cachedScreenWidth
+        }
+        return Self._cachedScreenHeight
     }
 
     static var currentScreenHeight: CGFloat {
         let scenes = UIApplication.shared.connectedScenes
-        let windowScene = scenes.first { $0.activationState == .foregroundActive } as? UIWindowScene
-        return windowScene?.screen.bounds.height ?? 0
+        if let windowScene = scenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+            let height = windowScene.screen.bounds.height
+            if height > 0 {
+                Self._cachedScreenHeight = height
+            }
+            return Self._cachedScreenHeight
+        }
+        return Self._cachedScreenHeight
     }
 }
