@@ -6,9 +6,10 @@ struct TokenBudget {
     let memoryTokens: Int
     let templateTokens: Int
     let personaTokens: Int
+    let noteTokens: Int
 
     var messageTokens: Int {
-        maxContextTokens - reservedResponseTokens - memoryTokens - templateTokens - personaTokens
+        maxContextTokens - reservedResponseTokens - memoryTokens - templateTokens - personaTokens - noteTokens
     }
 }
 
@@ -47,13 +48,17 @@ struct KoboldPromptContextBuilder {
         let memoryTokens = await tokenCount(memory)
         let templateTokens = await tokenCount(template)
         let personaTokens = await tokenCount(personaDescription)
+        // Token count can be bulk counted since notes are either in memory or in prompt.
+        let noteTokens = await tokenCount(chat.chatNotes.map(\.note).joined(separator: "\n"))
+
         
         let budget = TokenBudget(
             maxContextTokens: maxContextTokens,
             reservedResponseTokens: reservedResponseTokens,
             memoryTokens: memoryTokens,
             templateTokens: templateTokens,
-            personaTokens: personaTokens
+            personaTokens: personaTokens,
+            noteTokens: noteTokens
         )
 
         let blocks = await messageBlocks(
@@ -99,10 +104,32 @@ struct KoboldPromptContextBuilder {
 
         let personaName = userPersona?.name ?? "User"
 
-        for message in chat.messages {
+        for (index, message) in chat.messages.enumerated() {
             var message = message
             guard message.exclude == false else {
                 continue
+            }
+
+            // Note depth should be x from the last message. For example, if the last message is the 10th message, and the note depth is 2,
+            // we should inject the note into the 8th message.
+            let noteToInject = chat.chatNotes.first(where: {
+                let indexToInject = max(0, chat.messages.count - $0.depth)
+                return indexToInject == index && $0.injectInMemory == false
+            })?
+                .note
+                .replacingOccurrences(of: "{{char}}", with: chat.chatTitle)
+                .replacingOccurrences(of: "{{user}}", with: personaName)
+
+            if let noteToInject {
+                // Inject note into message as a system message. 
+                let text = "\(settings.systemStopSequence)\n\(noteToInject)"
+                blocks.append(
+                    MessageBlock(
+                        id: UUID(),
+                        text: text,
+                        tokens: 0 // Note tokens are pre counted during memory check 
+                    )
+                )
             }
 
             // NOTE: Token count may not be accurate depending on stop sequences, and personas. This may be negligible, but we may want

@@ -23,7 +23,7 @@ struct ChatModel: Hashable {
     var messages: [MessageModel] = []
     var memory: String
     var characterCards: [CharacterCardModel] = []
-    var chatNotes: [String] = []
+    var chatNotes: [ChatNoteModel] = []
     var isPrivate: Bool = false
     
     var error: String?
@@ -109,7 +109,12 @@ struct ChatModel: Hashable {
             fullMemory += "\nPersona: \(personaDescription)\n"
         }
 
-        // TODO: Replace user name with custom user persona
+        for note in chatNotes {
+            if note.injectInMemory {
+                fullMemory += "\n\(note.note)"
+            }
+        }
+
         fullMemory = fullMemory
             .replacingOccurrences(of: "{{char}}", with: chatTitle)
             .replacingOccurrences(of: "{{user}}", with: userPersona?.name ?? "User")
@@ -135,7 +140,7 @@ extension ChatModel {
         self.createdAt = record.createdAt
         self.updatedAt = record.updatedAt
         self.memory = record.memory
-        self.chatNotes = (try? record.chatNotes.decodeStringArray()) ?? []
+        self.chatNotes = (try? record.chatNotes.decodeChatNoteArray()) ?? []
         self.isPrivate = record.isPrivate
     }
 
@@ -145,7 +150,7 @@ extension ChatModel {
             createdAt: createdAt, 
             updatedAt: updatedAt, 
             memory: memory, 
-            chatNotes: chatNotes.encodeStringArray(), 
+            chatNotes: chatNotes.encodeChatNoteArray(), 
             isPrivate: isPrivate 
         ) 
     }

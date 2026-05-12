@@ -107,6 +107,18 @@ final class LanguageModelService {
             
             return RequestBodyMessages(role: role, message: messageText)
         }
+
+        for note in chatModel.chatNotes {
+            guard note.injectInMemory == false else { continue }
+            // ensure index is not negative
+            let insertIndex = max(0, requestMessages.count - note.depth)
+            let noteText = note.note
+                .replacingOccurrences(of: "{{char}}", with: chatModel.chatTitle)
+                .replacingOccurrences(of: "{{user}}", with: userPersona?.name ?? "User")
+            
+            let requestMessage = RequestBodyMessages(role: .system, message: noteText)
+            requestMessages.insert(requestMessage, at: insertIndex)
+        }
         
         // If we are continueing a message, we need to add special instructions to the system message.
         // If we are not continuing but the message is loading, we can assume we are regenerating the same message.
@@ -121,7 +133,12 @@ final class LanguageModelService {
                 let continueMessage = TemplateInstructions().continueMessage(lastMessage)
                 requestMessages.append(RequestBodyMessages(role: .system, message: continueMessage))
             } else if chatModel.messages.last?.status != .done {
-                requestMessages.removeLast()
+                // Remove the last user message
+                // if we inserted a notes into the last index, we need to remove the user message before it.
+                let lastUserMessage = requestMessages.last(where: { $0.role == .user })
+                if let lastUserMessage {
+                    requestMessages.removeAll(where: { $0.message == lastUserMessage.message })
+                }
             }
         }
 

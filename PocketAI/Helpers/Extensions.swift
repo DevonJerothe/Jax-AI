@@ -7,6 +7,11 @@ extension String {
         return try JSONDecoder().decode([String].self, from: data)
     }
 
+    func decodeChatNoteArray() throws -> [ChatNoteModel] {
+        guard let data = data(using: .utf8) else { return [] }
+        return try JSONDecoder().decode([ChatNoteModel].self, from: data)
+    }
+
     // Decode the escaped text users type in settings into the stored runtime value.
     func decodeEscapedSequence() -> String {
         guard self.isEmpty == false else {
@@ -57,6 +62,13 @@ extension String {
 
 extension Array where Element == String {
     func encodeStringArray() -> String {
+        guard let data = try? JSONEncoder().encode(self) else { return "" }
+        return String(data: data, encoding: .utf8) ?? ""
+    }
+}
+
+extension Array where Element == ChatNoteModel {
+    func encodeChatNoteArray() -> String {
         guard let data = try? JSONEncoder().encode(self) else { return "" }
         return String(data: data, encoding: .utf8) ?? ""
     }
