@@ -102,8 +102,7 @@ final class LanguageModelService {
         var requestMessages = chatModel.messages.map { message in
             let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
             let messageText = message.text
-                .replacingOccurrences(of: "{{char}}", with: chatModel.chatTitle)
-                .replacingOccurrences(of: "{{user}}", with: userPersona?.name ?? "User")
+                .replaceChatSequences(user: userPersona?.name, char: chatModel.chatTitle)
             
             return RequestBodyMessages(role: role, message: messageText)
         }
@@ -113,9 +112,8 @@ final class LanguageModelService {
             // ensure index is not negative
             let insertIndex = max(0, requestMessages.count - note.depth)
             let noteText = note.note
-                .replacingOccurrences(of: "{{char}}", with: chatModel.chatTitle)
-                .replacingOccurrences(of: "{{user}}", with: userPersona?.name ?? "User")
-            
+                .replaceChatSequences(user: userPersona?.name, char: chatModel.chatTitle)
+
             let requestMessage = RequestBodyMessages(role: .system, message: noteText)
             requestMessages.insert(requestMessage, at: insertIndex)
         }
@@ -134,10 +132,11 @@ final class LanguageModelService {
                 requestMessages.append(RequestBodyMessages(role: .system, message: continueMessage))
             } else if chatModel.messages.last?.status != .done {
                 // Remove the last user message
-                // if we inserted a notes into the last index, we need to remove the user message before it.
-                let lastUserMessage = requestMessages.last(where: { $0.role == .user })
-                if let lastUserMessage {
-                    requestMessages.removeAll(where: { $0.message == lastUserMessage.message })
+                // if we inserted a notes into the last index, we need to remove the bot message before it.
+                // At this point we will always have an empty "placeholder" bot message for the loader
+                let loaderPlaceholder = requestMessages.last(where: { $0.role == .assistant })
+                if let loaderPlaceholder {
+                    requestMessages.removeAll(where: { $0.message == loaderPlaceholder.message })
                 }
             }
         }
@@ -191,9 +190,18 @@ final class LanguageModelService {
                 repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
                 stream: true,
                 systemPromptTemplate: runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"),
-                characterDescription: chatModel.characterCards.first?.description,
-                characterPersonality: chatModel.characterCards.first?.personality,
-                characterScenario: chatModel.characterCards.first?.scenario
+                characterDescription: chatModel.characterCards.first?.description?.replaceChatSequences(
+                    user: userPersona?.name,
+                    char: chatModel.chatTitle
+                ),
+                characterPersonality: chatModel.characterCards.first?.personality?.replaceChatSequences(
+                    user: userPersona?.name,
+                    char: chatModel.chatTitle
+                ),
+                characterScenario: chatModel.characterCards.first?.scenario?.replaceChatSequences(
+                    user: userPersona?.name,
+                    char: chatModel.chatTitle
+                )
             )
             
             streamResponse = openRouterManager.streamMessage(builder: promptBuilder)
@@ -227,9 +235,19 @@ final class LanguageModelService {
         var requestMessages = chatModel.messages.map { message in
             let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
             let messageText = message.text
-                .replacingOccurrences(of: "{{char}}", with: chatModel.chatTitle)
-                .replacingOccurrences(of: "{{user}}", with: userPersona?.name ?? "User")
+                .replaceChatSequences(user: userPersona?.name, char: chatModel.chatTitle)
             return RequestBodyMessages(role: role, message: messageText)
+        }
+        
+        for note in chatModel.chatNotes {
+            guard note.injectInMemory == false else { continue }
+            // ensure index is not negative
+            let insertIndex = max(0, requestMessages.count - note.depth)
+            let noteText = note.note
+                .replaceChatSequences(user: userPersona?.name, char: chatModel.chatTitle)
+
+            let requestMessage = RequestBodyMessages(role: .system, message: noteText)
+            requestMessages.insert(requestMessage, at: insertIndex)
         }
         
         // If we are continueing a message, we need to add special instructions to the system message.
@@ -244,7 +262,12 @@ final class LanguageModelService {
                 let continueMessage = TemplateInstructions().continueMessage(lastMessage)
                 requestMessages.append(RequestBodyMessages(role: .system, message: continueMessage))
             } else if chatModel.messages.last?.status != .done {
-                requestMessages.removeLast()
+                // Remove the last user message
+                // if we inserted a notes into the last index, we need to remove the bot message before it.
+                let loaderPlaceholder = requestMessages.last(where: { $0.role == .assistant })
+                if let loaderPlaceholder {
+                    requestMessages.removeAll(where: { $0.message == loaderPlaceholder.message })
+                }
             }
         }
         
@@ -301,9 +324,18 @@ final class LanguageModelService {
                 repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
                 stream: false,
                 systemPromptTemplate: runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"),
-                characterDescription: chatModel.characterCards.first?.description,
-                characterPersonality: chatModel.characterCards.first?.personality,
-                characterScenario: chatModel.characterCards.first?.scenario
+                characterDescription: chatModel.characterCards.first?.description?.replaceChatSequences(
+                    user: userPersona?.name,
+                    char: chatModel.chatTitle
+                ),
+                characterPersonality: chatModel.characterCards.first?.personality?.replaceChatSequences(
+                    user: userPersona?.name,
+                    char: chatModel.chatTitle
+                ),
+                characterScenario: chatModel.characterCards.first?.scenario?.replaceChatSequences(
+                    user: userPersona?.name,
+                    char: chatModel.chatTitle
+                )
             )
             
             serviceResponse = await openRouterManager?.sendMessage(builder: promptBuilder)

@@ -102,7 +102,7 @@ struct KoboldPromptContextBuilder {
         let firstBotID = chat.messages.first(where: { $0.actor == .bot })?.id
         var blocks: [MessageBlock] = []
 
-        let personaName = userPersona?.name ?? "User"
+        let personaName = userPersona?.name
 
         for (index, message) in chat.messages.enumerated() {
             var message = message
@@ -117,8 +117,7 @@ struct KoboldPromptContextBuilder {
                 return indexToInject == index && $0.injectInMemory == false
             })?
                 .note
-                .replacingOccurrences(of: "{{char}}", with: chat.chatTitle)
-                .replacingOccurrences(of: "{{user}}", with: personaName)
+                .replaceChatSequences(user: personaName, char: chat.chatTitle)
 
             if let noteToInject {
                 // Inject note into message as a system message. 
@@ -140,8 +139,7 @@ struct KoboldPromptContextBuilder {
             switch message.actor {
             case .user:
                 let messageText = message.text
-                    .replacingOccurrences(of: "{{char}}", with: chat.chatTitle)
-                    .replacingOccurrences(of: "{{user}}", with: personaName)
+                    .replaceChatSequences(user: personaName, char: chat.chatTitle)
                 
                 var userText = "\(messageText)\(settings.botStopSequence)" // + botSequenceTokens
                 if settings.botStopSequence.isEmpty == false {
@@ -154,8 +152,7 @@ struct KoboldPromptContextBuilder {
 
             case .bot:
                 let messageText = message.text
-                    .replacingOccurrences(of: "{{char}}", with: chat.chatTitle)
-                    .replacingOccurrences(of: "{{user}}", with: personaName)
+                    .replaceChatSequences(user: personaName, char: chat.chatTitle)
                 
                 guard message.status == .done || continueResponse else {
                     continue

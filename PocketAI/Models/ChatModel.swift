@@ -116,8 +116,7 @@ struct ChatModel: Hashable {
         }
 
         fullMemory = fullMemory
-            .replacingOccurrences(of: "{{char}}", with: chatTitle)
-            .replacingOccurrences(of: "{{user}}", with: userPersona?.name ?? "User")
+            .replaceChatSequences(user: userPersona?.name, char: chatTitle)
     
         return fullMemory
     }

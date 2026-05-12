@@ -58,6 +58,13 @@ extension String {
             .replacingOccurrences(of: "\t", with: "\\t")
             .replacingOccurrences(of: "\r", with: "\\r")
     }
+    
+    func replaceChatSequences(user: String?, char: String) -> String {
+        return self
+            .replacingOccurrences(of: "{{char}}", with: char)
+            .replacingOccurrences(of: "{{user}}", with: user ?? "{{user}}")
+        
+    }
 }
 
 extension Array where Element == String {
