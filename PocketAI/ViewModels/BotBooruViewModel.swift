@@ -24,18 +24,16 @@ final class BotBooruViewModel {
 
         // check if logged in
         loggedIn = initialAuthSettings.token != nil
-        
-        if loggedIn {
-            // Check if last log in was more than 24 hours ago
-            if let lastFetched = initialAuthSettings.lastFetched, Date().timeIntervalSince(lastFetched) > 24 * 60 * 60 {
-                guard let username = initialAuthSettings.username, let password = initialAuthSettings.password else { return }
-                Task {
+
+        Task {
+            if loggedIn {
+                // Check if last log in was more than 24 hours ago
+                if let lastFetched = initialAuthSettings.lastFetched, Date().timeIntervalSince(lastFetched) > 24 * 60 * 60 {
+                    guard let username = initialAuthSettings.username, let password = initialAuthSettings.password else { return }
                     await login(username: username, password: password)
                 }
-            }
-
-            if loadPosts {
-                Task {
+    
+                if loadPosts {
                     await getPosts()
                 }
             }
@@ -55,10 +53,10 @@ final class BotBooruViewModel {
             case .success:
                 authSettings = botBooruService.authSettings ?? authSettings
                 loggedIn = true
+                isLoading = false
                 await getPosts()
             case .failure:
-                // TODO: Handle proper auth error reporting
-                loggedIn = false
+                logout()
                 loginError = "Invalid credentials"
         }
         isLoading = false
