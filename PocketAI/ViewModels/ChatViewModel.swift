@@ -321,7 +321,6 @@ final class ChatViewModel {
             )
 
             for await response in stream {
-                print(response.deltaText ?? "")
                 let responseText = response.text ?? ""
                 let rawResponse = rawAccumulator.ingest(responseText)
                 let isFinal = response.streaming == false
@@ -394,7 +393,6 @@ final class ChatViewModel {
                 streamingMessageID = messageID
             }
             await mdReader.appendAccumulated(responseText, theme: mdTheme)
-//            await mdReader.append(delta, theme: mdTheme)
         }
 
         do {
