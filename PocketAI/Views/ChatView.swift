@@ -113,7 +113,6 @@ struct ChatView: View {
                             }
                         }
                 }
-                .defaultScrollAnchor(.bottom)
                 .coordinateSpace(name: "chatScroll")
                 .padding(.horizontal)
                 .scrollIndicators(.hidden)
@@ -134,6 +133,7 @@ struct ChatView: View {
                 }
                 .onChange(of: editScrollRequest) {
                     guard let messageID = editScrollMessageID else { return }
+                    if isInputFocused { return }
                     scrollToMessage(proxy: proxy, messageID: messageID)
                 }
                 .onChange(of: isInputFocused) { _, isFocused in
@@ -157,6 +157,9 @@ struct ChatView: View {
                     .padding(.bottom, 14)
                     .transition(.scale(scale: 0.9).combined(with: .opacity))
                 }
+            }
+            .onAppear {
+                scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.0, animated: false)
             }
             .onGeometryChange(for: CGFloat.self) { geo in
                 geo.size.height

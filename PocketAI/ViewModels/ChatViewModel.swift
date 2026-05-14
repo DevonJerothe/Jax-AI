@@ -277,6 +277,7 @@ final class ChatViewModel {
         await applyResponseUpdate(
             for: messageID,
             responseText: visibleResponse,
+            delta: "",
             disconnect: response?.disconnect ?? true,
             isFinal: true,
             shouldShowThinking: false
@@ -333,6 +334,7 @@ final class ChatViewModel {
                 await applyResponseUpdate(
                     for: messageID,
                     responseText: visibleResponse,
+                    delta: response.deltaText ?? "",
                     disconnect: response.disconnect,
                     isFinal: isFinal,
                     shouldShowThinking: parsedResponse.shouldShowThinking
@@ -344,6 +346,7 @@ final class ChatViewModel {
     private func applyResponseUpdate(
         for messageID: UUID,
         responseText: String,
+        delta: String,
         disconnect: Bool,
         isFinal: Bool,
         shouldShowThinking: Bool
@@ -384,7 +387,7 @@ final class ChatViewModel {
         if isFinal {
             await mdReader.finish(theme: mdTheme)
             streamingMessageID = nil
-        } else if responseText.isEmpty == false {
+        } else if responseText.isEmpty == false && shouldShowThinking == false {
             if streamingMessageID != messageID {
                 mdReader = MarkdownReader()
                 streamingMessageID = messageID
@@ -458,7 +461,7 @@ final class ChatViewModel {
     private func triggerHapticIfNeeded() {
         let now = Date()
         guard isViewActive,
-            lastHapticTriggerAt == nil || now.timeIntervalSince(lastHapticTriggerAt!) >= 0.1 else {
+            lastHapticTriggerAt == nil || now.timeIntervalSince(lastHapticTriggerAt!) >= 0.2 else {
             return
         }
 

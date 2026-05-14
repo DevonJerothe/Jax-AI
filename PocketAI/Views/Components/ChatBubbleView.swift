@@ -364,9 +364,6 @@ struct ChatBubbleView: View {
                 .stroke(appTheme.tintColor.color.opacity(0.55), lineWidth: 1)
         )
         .frame(maxWidth: maxWidth, alignment: .leading)
-        .onChange(of: editedText) {
-            scrollToEditedMessage()
-        }
     }
 
     private func toggleEditing() {
