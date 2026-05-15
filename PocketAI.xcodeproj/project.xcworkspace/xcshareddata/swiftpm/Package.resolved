@@ -1,5 +1,5 @@
 {
-  "originHash" : "11787667a125deab54fe9caf30859507b24276319bea85a802b54d180cdf0df6",
+  "originHash" : "0be477fbe32d2902e0ae4bfdff1e4763652eeff1219c530a127f059ab070fa7a",
   "pins" : [
     {
       "identity" : "grdb.swift",
@@ -53,6 +53,15 @@
       "state" : {
         "revision" : "d444d98aa32f022bf4a8e74b5a697c7ee856a6ad",
         "version" : "4.4.9"
+      }
+    },
+    {
+      "identity" : "swift-tiktoken",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/DePasqualeOrg/swift-tiktoken.git",
+      "state" : {
+        "revision" : "e088d534d80dd1875ca3edfd69a16a6c25ab84c4",
+        "version" : "0.0.1"
       }
     }
   ],

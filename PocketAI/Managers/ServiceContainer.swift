@@ -1,5 +1,6 @@
 import Foundation
 import SwiftLLMSDK
+import SwiftTiktoken
 
 ///
 /// This service container is responsible for all dependency injection and shared services such as userDefaults and connection status
@@ -16,6 +17,7 @@ final class ServiceContainer {
     private let characterStore: CharacterStore
     private let personaStore: PersonaStore
     private var hasBootstrappedStores = false
+    var tokenizer: CoreBPE?
     
     var isLoading: Bool {
         connectionStatusManager.connectionStatus == .connecting
@@ -84,6 +86,10 @@ final class ServiceContainer {
             Task {
                 await connectionStatusManager.connect()
             }
+        }
+
+        Task {
+            self.tokenizer = try? await CoreBPE.cl100kBase()
         }
     }
     

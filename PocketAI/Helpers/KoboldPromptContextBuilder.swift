@@ -1,4 +1,5 @@
 import Foundation
+import SwiftTiktoken
 
 struct TokenBudget {
     let maxContextTokens: Int
@@ -48,10 +49,15 @@ struct KoboldPromptContextBuilder {
         let memoryTokens = await tokenCount(memory)
         let templateTokens = await tokenCount(template)
         let personaTokens = await tokenCount(personaDescription)
-        // Token count can be bulk counted since notes are either in memory or in prompt.
-        let noteTokens = await tokenCount(chat.chatNotes.map(\.note).joined(separator: "\n"))
-
         
+        // Notes marked for memory injection are included in the `getFullMemory` call. 
+        // We should only count notes here that are counted for prompt injection.
+        let noteTokens = await tokenCount(
+            chat.chatNotes.filter { 
+                $0.injectInMemory == false 
+            }.map(\.note).joined(separator: "\n")
+        )
+
         let budget = TokenBudget(
             maxContextTokens: maxContextTokens,
             reservedResponseTokens: reservedResponseTokens,
