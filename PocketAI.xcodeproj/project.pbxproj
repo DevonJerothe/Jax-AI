@@ -10,6 +10,7 @@
 		E909E8F42E5113C3009909E7 /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = E909E8F32E5113C3009909E7 /* Collections */; };
 		E94CC7E32D86726D00B4AB0B /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = E94CC7E22D86726D00B4AB0B /* GRDB */; };
 		E965E89C2FB516BE00B01142 /* MarkdownStreamer in Frameworks */ = {isa = PBXBuildFile; productRef = E965E89B2FB516BE00B01142 /* MarkdownStreamer */; };
+		E965E9E22FB5601100B01142 /* SwiftTiktoken in Frameworks */ = {isa = PBXBuildFile; productRef = E965E9E12FB5601100B01142 /* SwiftTiktoken */; };
 		E97327162DA9B620009CEAE0 /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97327152DA9B620009CEAE0 /* SwiftLLMSDK */; };
 		E97F95802D80C2D1007C292A /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97F957F2D80C2D1007C292A /* SwiftLLMSDK */; };
 		E9A158542FAFA1AD00A6ADA1 /* MarkdownStreamer in Frameworks */ = {isa = PBXBuildFile; productRef = E9A158532FAFA1AD00A6ADA1 /* MarkdownStreamer */; };
@@ -94,6 +95,7 @@
 				E9DB2F692D826261009AEF2B /* SplashMarkdown in Frameworks */,
 				E965E89C2FB516BE00B01142 /* MarkdownStreamer in Frameworks */,
 				E97327162DA9B620009CEAE0 /* SwiftLLMSDK in Frameworks */,
+				E965E9E22FB5601100B01142 /* SwiftTiktoken in Frameworks */,
 				E9F4B27A2D8A3B04001549FA /* LZ77 in Frameworks */,
 				E9DB2F672D826261009AEF2B /* SplashImageGen in Frameworks */,
 			);
@@ -178,6 +180,7 @@
 				E9A158532FAFA1AD00A6ADA1 /* MarkdownStreamer */,
 				E9FEE4322FB3BD6200263330 /* MarkdownStreamer */,
 				E965E89B2FB516BE00B01142 /* MarkdownStreamer */,
+				E965E9E12FB5601100B01142 /* SwiftTiktoken */,
 			);
 			productName = PocketAI;
 			productReference = E9E949BA2D808E9C0008861E /* PocketAI.app */;
@@ -268,6 +271,7 @@
 				E97327142DA9B620009CEAE0 /* XCLocalSwiftPackageReference "../SwiftLLMSDK" */,
 				E909E8F22E5113C3009909E7 /* XCRemoteSwiftPackageReference "swift-collections" */,
 				E965E89A2FB516BE00B01142 /* XCRemoteSwiftPackageReference "MarkdownStreamer" */,
+				E965E9E02FB5601100B01142 /* XCRemoteSwiftPackageReference "swift-tiktoken" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E9E949BB2D808E9C0008861E /* Products */;
@@ -683,6 +687,14 @@
 				minimumVersion = 1.1.0;
 			};
 		};
+		E965E9E02FB5601100B01142 /* XCRemoteSwiftPackageReference "swift-tiktoken" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/DePasqualeOrg/swift-tiktoken.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.0.1;
+			};
+		};
 		E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/JohnSundell/Splash";
@@ -716,6 +728,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E965E89A2FB516BE00B01142 /* XCRemoteSwiftPackageReference "MarkdownStreamer" */;
 			productName = MarkdownStreamer;
+		};
+		E965E9E12FB5601100B01142 /* SwiftTiktoken */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E965E9E02FB5601100B01142 /* XCRemoteSwiftPackageReference "swift-tiktoken" */;
+			productName = SwiftTiktoken;
 		};
 		E97327152DA9B620009CEAE0 /* SwiftLLMSDK */ = {
 			isa = XCSwiftPackageProductDependency;

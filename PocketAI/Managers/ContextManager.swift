@@ -34,6 +34,7 @@ struct ContextBlock {
     let tokenCount: Int 
     let target: Target
     var order: Int
+    var actor: OpenRouterMessageRole
     let sourceID: UUID? 
 
     init(
@@ -43,6 +44,7 @@ struct ContextBlock {
         tokenCount: Int,
         target: Target,
         order: Int = 0, // Order is mostly used for prompt target. So we can leave 0 as default for others. 
+        actor: OpenRouterMessageRole = .system,
         sourceID: UUID? = nil
     ) {
         self.kind = kind
@@ -51,6 +53,7 @@ struct ContextBlock {
         self.tokenCount = tokenCount
         self.target = target
         self.order = order
+        self.actor = actor
         self.sourceID = sourceID
     }
 }
@@ -58,17 +61,35 @@ struct ContextBlock {
 struct TextCompletionContent {
     let memory: String 
     let prompt: String
-    let tokenCount: Int
+    let tokenCount: ContextBudget
 }
 
 struct ChatCompletionContent {
     let messages: [RequestBodyMessages]
-    let tokenCount: Int 
+    let tokenCount: ContextBudget
+}
+
+struct ContextBudget {
+    let maxContextTokens: Int
+    let reservedResponseTokens: Int
+    let availableContextTokens: Int 
+    let selectedMemoryTokens: Int 
+    let selectedPromptTokens: Int
+
+    var totalSelectedTokens: Int {
+        selectedMemoryTokens + selectedPromptTokens
+    }
 }
 
 // We should build a context manager for each chat instance. This should handle all token counting and 
 // budgeting as we continue chatting with the bot
 final class ContextManager {
+    enum ContextOutput {
+        case textCompletion(TextCompletionContent)
+        case chatCompletion(ChatCompletionContent)
+        case error(String)
+    }
+    
     private(set) var settings: ConnectionStatusManager
     private(set) var chat: ChatModel
     
@@ -76,22 +97,8 @@ final class ContextManager {
     private var tokenCache: TokenCountCache = .init()
     private var contextBlocks: [ContextBlock] = []
 
-    // Return token count for current memory blocks. This include non required context
-    // and may be more than actual based on filtering
-    var totalMemoryContext: Int {
-        contextBlocks.filter {
-            $0.target == .memory 
-        }.reduce(0) { $0 + $1.tokenCount }
-    }
-
-    // token count of all required memory blocks
-    // this count will always be injected and counted towards context.
-    var requiredContext: Int {
-        contextBlocks.filter { 
-            ($0.priority == .required && $0.target == .memory)
-        }.reduce(0) { $0 + $1.tokenCount }
-    }
-
+    private var textCompletionBuilder: TextCompletionContextBuilder = .init()
+    
     init(
         from chat: ChatModel, 
         _ settings: ConnectionStatusManager
@@ -105,6 +112,44 @@ final class ContextManager {
         }
     }
 
+    public func buildContext(
+        chat: ChatModel,
+        reloadContext: Bool = true, 
+        continued: Bool = false, 
+        forceThinking: Bool = false
+    ) async -> ContextOutput? {
+
+        // replace with eror type
+        guard let tokenizer = tokenizer else {
+            return .error("Tokenizer not found")
+        }
+        
+        self.chat = chat 
+        let connectionType = await settings.connectionSettings.connectionType
+
+        if reloadContext {
+            contextBlocks.removeAll()
+            await loadContextFromChat()
+            await buildMessageBlocks()
+        }
+
+        switch connectionType {
+            case .KoboldAPI:
+                return .textCompletion(await textCompletionBuilder.render(
+                    memoryBlocks: contextBlocks.filter { $0.target == .memory }, 
+                    promptBlocks: contextBlocks.filter { $0.target == .prompt }, 
+                    settings: settings.connectionSettings, 
+                    continued: continued, 
+                    forceThinking: forceThinking, 
+                    tokenizer: tokenizer
+                ))
+            case .OpenRouter: 
+
+                // TODO: support OpenRouter after Kobold Testing
+                return .error("OpenRouter WIP")
+        }
+    }
+
     private func loadContextFromChat() async {
         guard let characterCard = chat.characterCards.first else {
             return
@@ -114,6 +159,59 @@ final class ContextManager {
         await buildCharachterBlocks(characterCard)
         // system prompts and other memory blocks
         await buildMemoryBlocks()
+    }
+
+    public func refreshMemory(chat: ChatModel) async {
+        self.chat = chat
+        contextBlocks.removeAll {
+            $0.target == .memory
+        }
+
+        await loadContextFromChat()
+    }
+
+    public func refreshMessageBlocks(chat: ChatModel) async {
+        self.chat = chat
+        contextBlocks.removeAll {
+            $0.target == .prompt
+        }
+
+        await buildMessageBlocks()
+    }
+
+    public func updateMessageBlock(message: MessageModel, new: Bool = false) async {
+        let personaName = await ServiceContainer.shared.getPersona?.name
+
+        // Treat as a new message 
+        if new {
+            // get last index of current message list 
+            let lastIndex = chat.messages.count
+            
+            if var messageBlock = await buildMessageBlock(
+                message: message, 
+                personaName: personaName, 
+                continueResponse: false
+            ) {
+                messageBlock.order = 1000 + (lastIndex * 10) // normal loop index starts at 0, count starts at 1. 
+                contextBlocks.append(messageBlock)
+            }
+        } else {
+            // find contextBlock to update 
+            let oldBlock = contextBlocks.first {
+                $0.sourceID == message.id
+            }
+            guard let oldBlock = oldBlock else { return }
+
+            contextBlocks.removeAll { $0.sourceID == message.id }
+            if var updatedBlock = await buildMessageBlock(
+                message: message, 
+                personaName: personaName, 
+                continueResponse: false
+            ) {
+                updatedBlock.order = oldBlock.order
+                contextBlocks.append(updatedBlock)
+            }
+        }
     }
 
     private func getTokenCount(text: String?) async -> Int? {
@@ -222,12 +320,11 @@ extension ContextManager {
         }
 
         // User Memory Injected Notes
-        var notes = chat.chatNotes.filter {
+        let notes = chat.chatNotes.filter {
             $0.injectInMemory
         }.compactMap(\.note).joined(separator: "\n")
         .replaceChatSequences(user: personaName, char: chat.chatTitle)
-
-        notes = "[Story Notes]\n\(notes)" 
+ 
         if let notesTokens = await getTokenCount(text: notes) {
             let notesBlock = ContextBlock(
                 kind: .userNote,
@@ -262,8 +359,6 @@ extension ContextManager {
         let personaName = persona?.name
 
         let messages = chat.messages
-        let lastUserID = messages.last(where: { $0.actor == .user })?.id
-        let firstBotIdD = messages.first(where: { $0.actor == .bot })?.id
 
         for (index, message) in messages.enumerated() {
             guard message.exclude == false else {
@@ -281,14 +376,10 @@ extension ContextManager {
                 contextBlocks.append(noteBlock)
             }
 
-            guard var messageBlock = await renderMessageBlock(
+            guard var messageBlock = await buildMessageBlock(
                 message: message,
-                settings: connectionSettings,
                 personaName: personaName,
-                lastUserID: lastUserID,
-                firstBotID: firstBotIdD,
                 continueResponse: continued,
-                forceThinking: forceThinking 
             ) else {
                 continue 
             }
@@ -310,7 +401,7 @@ extension ContextManager {
             return nil
         }
 
-        let renderedText = "\(settings.systemStopSequence)\n\(note.replaceChatSequences(user: personaName, char: chat.chatTitle))\n"
+        let renderedText = note.replaceChatSequences(user: personaName, char: chat.chatTitle)
 
         guard let tokens = await getTokenCount(text: renderedText) else {
             return nil
@@ -321,58 +412,35 @@ extension ContextManager {
             priority: .high,
             text: renderedText,
             tokenCount: tokens,
-            target: .prompt
+            target: .prompt,
+            actor: .system
         )
     }
 
-    private func renderMessageBlock(
+    private func buildMessageBlock(
         message: MessageModel,
-        settings: ConnectionSettingsModel,
         personaName: String?,
-        lastUserID: UUID?, 
-        firstBotID: UUID?,
         continueResponse: Bool,
-        forceThinking: Bool,
     ) async -> ContextBlock? {
         let messageText = message.text
             .replaceChatSequences(user: personaName, char: chat.chatTitle)
 
-        let renderedText: String
-
-        switch message.actor {
-            case .user:
-                var text = "\(messageText)\(settings.botStopSequence)"
-
-                if settings.botStopSequence.isEmpty == false {
-                    text += " "
-                }
-
-                if forceThinking && message.id == lastUserID {
-                    text += "\(settings.thinkingStartSequence)\n\(settings.forceThinkingInstruct)"
-                }
-
-                renderedText = text
-            case .bot: 
-                guard message.status == .done || continueResponse else {
-                    return nil
-                }
-
-                let prefix = firstBotID == message.id ? settings.botStopSequence : ""
-                let suffix = continueResponse ? "" : settings.userStopSequence
-
-                renderedText = "\(prefix)\(messageText)\(suffix)"
+        guard message.actor == .user || message.status == .done || continueResponse else {
+            return nil
         }
 
-        guard let tokens = await getTokenCount(text: renderedText) else {
+        guard let tokens = await getTokenCount(text: messageText) else {
             return nil
         }
 
         return ContextBlock(
             kind: .message, 
             priority: .high,
-            text: renderedText,
+            text: messageText,
             tokenCount: tokens,
-            target: .prompt
+            target: .prompt,
+            actor: message.actor == .user ? .user : .assistant,
+            sourceID: message.id
         )
     }
 }
@@ -397,17 +465,239 @@ final class TokenCountCache {
 }
 
 // MARK: - Prompt Builders 
-// struct TextCompletionContextBuilder {
-//     func render(
-//         memoryBlocks: [ContextBlock],
-//         promptBlocks: [ContextBlock],
-//         settings: ConnectionSettingsModel,
-//         contiued: Bool = false, 
-//         forceThinking: Bool = false
-//     ) -> TextCompletionContent{
-        
-//     }
-// }
+struct TextCompletionContextBuilder {
+    private var tokenCache: TokenCountCache = .init()
+
+    private struct RenderedContextBlock {
+        let source: ContextBlock
+        let renderedText: String
+        let tokenCount: Int
+
+        var priority: ContextBlock.Priority {
+            source.priority
+        }
+
+        var order: Int {
+            source.order
+        }
+
+        // sort function 
+        static func sort(
+            _ lhs: RenderedContextBlock, 
+            _ rhs: RenderedContextBlock
+        ) -> Bool {
+            if lhs.priority != rhs.priority {
+                return lhs.priority.rawValue < rhs.priority.rawValue
+            }
+            return lhs.order < rhs.order
+        }
+    }
+    
+    func render(
+        memoryBlocks: [ContextBlock],
+        promptBlocks: [ContextBlock],
+        settings: ConnectionSettingsModel,
+        continued: Bool = false, 
+        forceThinking: Bool = false, 
+        tokenizer: CoreBPE
+    ) -> TextCompletionContent{
+
+        let maxContextTokens = settings.contextLength ?? 4096
+        let reservedResponseTokens = settings.responseLength ?? 240 
+        let availableContextTokens = max(0, maxContextTokens - reservedResponseTokens)
+
+        let renderedMemBlocks = renderMemoryBlock(memoryBlocks, tokenizer: tokenizer)
+        let renderedPromptBlocks = renderPromptBlock(
+            promptBlocks,
+            settings: settings,
+            continued: continued, 
+            forceThinking: forceThinking,
+            tokenizer: tokenizer
+        )
+
+        // select memory blocks 
+        let selectedMemoryBlocks = selectMemoryBlocks(
+            renderedMemBlocks, 
+            tokenBudget: availableContextTokens
+        )
+        let selectedMemoryTokens = selectedMemoryBlocks.reduce(0) {
+            $0 + $1.tokenCount
+        }
+        let remainingPromptBudget = max(0, availableContextTokens - selectedMemoryTokens)
+    
+        // select prompt blocks 
+        let selectedPromptBlocks = selectPromptBlocks(
+            renderedPromptBlocks, 
+            tokenBudget: remainingPromptBudget
+        )
+        let selectedPromptTokens = selectedPromptBlocks.reduce(0) {
+            $0 + $1.tokenCount
+        }
+
+        return TextCompletionContent(
+            memory: selectedMemoryBlocks.map(\.renderedText).joined(separator: "\n"),
+            prompt: selectedPromptBlocks.map(\.renderedText).joined(),
+            tokenCount: .init(
+                maxContextTokens: maxContextTokens, 
+                reservedResponseTokens: reservedResponseTokens, 
+                availableContextTokens: availableContextTokens - selectedMemoryTokens - selectedPromptTokens, 
+                selectedMemoryTokens: selectedMemoryTokens, 
+                selectedPromptTokens: selectedPromptTokens
+            )
+        )
+    }
+
+    private func renderMemoryBlock(
+        _ blocks: [ContextBlock],
+        tokenizer: CoreBPE
+    ) -> [RenderedContextBlock] {
+        var renderedBlocks: [RenderedContextBlock] = []
+
+        for block in blocks {
+            var renderText = ""
+            switch block.kind {
+                case .characterDescription: 
+                    renderText = "[Description]\n\(block.text)"
+                case .characterPersonality:
+                    renderText = "[Personality]\n\(block.text)"
+                case .characterScenario: 
+                    renderText = "[Scenario]\n\(block.text)"
+                case .persona: 
+                    renderText = "[Persona]\n\(block.text)"
+                case .system: 
+                    renderText = "[System]\n\(block.text)"
+                case .userNote: 
+                    renderText = "[Story Note]\n\(block.text)"
+                case .characterMessageExample: 
+                    renderText = "[Character Message Example]\n\(block.text)"
+                default:
+                    renderText = block.text
+            }
+
+            guard renderText.isEmpty == false else {
+                continue
+            }
+
+            let tokens = tokenCache.count(renderText, tokenizer: tokenizer)
+            renderedBlocks.append(RenderedContextBlock(
+                source: block,
+                renderedText: renderText,
+                tokenCount: tokens
+            ))
+        }
+
+        return renderedBlocks
+    }
+
+    private func renderPromptBlock(
+        _ blocks: [ContextBlock],
+        settings: ConnectionSettingsModel,
+        continued: Bool, 
+        forceThinking: Bool,
+        tokenizer: CoreBPE
+    ) -> [RenderedContextBlock] {
+        let sortedBlocks = blocks.sorted { $0.order < $1.order }
+        let firstBotMessagedID = sortedBlocks.first(where: { $0.actor == .assistant && $0.kind == .message })?.sourceID
+        let lastUserMessageID = sortedBlocks.last(where: { $0.actor == .user && $0.kind == .message })?.sourceID
+
+        var renderedBlocks: [RenderedContextBlock] = []
+
+        for block in sortedBlocks {
+            var renderedText = ""
+            switch block.actor {
+                case .system:
+                    renderedText = "\(settings.systemStopSequence)\n\(block.text)"
+                case .assistant: 
+                    let prefix = block.sourceID == firstBotMessagedID
+                        ? settings.botStopSequence
+                        : ""
+                    let suffix = continued ? "" : settings.userStopSequence
+                    renderedText = "\(prefix)\(block.text)\(suffix)"
+                case .user: 
+                    var text = "\(block.text)\(settings.botStopSequence)"
+                    if settings.botStopSequence.isEmpty == false {
+                        text += " "
+                    }
+                    if forceThinking && block.sourceID == lastUserMessageID {
+                        text += "\(settings.thinkingStartSequence)\n\(settings.forceThinkingInstruct)"
+                    }
+                    renderedText = text
+                default:
+                    continue
+            }
+
+            guard renderedText.isEmpty == false else {
+                continue
+            }
+
+            let tokens = tokenCache.count(renderedText, tokenizer: tokenizer)
+            
+            renderedBlocks.append(
+                RenderedContextBlock(
+                    source: block,
+                    renderedText: renderedText,
+                    tokenCount: tokens
+                )
+            )
+        }
+
+        return renderedBlocks
+    }
+
+    private func selectMemoryBlocks(
+        _ blocks: [RenderedContextBlock],
+        tokenBudget: Int
+    ) -> [RenderedContextBlock] {
+        var remaining = tokenBudget
+        var selected: [RenderedContextBlock] = []
+
+        // get all required blocks first 
+        let requiredBlocks = blocks.filter { $0.priority == .required }.sorted(by: RenderedContextBlock.sort)
+        for block in requiredBlocks {
+            selected.append(block)
+            remaining -= block.tokenCount
+        }
+
+        let nonRequiredBlocks = blocks.filter { $0.priority != .required }.sorted(by: RenderedContextBlock.sort)
+        for block in nonRequiredBlocks {
+            guard block.tokenCount <= remaining else {
+                continue
+            }
+
+            selected.append(block)
+            remaining -= block.tokenCount
+        }
+
+        return selected.sorted(by: RenderedContextBlock.sort)
+    }
+
+    private func selectPromptBlocks(
+        _ blocks: [RenderedContextBlock],
+        tokenBudget: Int
+    ) -> [RenderedContextBlock] {
+        let sortedBlocks = blocks.sorted { $0.order < $1.order }
+
+        var remaining = tokenBudget
+        var selectedBlocks: [RenderedContextBlock] = []
+
+        for block in sortedBlocks.reversed() {
+            if block.tokenCount <= remaining {
+                selectedBlocks.append(block)
+                remaining -= block.tokenCount
+            } else {
+                break
+            }
+        }
+
+        // if we hit limit by memory alone we should make sure no notes are inlcuded with the suffix value
+        if selectedBlocks.isEmpty {
+            let filteredMessages = sortedBlocks.filter { $0.source.kind == .message }
+            return Array(filteredMessages.suffix(2))
+        }
+
+        return selectedBlocks.reversed()
+    }
+}
 
 // struct ChatCompletionContextBuilder {
 //     func renderOpenAI(
