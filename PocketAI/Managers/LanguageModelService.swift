@@ -13,7 +13,8 @@ final class LanguageModelService {
     private var runtimeConnectionSettings: ConnectionSettingsModel
     var koboldManager: APIManager<KoboldAPI>?
     var openRouterManager: APIManager<OpenRouterAPI>?
-    
+    var contextBuilder: ContextManager?
+
     var selectedModel: String?
     var availableModels: [OpenRouterModel] = []
     var maxContextLength: Int = 26000
@@ -27,11 +28,12 @@ final class LanguageModelService {
     }
 
     private func setupManagers() {
-        guard let host = runtimeConnectionSettings.host, let port = runtimeConnectionSettings.port else {
+        guard let host = runtimeConnectionSettings.host, let port = runtimeConnectionSettings.port
+        else {
             print("No Connection Settings")
             return
         }
-        
+
         self.koboldManager = .init(
             forService: KoboldAPI(
                 urlSession: URLSession.shared,
@@ -39,7 +41,7 @@ final class LanguageModelService {
                 port: port
             )
         )
-        
+
         let openRouterModel = runtimeConnectionSettings.selectedModel
         self.openRouterManager = .init(
             forService: OpenRouterAPI(
@@ -48,7 +50,7 @@ final class LanguageModelService {
                 apiKey: runtimeConnectionSettings.apiKey
             )
         )
-        
+
         if runtimeConnectionSettings.connectionType == .OpenRouter {
             self.selectedModel = openRouterModel
         }
@@ -63,7 +65,7 @@ final class LanguageModelService {
             switch result {
             case .success(let name):
 
-                // Set Max Context Length 
+                // Set Max Context Length
                 let result = await getMaxContextLength()
                 self.maxContextLength = result ?? 26000
 
@@ -91,68 +93,59 @@ final class LanguageModelService {
     func disconnect() {
         selectedModel = nil
     }
-    
+
+    func initContextManager(
+        chatModel: ChatModel
+    ) async {
+        let manager = ContextManager(
+            from: chatModel,
+            runtimeConnectionSettings
+        )
+        await manager.prepare()
+        self.contextBuilder = manager
+    }
+
     func sendStreamedMessage(
         chatModel: ChatModel,
-        userPersona: UserPersonaModel?, 
+        userPersona: UserPersonaModel?,
         continued: Bool = false,
-        trimmedPrompt: String
-    ) -> AsyncStream<ModelResponse> {
-        // Map our internal message model to the request body message
-        var requestMessages = chatModel.messages.map { message in
-            let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
-            let messageText = message.text
-                .replaceChatSequences(user: userPersona?.name, char: chatModel.chatTitle)
-            
-            return RequestBodyMessages(role: role, message: messageText)
+        // trimmedPrompt: String
+    ) async -> AsyncStream<ModelResponse> {
+
+        guard let contextBuilder else { 
+            fatalError("ContextBuilder is not initialized")
         }
 
-        for note in chatModel.chatNotes {
-            guard note.injectInMemory == false else { continue }
-            // ensure index is not negative
-            let insertIndex = max(0, requestMessages.count - note.depth)
-            let noteText = note.note
-                .replaceChatSequences(user: userPersona?.name, char: chatModel.chatTitle)
-
-            let requestMessage = RequestBodyMessages(role: .system, message: noteText)
-            requestMessages.insert(requestMessage, at: insertIndex)
-        }
-        
-        // If we are continueing a message, we need to add special instructions to the system message.
-        // If we are not continuing but the message is loading, we can assume we are regenerating the same message.
-        // Pulled this instruction from SillyTavern.
-        if runtimeConnectionSettings.connectionType == .OpenRouter {
-            if continued {
-                guard let lastMessage = requestMessages.last?.message else {
-                    return AsyncStream { continuation in
-                        continuation.finish()
-                    }
-                }
-                let continueMessage = TemplateInstructions().continueMessage(lastMessage)
-                requestMessages.append(RequestBodyMessages(role: .system, message: continueMessage))
-            } else if chatModel.messages.last?.status != .done {
-                // Remove the last user message
-                // if we inserted a notes into the last index, we need to remove the bot message before it.
-                // At this point we will always have an empty "placeholder" bot message for the loader
-                let loaderPlaceholder = requestMessages.last(where: { $0.role == .assistant })
-                if let loaderPlaceholder {
-                    requestMessages.removeAll(where: { $0.message == loaderPlaceholder.message })
-                }
-            }
-        }
+        let contextResult = await contextBuilder.buildContext(
+            chat: chatModel,
+            continued: continued,
+            forceThinking: runtimeConnectionSettings.forceThinking
+        )
 
         let (stream, continuation) = AsyncStream<ModelResponse>.makeStream()
         var streamResponse: AsyncStream<Result<ModelResponse, APIError>>
-        
+
         switch runtimeConnectionSettings.connectionType {
         case .KoboldAPI:
             guard let koboldManager = koboldManager else {
-                fatalError("KoboldManager not connected")
+                streamResponse = AsyncStream { continuation in 
+                    continuation.yield(.failure(.invalidService))
+                    continuation.finish()
+                }
+                break
             }
-            
+
+            guard let contextPrompt = contextResult?.textCompletion else {
+                streamResponse = AsyncStream { continuation in 
+                    continuation.yield(.failure(.invalidService))
+                    continuation.finish()
+                }
+                break
+            }
+
             let promptBuilder = KoboldRequestBuilder(
-                prompt: trimmedPrompt,
-                memory: chatModel.getFullMemory(userPersona: userPersona),
+                prompt: contextPrompt.prompt,
+                memory: contextPrompt.memory,
                 maxContextLength: runtimeConnectionSettings.contextLength ?? 4096,
                 maxLength: runtimeConnectionSettings.responseLength ?? 240,
                 temperature: runtimeConnectionSettings.temperature,
@@ -166,20 +159,38 @@ final class LanguageModelService {
                 repetitionRange: runtimeConnectionSettings.repetitionRange,
                 repetitionSlope: runtimeConnectionSettings.repetitionSlope,
                 stopSequence: stopSequences,
-                samplerOrder: runtimeConnectionSettings.samplerOrder,
-                promptTemplate: continued ? "" : runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n")
+                samplerOrder: runtimeConnectionSettings.samplerOrder
             )
-            
+
             streamResponse = koboldManager.streamMessage(builder: promptBuilder)
         case .OpenRouter:
             guard let openRouterManager = openRouterManager else {
-                fatalError("OpenRouterManager not connected")
+                streamResponse = AsyncStream { continuation in 
+                    continuation.yield(.failure(.invalidService))
+                    continuation.finish()
+                }
+                break
             }
 
-            // TODO: support sending user persona description
+            guard let contextMessages = contextResult?.chatCompletion else {
+                streamResponse = AsyncStream { continuation in 
+                    continuation.yield(.failure(.invalidService))
+                    continuation.finish()
+                }
+                break
+            }
+
+            guard let selectedModel = self.selectedModel else {
+                streamResponse = AsyncStream { continuation in 
+                    continuation.yield(.failure(.invalidService))
+                    continuation.finish()
+                }
+                break
+            }
+
             let promptBuilder = OpenRouterRequestBuilder(
-                model: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
-                messages: requestMessages,
+                model: selectedModel,
+                messages: contextMessages.messages,
                 stop: stopSequences,
                 temperature: runtimeConnectionSettings.temperature,
                 topP: runtimeConnectionSettings.topP,
@@ -188,33 +199,20 @@ final class LanguageModelService {
                 topK: runtimeConnectionSettings.topK,
                 maxTokens: runtimeConnectionSettings.responseLength ?? 240,
                 repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
-                stream: true,
-                systemPromptTemplate: runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"),
-                characterDescription: chatModel.characterCards.first?.description?.replaceChatSequences(
-                    user: userPersona?.name,
-                    char: chatModel.chatTitle
-                ),
-                characterPersonality: chatModel.characterCards.first?.personality?.replaceChatSequences(
-                    user: userPersona?.name,
-                    char: chatModel.chatTitle
-                ),
-                characterScenario: chatModel.characterCards.first?.scenario?.replaceChatSequences(
-                    user: userPersona?.name,
-                    char: chatModel.chatTitle
-                )
+                stream: true
             )
-            
+
             streamResponse = openRouterManager.streamMessage(builder: promptBuilder)
         }
-        Task.detached(priority: .medium) {
+        Task(priority: .medium) {
             defer { continuation.finish() }
-        
+
             for await response in streamResponse {
                 switch response {
                 case .success(let modelResponse):
                     continuation.yield(modelResponse)
                 case .failure(_):
-                    let errorResponse = ModelResponse(              
+                    let errorResponse = ModelResponse(
                         role: "assistant",
                         text: "There was an error processing your request. Please try again later.",
                         disconnect: true
@@ -222,76 +220,35 @@ final class LanguageModelService {
                     continuation.yield(errorResponse)
                     return
                 }
-            }         
+            }
         }
         return stream
     }
-    
+
     // Put all context switching of service type in this class and out of the view models.
     func sendMessage(chatModel: ChatModel, continued: Bool = false) async -> ModelResponse? {
-        let userPersona = await ServiceContainer.shared.getPersona
-        
-        // Map our internal message model to the request body message
-        var requestMessages = chatModel.messages.map { message in
-            let role: OpenRouterMessageRole = message.actor.rawValue == 0 ? .user : .assistant
-            let messageText = message.text
-                .replaceChatSequences(user: userPersona?.name, char: chatModel.chatTitle)
-            return RequestBodyMessages(role: role, message: messageText)
+        guard let contextBuilder else { 
+            fatalError("ContextBuilder is not initialized")
         }
-        
-        for note in chatModel.chatNotes {
-            guard note.injectInMemory == false else { continue }
-            // ensure index is not negative
-            let insertIndex = max(0, requestMessages.count - note.depth)
-            let noteText = note.note
-                .replaceChatSequences(user: userPersona?.name, char: chatModel.chatTitle)
 
-            let requestMessage = RequestBodyMessages(role: .system, message: noteText)
-            requestMessages.insert(requestMessage, at: insertIndex)
-        }
-        
-        // If we are continueing a message, we need to add special instructions to the system message.
-        // If we are not continuing but the message is loading, we can assume we are regenerating the same message.
-        // Pulled this instruction from SillyTavern.
-        if runtimeConnectionSettings.connectionType == .OpenRouter {
-            if continued {
-                guard let lastMessage = requestMessages.last?.message else {
-                    print("No last message")
-                    return nil
-                }
-                let continueMessage = TemplateInstructions().continueMessage(lastMessage)
-                requestMessages.append(RequestBodyMessages(role: .system, message: continueMessage))
-            } else if chatModel.messages.last?.status != .done {
-                // Remove the last user message
-                // if we inserted a notes into the last index, we need to remove the bot message before it.
-                let loaderPlaceholder = requestMessages.last(where: { $0.role == .assistant })
-                if let loaderPlaceholder {
-                    requestMessages.removeAll(where: { $0.message == loaderPlaceholder.message })
-                }
-            }
-        }
-        
+        let contextResult = await contextBuilder.buildContext(
+            chat: chatModel,
+            continued: continued,
+            forceThinking: runtimeConnectionSettings.forceThinking
+        )
+
         var serviceResponse: Result<ModelResponse, APIError>?
-        
+
         switch runtimeConnectionSettings.connectionType {
         case .KoboldAPI:
-            print("Templates used: \(runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"))")        
-            let promptContext = await KoboldPromptContextBuilder(
-                tokenCount: { [weak self] text in
-                    await self?.getTokenCount(string: text) ?? 0
-                }
-            ).build(
-                for: chatModel,
-                settings: runtimeConnectionSettings,
-                userPersona: userPersona,
-                continueResponse: continued,
-                forceThinking: runtimeConnectionSettings.forceThinking,
-                includeTemplate: continued == false
-            )
+
+            guard let contextPrompt = contextResult?.textCompletion else {
+                fatalError("No Context")
+            }
 
             let promptBuilder = KoboldRequestBuilder(
-                prompt: promptContext.prompt,
-                memory: promptContext.memory,
+                prompt: contextPrompt.prompt,
+                memory: contextPrompt.memory,
                 maxContextLength: runtimeConnectionSettings.contextLength ?? 4096,
                 maxLength: runtimeConnectionSettings.responseLength ?? 240,
                 temperature: runtimeConnectionSettings.temperature,
@@ -306,14 +263,25 @@ final class LanguageModelService {
                 repetitionSlope: runtimeConnectionSettings.repetitionSlope,
                 stopSequence: stopSequences,
                 samplerOrder: runtimeConnectionSettings.samplerOrder,
-                promptTemplate: promptContext.template
             )
-            
+
             serviceResponse = await koboldManager?.sendMessage(builder: promptBuilder)
         case .OpenRouter:
+            guard let contextMessages = contextResult?.chatCompletion else {
+                fatalError("No Context")
+            }
+
+            guard let selectedModel = self.selectedModel else {
+                return ModelResponse(
+                    role: "assistant", 
+                    text: "Model not selected or available", 
+                    disconnect: true
+                )
+            }
+        
             let promptBuilder = OpenRouterRequestBuilder(
-                model: self.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free",
-                messages: requestMessages,
+                model: selectedModel,
+                messages: contextMessages.messages,
                 stop: stopSequences,
                 temperature: runtimeConnectionSettings.temperature,
                 topP: runtimeConnectionSettings.topP,
@@ -322,25 +290,12 @@ final class LanguageModelService {
                 topK: runtimeConnectionSettings.topK,
                 maxTokens: runtimeConnectionSettings.responseLength ?? 240,
                 repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
-                stream: false,
-                systemPromptTemplate: runtimeConnectionSettings.userTemplates.values.filter { $0.isEnabled }.map { $0.content }.joined(separator: "\n"),
-                characterDescription: chatModel.characterCards.first?.description?.replaceChatSequences(
-                    user: userPersona?.name,
-                    char: chatModel.chatTitle
-                ),
-                characterPersonality: chatModel.characterCards.first?.personality?.replaceChatSequences(
-                    user: userPersona?.name,
-                    char: chatModel.chatTitle
-                ),
-                characterScenario: chatModel.characterCards.first?.scenario?.replaceChatSequences(
-                    user: userPersona?.name,
-                    char: chatModel.chatTitle
-                )
+                stream: false
             )
-            
+
             serviceResponse = await openRouterManager?.sendMessage(builder: promptBuilder)
         }
-        
+
         switch serviceResponse {
         case .success(let model):
             return model
@@ -367,23 +322,24 @@ final class LanguageModelService {
         var normalizedSettings = newConnectionSettings
         normalizedSettings.ensureNonEmptySequences()
 
-        if normalizedSettings.host != runtimeConnectionSettings.host ||
-            normalizedSettings.port != runtimeConnectionSettings.port ||
-            normalizedSettings.apiKey != runtimeConnectionSettings.apiKey ||
-            normalizedSettings.selectedModel != runtimeConnectionSettings.selectedModel ||
-            normalizedSettings.connectionType != runtimeConnectionSettings.connectionType {
+        if normalizedSettings.host != runtimeConnectionSettings.host
+            || normalizedSettings.port != runtimeConnectionSettings.port
+            || normalizedSettings.apiKey != runtimeConnectionSettings.apiKey
+            || normalizedSettings.selectedModel != runtimeConnectionSettings.selectedModel
+            || normalizedSettings.connectionType != runtimeConnectionSettings.connectionType
+        {
             self.runtimeConnectionSettings = normalizedSettings
             setupManagers()
         } else {
             self.runtimeConnectionSettings = normalizedSettings
         }
-    } 
+    }
 
     private var stopSequences: [String] {
         [
             runtimeConnectionSettings.userStopSequence,
             runtimeConnectionSettings.botStopSequence,
-            runtimeConnectionSettings.systemStopSequence
+            runtimeConnectionSettings.systemStopSequence,
         ]
         .filter { $0.isEmpty == false }
     }
@@ -397,7 +353,8 @@ final class LanguageModelService {
 
     // MARK: - Kobold Functions
     func getMaxContextLength() async -> Int? {
-        guard let manager = koboldManager, runtimeConnectionSettings.connectionType == .KoboldAPI else {
+        guard let manager = koboldManager, runtimeConnectionSettings.connectionType == .KoboldAPI
+        else {
             print("No Kobold Manager")
             return nil
         }
@@ -412,7 +369,8 @@ final class LanguageModelService {
     }
 
     func getTokenCount(string: String) async -> Int {
-        guard let manager = koboldManager, runtimeConnectionSettings.connectionType == .KoboldAPI else {
+        guard let manager = koboldManager, runtimeConnectionSettings.connectionType == .KoboldAPI
+        else {
             print("No Kobold Manager")
             return 0
         }
@@ -428,7 +386,9 @@ final class LanguageModelService {
 
     // MARK: - OpenRouter Functions
     func getAvailableModels() async {
-        guard let manager = openRouterManager, runtimeConnectionSettings.connectionType == .OpenRouter else {
+        guard let manager = openRouterManager,
+            runtimeConnectionSettings.connectionType == .OpenRouter
+        else {
             print("No OpenRouter Manager")
             return
         }
@@ -440,5 +400,4 @@ final class LanguageModelService {
             print("Error: \(error)")
         }
     }
-
 }
