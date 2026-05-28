@@ -6,10 +6,10 @@
 //
 
 import Foundation
+import MarkdownStreamer
 import SwiftLLMSDK
 import SwiftUI
 import UIKit
-import MarkdownStreamer
 
 @MainActor
 @Observable
@@ -19,6 +19,7 @@ final class ChatViewModel {
     private let chatStore: ChatStore
     private let characterStore: CharacterStore
     private let appTheme: AppTheme = ServiceContainer.shared.currentTheme
+    // private let contextBuilder: ContextManager
 
     // Markdown streaming
     private(set) var mdReader: MarkdownReader = MarkdownReader()
@@ -53,7 +54,7 @@ final class ChatViewModel {
     var updateScrollView: Bool = false
     var scrollAfterLayout: Bool = false
     var scrollReloadToggle: Int = 0
-    
+
     var showSettings: Bool = false
     var editingMessageID: UUID?
     var newInstance: Bool = true
@@ -72,10 +73,24 @@ final class ChatViewModel {
         characterStore: CharacterStore? = nil
     ) {
         self.chatID = chatID
-        self.languageModelService = languageModelService ?? ServiceContainer.shared.getLanguageModelService()
-        self.connectionManager = connectionManager ?? ServiceContainer.shared.getConnectionStatusManager()
+        self.languageModelService =
+            languageModelService ?? ServiceContainer.shared.getLanguageModelService()
+        self.connectionManager =
+            connectionManager ?? ServiceContainer.shared.getConnectionStatusManager()
         self.chatStore = chatStore ?? ServiceContainer.shared.getChatStore()
         self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
+
+        Task {
+            guard let model = model else { 
+                print("Model not found yet!")
+                return
+            }
+
+            // Warm up generation. We ensure the contextManager is initialized on each message 
+            // send. This will allow the manager to start building the inital context early if 
+            // a chat is opened long enough before a first send.
+            await self.languageModelService.initContextManager(chatModel: model)
+        }
     }
 
     func fetchCharacterCard() -> CharacterCardModel? {
@@ -134,7 +149,7 @@ final class ChatViewModel {
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id, save: false)
-            isAutoScrollEnabled = true 
+            isAutoScrollEnabled = true
             scrollAfterLayout.toggle()
             scrollReloadToggle += 1
             await generateResponse(for: updatedMessage.id, isContinued: continueResponse)
@@ -158,7 +173,7 @@ final class ChatViewModel {
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id)
-            isAutoScrollEnabled = true 
+            isAutoScrollEnabled = true
             scrollAfterLayout.toggle()
         } catch {
             print("Failed to navigate message generation: \(error)")
@@ -224,7 +239,7 @@ final class ChatViewModel {
 
         do {
             try await chatStore.deleteMessage(message, from: chat.id)
-            isAutoScrollEnabled = true 
+            isAutoScrollEnabled = true
             scrollAfterLayout.toggle()
             scrollReloadToggle += 1
         } catch {
@@ -232,9 +247,12 @@ final class ChatViewModel {
         }
     }
 
-    private func generateResponse(for messageID: UUID, isContinued: Bool = false, streamed: Bool = true) async {
+    private func generateResponse(
+        for messageID: UUID, isContinued: Bool = false, streamed: Bool = true
+    ) async {
         guard let chat = model,
-            let messageIndex = chat.messages.firstIndex(where: { $0.id == messageID }) else {
+            let messageIndex = chat.messages.firstIndex(where: { $0.id == messageID })
+        else {
             return
         }
 
@@ -244,24 +262,19 @@ final class ChatViewModel {
         }
 
         if streamed {
-            let trimmedPrompt = await autoTrimPrompt(
-                for: chat,
-                continueResponse: isContinued,
-                forceThinking: connectionManager.connectionSettings.forceThinking
-            )
-
             generateStreamedResponse(
                 for: messageID,
                 chat: chat,
                 isContinued: isContinued,
-                excludeThinking: true, // OpenRouter is sometimes passing <think> tags. We should just open this up as a setting
-                trimmedPrompt: trimmedPrompt
+                excludeThinking: true,  // OpenRouter is sometimes passing <think> tags. We should just open this up as a setting
             )
             return
         }
 
-        let response = await languageModelService.sendMessage(chatModel: chat, continued: isContinued)
-        let responseText = response?.text ?? "There was an error processing your request. Please try again later."
+        let response = await languageModelService.sendMessage(
+            chatModel: chat, continued: isContinued)
+        let responseText =
+            response?.text ?? "There was an error processing your request. Please try again later."
         let settings = connectionManager.connectionSettings
         let sanitizedResponse = ReasoningStreamParser.visibleText(
             from: responseText,
@@ -288,19 +301,19 @@ final class ChatViewModel {
         for messageID: UUID,
         chat: ChatModel,
         isContinued: Bool,
-        excludeThinking: Bool,
-        trimmedPrompt: String
+        excludeThinking: Bool
     ) {
         Task {
             let userPersona = ServiceContainer.shared.getPersona
-            
+
             do {
                 try chatStore.setChatStatus(for: chatID, to: .loading)
             } catch {
                 print("Failed to set chat status: \(error)")
             }
 
-            let originalText = isContinued
+            let originalText =
+                isContinued
                 ? chat.messages.first(where: { $0.id == messageID })?.text ?? ""
                 : ""
             var rawAccumulator = StreamAccumulator()
@@ -313,21 +326,22 @@ final class ChatViewModel {
                 thinkingStartSequence: connectionManager.connectionSettings.thinkingStartSequence,
                 thinkingStopSequence: connectionManager.connectionSettings.thinkingStopSequence
             )
-            let stream = languageModelService.sendStreamedMessage(
+            let stream = await languageModelService.sendStreamedMessage(
                 chatModel: chat,
                 userPersona: userPersona,
-                continued: isContinued,
-                trimmedPrompt: trimmedPrompt
+                continued: isContinued
             )
 
             for await response in stream {
                 let responseText = response.text ?? ""
                 let rawResponse = rawAccumulator.ingest(responseText)
                 let isFinal = response.streaming == false
-                let parsedResponse = excludeThinking
+                let parsedResponse =
+                    excludeThinking
                     ? reasoningParser.parse(rawResponse, isFinal: isFinal)
                     : ReasoningParseResult(visibleText: rawResponse, shouldShowThinking: false)
-                let visibleResponse = parsedResponse.visibleText.isEmpty
+                let visibleResponse =
+                    parsedResponse.visibleText.isEmpty
                     ? ""
                     : visibleAccumulator.combinedVisibleText(parsedResponse.visibleText)
 
@@ -352,7 +366,8 @@ final class ChatViewModel {
         shouldShowThinking: Bool
     ) async {
         guard let chat = model,
-            let message = chat.messages.first(where: { $0.id == messageID }) else {
+            let message = chat.messages.first(where: { $0.id == messageID })
+        else {
             return
         }
 
@@ -364,12 +379,14 @@ final class ChatViewModel {
         }
 
         if disconnect {
-            updatedMessage.text = responseText.isEmpty
+            updatedMessage.text =
+                responseText.isEmpty
                 ? "There was an error processing your request. Please try again later."
                 : responseText
         }
 
-        updatedMessage.status = isFinal
+        updatedMessage.status =
+            isFinal
             ? .done
             : (shouldShowThinking ? .thinking : .streaming)
 
@@ -422,7 +439,8 @@ final class ChatViewModel {
         var updatedMessage = chat.messages[messageIndex]
         updatedMessage.error = .disconnect
         updatedMessage.status = .done
-        updatedMessage.text = "Looks like you're not connected to a model. Please check your connection settings."
+        updatedMessage.text =
+            "Looks like you're not connected to a model. Please check your connection settings."
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id)
@@ -433,35 +451,11 @@ final class ChatViewModel {
         }
     }
 
-    private func autoTrimPrompt(
-        for chat: ChatModel,
-        continueResponse: Bool,
-        forceThinking: Bool
-    ) async -> String {
-        let settings = connectionManager.connectionSettings
-        let userPersona = ServiceContainer.shared.getPersona
-        guard settings.connectionType == .KoboldAPI else {
-            return ""
-        }
-
-        return await KoboldPromptContextBuilder(
-            tokenCount: { [languageModelService] text in
-                await languageModelService.getTokenCount(string: text)
-            }
-        ).build(
-            for: chat,
-            settings: settings,
-            userPersona: userPersona,
-            continueResponse: continueResponse,
-            forceThinking: forceThinking,
-            includeTemplate: continueResponse == false
-        ).prompt
-    }
-
     private func triggerHapticIfNeeded() {
         let now = Date()
         guard isViewActive,
-            lastHapticTriggerAt == nil || now.timeIntervalSince(lastHapticTriggerAt!) >= 0.2 else {
+            lastHapticTriggerAt == nil || now.timeIntervalSince(lastHapticTriggerAt!) >= 0.2
+        else {
             return
         }
 

@@ -9,6 +9,7 @@ import Foundation
 import GRDB
 import SwiftLLMSDK
 import SwiftUI
+import SwiftTiktoken
 
 struct CharacterCardModel: Hashable {
     var id: UUID = UUID()
@@ -86,6 +87,36 @@ struct CharacterCardModel: Hashable {
             return Image(uiImage: uiImage)
         }
         return nil
+    }
+
+    // Baseline estimate for UI cards. This will only count the initial message. 
+    // We should still pull an accurate token count from `/tokenCount` if running KoboldCPP
+    func tokenCount() async -> Int {
+        let tokenizer = try? await CoreBPE.cl100kBase() // standard 100k tokenizer. May need to bump to 200k or give a safe buffer. 
+        guard let tokenizer = tokenizer else { return 0 }
+        
+        var characterCardText = "" 
+        if let description = description {
+            characterCardText = description
+        }
+        if let cardTagline = cardTagline {
+            characterCardText += "\n" + cardTagline
+        }
+        if let personality = personality {
+            characterCardText += "\n" + personality
+        }
+        if let firstMessage = firstMessage {
+            characterCardText += "\n" + firstMessage
+        }
+        if let messageExample = messageExample {
+            characterCardText += "\n" + messageExample
+        }
+        if let scenario = scenario {
+            characterCardText += "\n" + scenario
+        }
+
+        let tokens = tokenizer.encodeWithSpecialTokens(text: characterCardText)
+        return tokens.count
     }
 }
 

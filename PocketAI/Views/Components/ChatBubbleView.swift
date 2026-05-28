@@ -7,7 +7,6 @@
 
 import SwiftUI
 import MarkdownStreamer
-import MarkdownUI
 
 struct ChatBubbleView: View {
 

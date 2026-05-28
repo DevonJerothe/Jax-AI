@@ -42,7 +42,7 @@ struct ChatSettingsView: View {
 
     private var temperatureBinding: Binding<Double> {
         Binding<Double>(
-            get: { connectionManager.connectionSettings.temperature ?? 0.6 },
+            get: { connectionManager.connectionSettings.temperature },
             set: { connectionManager.update(\.temperature, to: $0) }
         )
     }
