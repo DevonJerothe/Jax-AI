@@ -85,6 +85,10 @@ final class ChatViewModel {
                 print("Model not found yet!")
                 return
             }
+
+            // Warm up generation. We ensure the contextManager is initialized on each message 
+            // send. This will allow the manager to start building the inital context early if 
+            // a chat is opened long enough before a first send.
             await self.languageModelService.initContextManager(chatModel: model)
         }
     }

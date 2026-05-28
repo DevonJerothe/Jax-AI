@@ -24,7 +24,7 @@ final class ContextManager {
     }
 
     func prepare() async {
-        self.tokenizer = await ServiceContainer.shared.tokenizer
+        await loadTokenizerIfNeeded()
         await self.loadContextFromChat()
     }
 
@@ -35,9 +35,7 @@ final class ContextManager {
         forceThinking: Bool = false
     ) async -> ContextOutput? {
 
-        if tokenizer == nil {
-            self.tokenizer = await ServiceContainer.shared.tokenizer
-        }
+        await loadTokenizerIfNeeded()
 
         guard let tokenizer = tokenizer else {
             return .error("Tokenizer not found")
@@ -88,6 +86,19 @@ final class ContextManager {
         await buildCharacterBlocks(characterCard)
         // system prompts and other memory blocks
         await buildMemoryBlocks()
+    }
+
+    private func loadTokenizerIfNeeded() async {
+        guard tokenizer == nil else {
+            return 
+        }
+
+        if let sharedTokenizer = await ServiceContainer.shared.tokenizer {
+            tokenizer = sharedTokenizer
+            return 
+        }
+
+        tokenizer = try? await CoreBPE.cl100kBase()
     }
 
     public func refreshMemory(chat: ChatModel) async {
@@ -159,5 +170,9 @@ final class ContextManager {
         let tokens = tokenCache.count(text, tokenizer: tokenizer)
 
         return tokens
+    }
+
+    func syncSettigns(_ settings: ConnectionSettingsModel) {
+        self.settings = settings
     }
 }

@@ -56,6 +56,22 @@ final class LanguageModelService {
         }
     }
 
+    private func contextManager(for chatModel: ChatModel) async -> ContextManager {
+        // Ensure both the context manager is active, and contains the current chat
+        if let contextBuilder, contextBuilder.chat.id == chatModel.id {
+            contextBuilder.syncSettigns(runtimeConnectionSettings)
+            return contextBuilder
+        }
+
+        let manager = ContextManager(
+            from: chatModel,
+            runtimeConnectionSettings
+        )
+        await manager.prepare()
+        self.contextBuilder = manager
+        return manager
+    }
+    
     func connect() async -> Bool {
         print("Connecting to \(runtimeConnectionSettings.connectionType)")
         print("Current Context Length: \(runtimeConnectionSettings.contextLength ?? 0)")
@@ -97,12 +113,7 @@ final class LanguageModelService {
     func initContextManager(
         chatModel: ChatModel
     ) async {
-        let manager = ContextManager(
-            from: chatModel,
-            runtimeConnectionSettings
-        )
-        await manager.prepare()
-        self.contextBuilder = manager
+        _ = await contextManager(for: chatModel)
     }
 
     func sendStreamedMessage(
@@ -111,10 +122,7 @@ final class LanguageModelService {
         continued: Bool = false,
         // trimmedPrompt: String
     ) async -> AsyncStream<ModelResponse> {
-
-        guard let contextBuilder else { 
-            fatalError("ContextBuilder is not initialized")
-        }
+        let contextBuilder = await contextManager(for: chatModel)
 
         let contextResult = await contextBuilder.buildContext(
             chat: chatModel,
@@ -227,9 +235,7 @@ final class LanguageModelService {
 
     // Put all context switching of service type in this class and out of the view models.
     func sendMessage(chatModel: ChatModel, continued: Bool = false) async -> ModelResponse? {
-        guard let contextBuilder else { 
-            fatalError("ContextBuilder is not initialized")
-        }
+        let contextBuilder = await contextManager(for: chatModel)
 
         let contextResult = await contextBuilder.buildContext(
             chat: chatModel,
@@ -322,16 +328,17 @@ final class LanguageModelService {
         var normalizedSettings = newConnectionSettings
         normalizedSettings.ensureNonEmptySequences()
 
-        if normalizedSettings.host != runtimeConnectionSettings.host
+        let shouldRebuildManagers =  normalizedSettings.host != runtimeConnectionSettings.host
             || normalizedSettings.port != runtimeConnectionSettings.port
             || normalizedSettings.apiKey != runtimeConnectionSettings.apiKey
             || normalizedSettings.selectedModel != runtimeConnectionSettings.selectedModel
             || normalizedSettings.connectionType != runtimeConnectionSettings.connectionType
-        {
-            self.runtimeConnectionSettings = normalizedSettings
-            setupManagers()
-        } else {
-            self.runtimeConnectionSettings = normalizedSettings
+        
+        self.runtimeConnectionSettings = normalizedSettings
+        contextBuilder?.syncSettigns(normalizedSettings)
+
+        if shouldRebuildManagers {
+            setupManagers()         
         }
     }
 
