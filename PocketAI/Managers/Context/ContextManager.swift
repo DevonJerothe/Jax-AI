@@ -47,7 +47,7 @@ final class ContextManager {
         if reloadContext {
             contextBlocks.removeAll()
             await loadContextFromChat()
-            await buildMessageBlocks()
+            await buildMessageBlocks(continued: continued)
         }
 
         switch connectionType {
