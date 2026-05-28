@@ -17,8 +17,11 @@ struct ChatCompletionContextBuilder {
 
         let sortedMemoryBlocks = memoryBlocks.sorted { $0.order < $1.order }
         for memoryMessage in sortedMemoryBlocks {
+
+            let renderedText = renderSystemMessage(memoryMessage)
+            
             requestMessages.append(
-                RequestBodyMessages(role: memoryMessage.actor, message: memoryMessage.text)
+                RequestBodyMessages(role: memoryMessage.actor, message: renderedText)
             )
         }
         
@@ -53,5 +56,28 @@ struct ChatCompletionContextBuilder {
                 selectedPromptTokens: sortedMessages.reduce(0) { $0 + $1.tokenCount }
             )
         )
+    }
+
+    private func renderSystemMessage(
+        _ block: ContextBlock
+    ) -> String {
+        switch block.kind {
+            case .characterDescription: 
+                return "<character_description>\n\(block.text)\n</character_description>"
+            case .characterScenario: 
+                return "<character_scenario>\n\(block.text)\n</character_scenario>"
+            case .characterPersonality:
+                return "<character_personality>\n\(block.text)\n</character_personality>"
+            case .characterMessageExample:
+                return "<character_message_example>\n\(block.text)\n</character_message_example>"
+            case .persona: 
+                return "<user_persona>\n\(block.text)\n</user_persona>"
+            case .userNote: 
+                return "<user_note>\n\(block.text)\n</user_note>"
+            case .summary:
+                return "<chat_summary>\n\(block.text)\n</chat_summary>"
+            default: 
+                return block.text
+        }
     }
 }
