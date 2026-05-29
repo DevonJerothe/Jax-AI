@@ -5,19 +5,22 @@ struct ChatNoteView: View {
     @Environment(\.appTheme) private var appTheme
 
     @State private var viewModel: ChatViewModel
+    private let noteID: UUID?
+
     @State private var noteText: String = ""
     @State private var noteDepthValue: Int = 1
     @State private var noteInjectInMemory: Bool = false
 
-    init(chatID: UUID) {
+    init(chatID: UUID, noteID: UUID? = nil) {
+        self.noteID = noteID
         _viewModel = State(initialValue: ChatViewModel(chatID: chatID))
     }
 
-    private var maxNoteDepth: Int {
-        max(1, viewModel.model?.messages.count ?? 1)
+    private var isEditing: Bool {
+        noteID != nil
     }
 
-    private var canAdd: Bool {
+    private var canSubmit: Bool {
         noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
     }
 
@@ -25,7 +28,7 @@ struct ChatNoteView: View {
         AppSheetContainer(initialHeight: 560) {
             VStack(alignment: .leading, spacing: 20) {
                 AppSheetHeader(
-                    title: "Add Note",
+                    title: isEditing ? "Edit Note" : "Add Note",
                     subtitle: "Enter a note to inject into the chat prompt."
                 )
 
@@ -50,7 +53,7 @@ struct ChatNoteView: View {
                     .tint(appTheme.tintColor.color)
 
                     if noteInjectInMemory == false {
-                        Stepper(value: $noteDepthValue, in: 1...maxNoteDepth) {
+                        Stepper(value: $noteDepthValue, in: 1...Int.max) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Note Depth")
                                     .foregroundStyle(appTheme.primaryText.color)
@@ -68,10 +71,27 @@ struct ChatNoteView: View {
                 actionRow
             }
         }
+        .onAppear {
+            loadExistingNote()
+        }
     }
 
     private var actionRow: some View {
         HStack(spacing: 12) {
+            if isEditing {
+                Button {
+                    deleteNote()
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                        .labelStyle(.iconOnly)
+                        .frame(width: 44, height: 44)
+                }
+                .foregroundStyle(appTheme.destructiveAction.color)
+                .background(appTheme.secondaryBackgroundColor.color)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .accessibilityLabel("Delete Note")
+            }
+
             Spacer()
 
             Button {
@@ -86,13 +106,25 @@ struct ChatNoteView: View {
             Button {
                 submitNote()
             } label: {
-                Text("Add")
+                Text(isEditing ? "Update" : "Add")
                     .fontWeight(.semibold)
                     .frame(minWidth: 84)
             }
             .buttonStyle(AppSheetButtonStyle(kind: .primary))
-            .disabled(canAdd == false)
+            .disabled(canSubmit == false)
         }
+    }
+
+    private func loadExistingNote() {
+        guard let noteID,
+              let note = viewModel.model?.chatNotes.first(where: { $0.id == noteID })
+        else {
+            return
+        }
+
+        noteText = note.note
+        noteDepthValue = max(1, note.depth)
+        noteInjectInMemory = note.injectInMemory
     }
 
     private func submitNote() {
@@ -102,11 +134,31 @@ struct ChatNoteView: View {
 
         navManager.presentedSheet = nil
         Task {
-            await viewModel.addNote(
-                text: text,
-                depth: depth,
-                injectInMemory: injectInMemory
-            )
+            if let noteID {
+                await viewModel.updateNote(
+                    noteID: noteID,
+                    text: text,
+                    depth: depth,
+                    injectInMemory: injectInMemory
+                )
+            } else {
+                await viewModel.addNote(
+                    text: text,
+                    depth: depth,
+                    injectInMemory: injectInMemory
+                )
+            }
+        }
+    }
+
+    private func deleteNote() {
+        guard let noteID else {
+            return
+        }
+
+        navManager.presentedSheet = nil
+        Task {
+            await viewModel.deleteNote(noteID: noteID)
         }
     }
 }

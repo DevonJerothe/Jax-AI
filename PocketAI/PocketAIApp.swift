@@ -110,6 +110,8 @@ struct PocketAIApp: App {
             }
         case .chatSettings(let chatID):
             ChatSettingsView(chatID: chatID)
+        case .chatNotes(let chatID):
+            ChatNotesView(chatID: chatID)
         case .booruBrowserView:
             BooruBrowserView()
         case .chubAIBrowserView:
@@ -124,8 +126,8 @@ struct PocketAIApp: App {
         switch sheet {
         case .newTemplateView(let templateKey):
             NewTemplateView(templateKey: templateKey)
-        case .chatNote(let chatID):
-            ChatNoteView(chatID: chatID)
+        case .chatNote(let chatID, let noteID):
+            ChatNoteView(chatID: chatID, noteID: noteID)
         default:
             Text("Not Implemented")
         }
