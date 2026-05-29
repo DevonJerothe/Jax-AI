@@ -34,6 +34,7 @@ class NavigationManager {
         case characterDetails(UUID)
         case chatSettings(UUID)
         case newTemplateView(String?)
+        case chatNote(UUID)
         case booruBrowserView
         case chubAIBrowserView
 
@@ -49,6 +50,8 @@ class NavigationManager {
                 return "chatDetails_\(chatID.uuidString)"
             case .newTemplateView(let templateKey):
                 return "newTemplateView_\(templateKey ?? "new")"
+            case .chatNote(let chatID):
+                return "chatNote_\(chatID.uuidString)"
             case .booruBrowserView:
                 return "booruBrowserView"
             case .chubAIBrowserView:
@@ -247,6 +250,10 @@ class NavigationManager {
 
     func showNewTemplateView(templateKey: String? = nil) {
         presentedSheet = .newTemplateView(templateKey)
+    }
+
+    func showChatNoteView(chatID: UUID) {
+        presentedSheet = .chatNote(chatID)
     }
 
     /// Navigates to a specified destination within the current tab's navigation stack

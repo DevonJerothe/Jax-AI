@@ -138,7 +138,16 @@ final class ChatStore {
         }
     }
     
-    func updateChatNotes() {}
+    func addChatNote(_ note: ChatNoteModel, to chatId: UUID) async throws {
+        guard let index = chats.firstIndex(where: { $0.id == chatId }) else {
+            throw AppDBError.recordNotFound(chatId.uuidString)
+        }
+
+        chats[index].chatNotes.append(note)
+        chats[index].updatedAt = Date()
+        try chatRepository.save(chats[index])
+        await waitForObserver()
+    }
     
     func updatePrivacy(for chatId: UUID, isPrivate: Bool) async throws {
         guard let index = chats.firstIndex(where: { $0.id == chatId }) else {

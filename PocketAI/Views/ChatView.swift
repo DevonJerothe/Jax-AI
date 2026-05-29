@@ -202,14 +202,17 @@ struct ChatView: View {
                 .shadow(radius: 12)
 
                 HStack {
-                    Button {
-                        // TODO: Add image upload funtionality
+                    Menu {
+                        Button {
+                            navManager.showChatNoteView(chatID: viewModel.chatID)
+                        } label: {
+                            Label("Add Note", systemImage: "note.text.badge.plus")
+                        }
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 26))
                             .foregroundColor(appTheme.secondaryText.color)
                     }
-                    .disabled(true)
                     .padding(.bottom, 8)
                     .padding(.leading, 16)
                     Spacer()

@@ -211,6 +211,31 @@ final class ChatViewModel {
         }
     }
 
+    func addNote(text: String, depth: Int, injectInMemory: Bool) async {
+        guard let chat = model else {
+            return
+        }
+
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.isEmpty == false else {
+            return
+        }
+
+        let maxDepth = max(1, chat.messages.count)
+        let clampedDepth = injectInMemory ? 0 : min(max(depth, 1), maxDepth)
+        let note = ChatNoteModel(
+            note: trimmedText,
+            depth: clampedDepth,
+            injectInMemory: injectInMemory
+        )
+
+        do {
+            try await chatStore.addChatNote(note, to: chat.id)
+        } catch {
+            print("Failed to add chat note: \(error)")
+        }
+    }
+
     func updateMessage(_ message: MessageModel, newText: String) async {
         guard let chat = model else {
             return
