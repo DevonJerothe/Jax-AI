@@ -1,8 +1,8 @@
-import SwiftUI 
+import SwiftUI
 import Collections
 
 struct NewTemplateView: View {
-    @Environment(NavigationManager.self) var navManger
+    @Environment(NavigationManager.self) var navManager
     @Environment(ServiceContainer.self) private var serviceContainer
     @Environment(\.appTheme) private var appTheme
     var templateKey: String?
@@ -20,62 +20,44 @@ struct NewTemplateView: View {
     }
 
     var body: some View {
-        VStack {
-            FormField(title: "Template Name", textBinding: $templateName)
-            FormEditor(
-                title: "Template Content",
-                placeholder: "Enter the template content here...",
-                textBinding: $templateContent
-            )
+        AppSheetContainer {
+            VStack(alignment: .leading, spacing: 20) {
+                AppSheetHeader(
+                    title: templateKey == nil ? "New Template" : "Edit Template",
+                    subtitle: "Name the template and define the instructions added to chat context."
+                )
 
-            HStack {
-                Button {
-                    updateEditTemplate()
-                } label: {
-                    Text("Save")
-                        .foregroundColor(appTheme.primaryText.color)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(appTheme.primaryAction.color)
-                        .cornerRadius(12)
-                }
-                .padding(.horizontal, 16)
-                .disabled(templateName.isEmpty || templateContent.isEmpty)
+                VStack(alignment: .leading, spacing: 16) {
+                    AppSheetField(
+                        title: "Template Name",
+                        placeholder: "Roleplay",
+                        text: $templateName
+                    )
 
-                Spacer()
+                    AppSheetEditor(
+                        title: "Template Content",
+                        placeholder: "Enter template instructions...",
+                        text: $templateContent
+                    )
 
-                // delete button    
-                if templateKey != nil {
-                    Button {
-                        // delete the template
-                        deleteTemplate()
-                    } label: {
-                        Text("Delete")
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .foregroundColor(appTheme.destructiveAction.color)
+                    AppSheetOptionCard {
+                        Toggle(isOn: $isEnabled) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Enabled")
+                                    .foregroundStyle(appTheme.primaryText.color)
+
+                                Text("Include this template in new model context.")
+                                    .font(.caption)
+                                    .foregroundStyle(appTheme.secondaryText.color)
+                            }
+                        }
+                        .tint(appTheme.tintColor.color)
                     }
                 }
 
-                Button {
-                    // Enable / Disable the template
-                    enableDisableTemplate()
-                } label: {
-                    Text("\(isEnabled ? "Enabled" : "Disabled")")
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)                     
-                        .background(isEnabled ? appTheme.tintColor.color.opacity(0.6) : appTheme.secondaryBackgroundColor.color)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(isEnabled ? appTheme.tintColor.color : appTheme.borderColor.color, lineWidth: 1)
-                        ) 
-                }
-                .padding(.horizontal, 16)
+                actionRow
             }
         }
-        .padding(.top, 16)
-        // .padding(.horizontal, 16)
         .onAppear {
             if let key = templateKey {
                 let template = connectionManager.connectionSettings.userTemplates[key]
@@ -88,12 +70,46 @@ struct NewTemplateView: View {
         }
     }
 
-    private func enableDisableTemplate() {
-        guard let key = templateKey else { return }
-        var templates = connectionManager.connectionSettings.userTemplates
-        templates[key]?.isEnabled.toggle()
-        connectionManager.update(\.userTemplates, to: templates)
-        navManger.presentedSheet = nil
+    private var actionRow: some View {
+        HStack(spacing: 12) {
+            if templateKey != nil {
+                Button {
+                    deleteTemplate()
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                        .labelStyle(.iconOnly)
+                        .frame(width: 44, height: 44)
+                }
+                .foregroundStyle(appTheme.destructiveAction.color)
+                .background(appTheme.secondaryBackgroundColor.color)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .accessibilityLabel("Delete Template")
+            }
+
+            Spacer()
+
+            Button {
+                navManager.presentedSheet = nil
+            } label: {
+                Text("Cancel")
+                    .fontWeight(.semibold)
+                    .frame(minWidth: 84)
+            }
+            .buttonStyle(AppSheetButtonStyle(kind: .secondary))
+
+            Button {
+                updateEditTemplate()
+            } label: {
+                Text("Save")
+                    .fontWeight(.semibold)
+                    .frame(minWidth: 84)
+            }
+            .buttonStyle(AppSheetButtonStyle(kind: .primary))
+            .disabled(
+                templateName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                    templateContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            )
+        }
     }
 
     private func deleteTemplate() {
@@ -105,26 +121,30 @@ struct NewTemplateView: View {
         
         // Reassign the entire dictionary to trigger SwiftUI updates
         connectionManager.update(\.userTemplates, to: newTemplates)
-        navManger.presentedSheet = nil
+        navManager.presentedSheet = nil
     }
 
     private func updateEditTemplate() {
-        guard !templateName.isEmpty && !templateContent.isEmpty else { return }
+        let trimmedName = templateName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedContent = templateContent.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty && !trimmedContent.isEmpty else { return }
         
-        let template = TemplateModel(content: templateContent, isEnabled: true)
+        let template = TemplateModel(content: templateContent, isEnabled: isEnabled)
         var templates = connectionManager.connectionSettings.userTemplates
         
-        // Add or update the template. If updateing an existing template key, we need to swap the indexes.
-        templates.updateValue(template, forKey: templateName)
+        // Add or update the template. If updating an existing template key, keep its original position.
+        templates.updateValue(template, forKey: trimmedName)
         
-        // this should "technically" never have nil indexes... buts its also 1AM and I cant be bothered enough to test. So yea i guess TODO:
-        if let templateKey, templateKey != templateName {
-            templates.swapAt(templates.index(forKey: templateKey)!, templates.index(forKey: templateName)!)
+        if let templateKey,
+           templateKey != trimmedName,
+           let oldIndex = templates.index(forKey: templateKey),
+           let newIndex = templates.index(forKey: trimmedName) {
+            templates.swapAt(oldIndex, newIndex)
             templates.removeValue(forKey: templateKey)
         }
         
         connectionManager.update(\.userTemplates, to: templates)
-        navManger.presentedSheet = nil
+        navManager.presentedSheet = nil
     }
 }
 
@@ -171,6 +191,7 @@ struct TemplateEditor: View {
         } 
     }
 }
+
 struct TemplateItem: View {
     @Environment(\.appTheme) private var appTheme
 

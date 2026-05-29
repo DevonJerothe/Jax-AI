@@ -66,9 +66,7 @@ struct PocketAIApp: App {
             }
             .sheet(item: $navManager.presentedSheet) { sheet in
                 sheetView(for: sheet)
-                    .presentationDetents([.fraction(0.65)])
-                    .presentationBackground(.ultraThinMaterial)
-                    .ignoresSafeArea()
+                    .presentationBackground(serviceContainer.currentTheme.backgroundColor.color)
             }
             .tint(serviceContainer.currentTheme.tintColor.color)
             .environment(\.appTheme, serviceContainer.currentTheme)
@@ -112,6 +110,8 @@ struct PocketAIApp: App {
             }
         case .chatSettings(let chatID):
             ChatSettingsView(chatID: chatID)
+        case .chatNotes(let chatID):
+            ChatNotesView(chatID: chatID)
         case .booruBrowserView:
             BooruBrowserView()
         case .chubAIBrowserView:
@@ -124,14 +124,12 @@ struct PocketAIApp: App {
     @ViewBuilder
     private func sheetView(for sheet: NavigationManager.SheetType) -> some View {
         switch sheet {
-        case .chatSettings(let chatID):
-            ChatSettingsView(chatID: chatID)
-        case .newChat:
-            NewChatView()
         case .newTemplateView(let templateKey):
             NewTemplateView(templateKey: templateKey)
+        case .chatNote(let chatID, let noteID):
+            ChatNoteView(chatID: chatID, noteID: noteID)
         default:
-            Text("TODO: Sheet View")
+            Text("Not Implemented")
         }
     }
 }

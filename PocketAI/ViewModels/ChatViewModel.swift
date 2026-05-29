@@ -211,6 +211,70 @@ final class ChatViewModel {
         }
     }
 
+    func addNote(text: String, depth: Int, injectInMemory: Bool) async {
+        guard let chat = model else {
+            return
+        }
+
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.isEmpty == false else {
+            return
+        }
+
+        let clampedDepth = injectInMemory ? 0 : max(depth, 1)
+        let note = ChatNoteModel(
+            note: trimmedText,
+            depth: clampedDepth,
+            injectInMemory: injectInMemory
+        )
+
+        do {
+            try await chatStore.addChatNote(note, to: chat.id)
+        } catch {
+            print("Failed to add chat note: \(error)")
+        }
+    }
+
+    func updateNote(noteID: UUID, text: String, depth: Int, injectInMemory: Bool) async {
+        guard var chat = model,
+              let noteIndex = chat.chatNotes.firstIndex(where: { $0.id == noteID })
+        else {
+            return
+        }
+
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.isEmpty == false else {
+            return
+        }
+
+        chat.chatNotes[noteIndex].note = trimmedText
+        chat.chatNotes[noteIndex].depth = injectInMemory ? 0 : max(depth, 1)
+        chat.chatNotes[noteIndex].injectInMemory = injectInMemory
+        chat.chatNotes[noteIndex].updatedAt = Date()
+        chat.updatedAt = Date()
+
+        do {
+            try await chatStore.saveChat(chat)
+        } catch {
+            print("Failed to update chat note: \(error)")
+        }
+    }
+
+    func deleteNote(noteID: UUID) async {
+        guard var chat = model else {
+            return
+        }
+
+        chat.chatNotes.removeAll { $0.id == noteID }
+        chat.updatedAt = Date()
+
+        do {
+            try await chatStore.saveChat(chat)
+        } catch {
+            print("Failed to delete chat note: \(error)")
+        }
+    }
+
     func updateMessage(_ message: MessageModel, newText: String) async {
         guard let chat = model else {
             return

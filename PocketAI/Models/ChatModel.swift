@@ -92,35 +92,6 @@ struct ChatModel: Hashable {
         characterCards = [newCard]
     }
 
-    func getFullMemory(userPersona: UserPersonaModel?) -> String {
-        guard var fullMemory = characterCards.first?.description else {
-            return self.memory
-        }
-        fullMemory = "\nDescription: \(fullMemory)"
-        // Build out the memory object from characterCard
-        if let personality = characterCards.first?.personality {
-            fullMemory += "\n\(characterCards.first?.name ?? "")'s personality: \(personality)\n"
-        }
-        if let scenario = characterCards.first?.scenario {
-            fullMemory += "\nScenario: \(scenario)\n"
-        }
-
-        if let personaDescription = userPersona?.description {
-            fullMemory += "\nPersona: \(personaDescription)\n"
-        }
-
-        for note in chatNotes {
-            if note.injectInMemory {
-                fullMemory += "\n\(note.note)"
-            }
-        }
-
-        fullMemory = fullMemory
-            .replaceChatSequences(user: userPersona?.name, char: chatTitle)
-    
-        return fullMemory
-    }
-
     func getAvatarImg() -> Image? {
         if let imgData = characterCards.first?.imageData, let uiImage = UIImage(data: imgData) {
             return Image(uiImage: uiImage)

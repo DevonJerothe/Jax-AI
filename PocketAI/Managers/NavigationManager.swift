@@ -20,6 +20,7 @@ class NavigationManager {
         case characterView(UUID)
         case characterCardsView
         case chatSettings(UUID)
+        case chatNotes(UUID)
         case settingsView
         case connectionSettings
         case newChatView(Bool)
@@ -34,6 +35,7 @@ class NavigationManager {
         case characterDetails(UUID)
         case chatSettings(UUID)
         case newTemplateView(String?)
+        case chatNote(UUID, UUID?)
         case booruBrowserView
         case chubAIBrowserView
 
@@ -49,6 +51,8 @@ class NavigationManager {
                 return "chatDetails_\(chatID.uuidString)"
             case .newTemplateView(let templateKey):
                 return "newTemplateView_\(templateKey ?? "new")"
+            case .chatNote(let chatID, let noteID):
+                return "chatNote_\(chatID.uuidString)_\(noteID?.uuidString ?? "new")"
             case .booruBrowserView:
                 return "booruBrowserView"
             case .chubAIBrowserView:
@@ -151,6 +155,11 @@ class NavigationManager {
         }
     }
 
+    func navigateToChatNotes(chatID: UUID) {
+        presentedSheet = nil
+        appendToCurrentPath(Destination.chatNotes(chatID))
+    }
+
     // Navigates to specific character, optionally preserving the current path
     // - Parameter character: The character to navigate to
     // - Parameter keepCurrentPath: Whether to preserve the current path (default is false)
@@ -247,6 +256,10 @@ class NavigationManager {
 
     func showNewTemplateView(templateKey: String? = nil) {
         presentedSheet = .newTemplateView(templateKey)
+    }
+
+    func showChatNoteView(chatID: UUID, noteID: UUID? = nil) {
+        presentedSheet = .chatNote(chatID, noteID)
     }
 
     /// Navigates to a specified destination within the current tab's navigation stack
