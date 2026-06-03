@@ -65,7 +65,8 @@ final class ChubAIViewModel {
             case .success: 
                 chubSettings = chubAIService.chubSettings ?? chubSettings
                 loggedIn = true
-                await searchCards()
+                isLoading = false
+                await searchCards(refresh: true)
             case .failure(_):
                 loginError = "Invalid credentials"
                 loggedIn = false 

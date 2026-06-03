@@ -41,7 +41,7 @@ final class BotBooruViewModel {
         guard posts.isEmpty else { return }
         guard isLoading == false else { return }
 
-        await getPosts()
+        await getPosts(refresh: true)
     }
 
     func refreshLogin() async {
@@ -58,7 +58,7 @@ final class BotBooruViewModel {
                 authSettings = botBooruService.authSettings ?? authSettings
                 loggedIn = true
                 isLoading = false
-                await getPosts()
+                await getPosts(refresh: true)
             case .failure:
                 logout()
                 loginError = "Invalid credentials"
