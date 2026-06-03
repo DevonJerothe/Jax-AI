@@ -16,7 +16,9 @@ public struct BotBooruPostItem: Codable, Identifiable {
     var characterName: String 
     var createdAt: Date
     var tags: [BotBooruTagModel]
-    var uploaderId: Int 
+    var uploaderId: Int
+    var tokenCount: Int
+    var creatorNote: String?
 
     var thumbnail: URL? {
         // https://botbooru.com/images/4a89325299cf4ff8a881d65b3b3a1d2f.png?v=1
@@ -31,6 +33,8 @@ public struct BotBooruPostItem: Codable, Identifiable {
         case createdAt = "created_at"
         case tags = "tags"
         case uploaderId = "uploader_id"
+        case tokenCount = "token_count"
+        case creatorNote = "creator_notes_excerpt"
     }
 
 }
