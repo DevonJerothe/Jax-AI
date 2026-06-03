@@ -26,8 +26,7 @@ final class ChubAIViewModel {
     var hasMore: Bool = true
 
     init(
-        characterStore: CharacterStore? = nil,
-        loadCards: Bool = true
+        characterStore: CharacterStore? = nil
     ) {
         self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
         self.chubSettings = chubAIService.chubSettings ?? ChubAISettings()
@@ -42,19 +41,15 @@ final class ChubAIViewModel {
                     await login(username: username, password: password)
                 }
             }
-
-            if loadCards {
-                Task {
-                    await searchCards()
-                } 
-            }
         }
-
-        // Task {
-        //     isLoading = true
-        //     await searchCards(initLoad: true)
-        //     isLoading = false
-        // }
+    }
+    
+    func loadInitialCards() async {
+        guard loggedIn else { return }
+        guard cards.isEmpty else { return }
+        guard isLoading == false else { return }
+        
+        await searchCards(refresh: true)
     }
 
     func refreshLogin() async {
@@ -70,7 +65,8 @@ final class ChubAIViewModel {
             case .success: 
                 chubSettings = chubAIService.chubSettings ?? chubSettings
                 loggedIn = true
-                await searchCards()
+                isLoading = false
+                await searchCards(refresh: true)
             case .failure(_):
                 loginError = "Invalid credentials"
                 loggedIn = false 
@@ -143,9 +139,7 @@ final class ChubAIViewModel {
                 hasMore = false
                 print("Error: \(error.localizedDescription)")
         }
-        // if initLoad == false {
-        //     isLoading = false
-        // }
+
         isLoading = false
     }
 

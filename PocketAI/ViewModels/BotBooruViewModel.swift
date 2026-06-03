@@ -17,7 +17,7 @@ final class BotBooruViewModel {
     var sort: BotBooruSort = .latest
     var sortTime: BotBooruSortTime = .allTime
 
-    init(characterStore: CharacterStore? = nil, loadPosts: Bool = true) {
+    init(characterStore: CharacterStore? = nil) {
         self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
         let initialAuthSettings = botBooruService.authSettings ?? BotBooruAuthSettings(username: nil, password: nil, token: nil)
         authSettings = initialAuthSettings
@@ -32,12 +32,16 @@ final class BotBooruViewModel {
                     guard let username = initialAuthSettings.username, let password = initialAuthSettings.password else { return }
                     await login(username: username, password: password)
                 }
-    
-                if loadPosts {
-                    await getPosts()
-                }
             }
         }
+    }
+
+    func loadInitialPosts() async {
+        guard loggedIn else { return }
+        guard posts.isEmpty else { return }
+        guard isLoading == false else { return }
+
+        await getPosts(refresh: true)
     }
 
     func refreshLogin() async {
@@ -54,7 +58,7 @@ final class BotBooruViewModel {
                 authSettings = botBooruService.authSettings ?? authSettings
                 loggedIn = true
                 isLoading = false
-                await getPosts()
+                await getPosts(refresh: true)
             case .failure:
                 logout()
                 loginError = "Invalid credentials"

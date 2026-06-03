@@ -3,8 +3,8 @@ import SwiftUI
 struct GeneralSettingsView: View {
     @Environment(ServiceContainer.self) private var serviceContainer
     @Environment(\.appTheme) private var appTheme
-    @State private var booruViewModel: BotBooruViewModel = .init(loadPosts: false)
-    @State private var chubViewModel: ChubAIViewModel = .init(loadCards: false)
+    @State private var booruViewModel: BotBooruViewModel = .init()
+    @State private var chubViewModel: ChubAIViewModel = .init()
     @State private var passcode = ""
     @State private var confirmPasscode = ""
     @State private var passcodeError: String?

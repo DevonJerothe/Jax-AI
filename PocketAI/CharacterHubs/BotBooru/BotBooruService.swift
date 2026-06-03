@@ -30,12 +30,14 @@ public enum BotBooruSortTime: String, CaseIterable, Identifiable {
 
     public var id: Self { self }
 
+    case day = "day"
     case week = "week"
     case month = "month"
     case allTime = "all"
 
     var title: String {
         switch self {
+            case .day: "Day"
             case .week: "Week"
             case .month: "Month"
             case .allTime: "All Time"

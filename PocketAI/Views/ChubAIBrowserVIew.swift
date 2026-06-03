@@ -92,6 +92,7 @@ public struct ChubAIBrowserView: View {
         }
         .task {
             await viewModel.getTags()
+            await viewModel.loadInitialCards()
         }
         .onChange(of: showSettings) { old, new in
             guard old == true, new == false else { return }
@@ -108,7 +109,7 @@ public struct ChubAIBrowserView: View {
                         .background(appTheme.secondaryBackgroundColor.color)
                         .cornerRadius(12)
                         .onSubmit {
-                            Task { await viewModel.searchCards() }
+                            Task { await viewModel.searchCards(refresh: true) }
                         }
                         .glassEffect(
                             .regular.interactive(),

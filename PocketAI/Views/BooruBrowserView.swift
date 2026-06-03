@@ -130,6 +130,9 @@ public struct BooruBrowserView: View {
             }
         }
         .background(appTheme.backgroundColor.color)
+        .task {
+            await viewModel.loadInitialPosts()
+        }
     }
 
     private var showsSortTimeMenu: Bool {
@@ -370,6 +373,11 @@ struct BooruBrowserPostCard: View {
                 Text(post.characterName)
                     .font(.headline)
                     .foregroundColor(appTheme.primaryText.color)
+                
+                Text(post.creatorNote ?? "")
+                    .font(.caption)
+                    .foregroundColor(appTheme.secondaryText.color)
+                    .lineLimit(3)
 
                 Spacer()
                 HStack {
