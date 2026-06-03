@@ -390,5 +390,8 @@ extension ChatBubbleView: Equatable {
             && lhs.isEditing == rhs.isEditing
             && lhs.isStreaming == rhs.isStreaming
             && lhs.showToolbar == rhs.showToolbar
+            && lhs.cardName == rhs.cardName
+            && lhs.personaName == rhs.personaName
+            && lhs.isOnlyMessage == rhs.isOnlyMessage
     }
 }
