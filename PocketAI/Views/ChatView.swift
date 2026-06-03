@@ -5,6 +5,7 @@
 //  Created by devon jerothe on 3/11/25.
 //
 
+import MarkdownStreamer
 import SwiftLLMSDK
 import SwiftUI
 import UIKit
@@ -58,38 +59,48 @@ struct ChatView: View {
                         let messageCount = chat.messages.count
                         let isOnlyMessage = messageCount == 1
 
-                        LazyVStack {
+                        VStack {
                             ForEach(chat.messages, id: \.id) { message in
-                                let showToolbar = chatIsIdle && messageCount > 1 && message.id == lastMessageID && message.status == .done
+                                let showToolbar =
+                                    chatIsIdle && messageCount > 1 && message.id == lastMessageID
+                                    && message.status == .done
                                 let isStreaming = message.id == viewModel.streamingMessageID
-
-                                HStack {
-                                    ChatBubbleView(
-                                        message: message,
-                                        isStreaming: isStreaming,
-                                        mdReader: isStreaming ? viewModel.mdReader : nil,
-                                        cardName: cardName,
-                                        personaName: personaName,
-                                        showToolbar: showToolbar,
-                                        isOnlyMessage: isOnlyMessage,
-                                        onDelete: { Task { await viewModel.deleteMessage(message) } },
-                                        onRegenerate: { Task { await viewModel.regenerateMessage(message) } },
-                                        onContinue: { Task { await viewModel.regenerateMessage(message, continueResponse: true) } },
-                                        onSaveEdit: { newText in
-                                            Task { await viewModel.updateMessage(message, newText: newText) }
-                                        },
-                                        onNavigateGeneration: { forward in
-                                            Task {
-                                                await viewModel.navigateGeneration(message, forward: forward)
-                                            }
-                                        },
-                                        onScrollToMessage: { requestEditScroll(to: message.id) },
-                                        onSetEditing: { enabled in
-                                            viewModel.disableWhileEditing = enabled
-                                        },
-                                        onScrollViewUpdate: { viewModel.updateScrollView.toggle() }
-                                    )
-                                }
+                                ChatBubbleView(
+                                    message: message,
+                                    isStreaming: isStreaming,
+                                    mdReader: isStreaming ? viewModel.mdReader : nil,
+                                    cardName: cardName,
+                                    personaName: personaName,
+                                    showToolbar: showToolbar,
+                                    isOnlyMessage: isOnlyMessage,
+                                    onDelete: { Task { await viewModel.deleteMessage(message) } },
+                                    onRegenerate: {
+                                        Task { await viewModel.regenerateMessage(message) }
+                                    },
+                                    onContinue: {
+                                        Task {
+                                            await viewModel.regenerateMessage(
+                                                message, continueResponse: true)
+                                        }
+                                    },
+                                    onSaveEdit: { newText in
+                                        Task {
+                                            await viewModel.updateMessage(message, newText: newText)
+                                        }
+                                    },
+                                    onNavigateGeneration: { forward in
+                                        Task {
+                                            await viewModel.navigateGeneration(
+                                                message, forward: forward)
+                                        }
+                                    },
+                                    onScrollToMessage: { requestEditScroll(to: message.id) },
+                                    onSetEditing: { enabled in
+                                        viewModel.disableWhileEditing = enabled
+                                    },
+                                    onScrollViewUpdate: { viewModel.updateScrollView.toggle() }
+                                )
+                                .equatable()
                                 .padding(.top, 4)
                                 .padding(.bottom, 4)
                                 .id(message.id)
@@ -118,7 +129,7 @@ struct ChatView: View {
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
                 .simultaneousGesture(
-                    DragGesture(minimumDistance: 5)
+                    DragGesture(minimumDistance: 1)
                         .onChanged { _ in
                             disableAutoScroll()
                         }
@@ -144,9 +155,11 @@ struct ChatView: View {
 
                 if viewModel.isAutoScrollEnabled == false && isScrollViewAtBottom == false {
                     Button {
-                        viewModel.isAutoScrollEnabled = true
+                        setAutoScrollEnabled(true)
                         scrollViewHelper?.stopScrolling()
-                        scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.0, requiresAutoScroll: false)
+                        scrollToBottom(
+                            proxy: proxy, anchor: "bottomAnchor", delay: 0.0,
+                            requiresAutoScroll: false)
                     } label: {
                         Image(systemName: "arrow.down")
                             .foregroundColor(appTheme.secondaryText.color)
@@ -173,8 +186,8 @@ struct ChatView: View {
                 APIStatusBanner(
                     stayOnPath: true
                 )
-                    .padding(.horizontal, 16)
-                    .padding(.top, 10)
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -219,16 +232,21 @@ struct ChatView: View {
                     Button {
                         let promptText = self.textPrompt
                         self.textPrompt = ""
-                        viewModel.isAutoScrollEnabled = true
+                        setAutoScrollEnabled(true)
                         Task {
                             await self.viewModel.sendMessage(prompt: promptText)
                         }
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.system(size: 26))
-                            .foregroundColor(viewModel.isConnected ? appTheme.tintColor.color : appTheme.secondaryText.color)
+                            .foregroundColor(
+                                viewModel.isConnected
+                                    ? appTheme.tintColor.color : appTheme.secondaryText.color)
                     }
-                    .disabled(viewModel.isConnected == false || viewModel.isStreaming == true || viewModel.disableWhileEditing == true)
+                    .disabled(
+                        viewModel.isConnected == false || viewModel.isStreaming == true
+                            || viewModel.disableWhileEditing == true
+                    )
                     .padding(.bottom, 8)
                     .padding(.trailing, 16)
                 }
@@ -254,7 +272,7 @@ struct ChatView: View {
         }
         .background(appTheme.backgroundColor.color)
         .onAppear {
-            viewModel.isAutoScrollEnabled = true
+            setAutoScrollEnabled(true)
             viewModel.isViewActive = true
         }
         .onDisappear {
@@ -314,7 +332,7 @@ struct ChatView: View {
             return
         }
 
-        viewModel.isAutoScrollEnabled = false
+        setAutoScrollEnabled(false)
         autoScrollGeneration += 1
     }
 
@@ -325,13 +343,21 @@ struct ChatView: View {
         isScrollViewAtBottom = newIsAtBottom
 
         if newIsAtBottom && viewModel.isAutoScrollEnabled == false {
-            viewModel.isAutoScrollEnabled = true
+            setAutoScrollEnabled(true)
+        }
+    }
+
+    private func setAutoScrollEnabled(_ enabled: Bool) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            viewModel.isAutoScrollEnabled = enabled
         }
     }
 }
 
-private extension UIScrollView {
-    func stopScrolling() {
+extension UIScrollView {
+    fileprivate func stopScrolling() {
         layer.removeAllAnimations()
         setContentOffset(contentOffset, animated: false)
         panGestureRecognizer.isEnabled = false
