@@ -205,11 +205,10 @@ final class ChatViewModel {
             if chat.messages.count == 1 {
                 // If we only have 1 message (first mes) we can simply clear chat to apply any 
                 // new changes
-                await clearChat()
-            } else {
-                // we dont want to reset messages if active chats are happening.
-                try await chatStore.saveChat(chat)
-            }
+                try await chatStore.resetChat(chat)
+            } 
+            try await chatStore.saveChat(chat)
+            
         } catch {
             print("Failed to update chat settings: \(error)")
         }
