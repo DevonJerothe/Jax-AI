@@ -1,4 +1,4 @@
-import Foundation 
+import Foundation
 import SwiftLLMSDK
 import SwiftTiktoken
 
@@ -137,33 +137,44 @@ struct TextCompletionContextBuilder {
         tokenizer: CoreBPE
     ) -> [RenderedContextBlock] {
         let sortedBlocks = blocks.sorted { $0.order < $1.order }
-        let firstBotMessagedID = sortedBlocks.first(where: {
-            $0.actor == .assistant && $0.kind == .message
-        })?.sourceID
-        let lastUserMessageID = sortedBlocks.last(where: {
-            $0.actor == .user && $0.kind == .message
-        })?.sourceID
+        let lastMessageIndex = sortedBlocks.indices.last(where: {
+            sortedBlocks[$0].kind == .message
+                && (sortedBlocks[$0].actor == .assistant || sortedBlocks[$0].actor == .user)
+        })
+        let lastUserMessageIndex = sortedBlocks.indices.last(where: {
+            sortedBlocks[$0].actor == .user && sortedBlocks[$0].kind == .message
+        })
+
+        func textWithRolePrefix(_ text: String, prefix: String) -> String {
+            guard prefix.isEmpty == false else {
+                return text
+            }
+
+            return "\(prefix) \(text)"
+        }
 
         var renderedBlocks: [RenderedContextBlock] = []
 
-        for block in sortedBlocks {
+        for (index, block) in sortedBlocks.enumerated() {
             var renderedText = ""
             switch block.actor {
             case .system:
                 renderedText = "\(settings.systemStopSequence)\n\(block.text)"
             case .assistant:
-                let prefix =
-                    block.sourceID == firstBotMessagedID
-                    ? settings.botStopSequence
-                    : ""
-                let suffix = continued ? "" : settings.userStopSequence
-                renderedText = "\(prefix)\(block.text)\(suffix)"
-            case .user:
-                var text = "\(block.text)\(settings.botStopSequence)"
-                if settings.botStopSequence.isEmpty == false {
-                    text += " "
+                var text = textWithRolePrefix(block.text, prefix: settings.botStopSequence)
+                if continued == false && index == lastMessageIndex {
+                    text += settings.userStopSequence
                 }
-                if forceThinking && block.sourceID == lastUserMessageID {
+                renderedText = text
+            case .user:
+                var text = textWithRolePrefix(block.text, prefix: settings.userStopSequence)
+                if index == lastMessageIndex {
+                    text += settings.botStopSequence
+                    if settings.botStopSequence.isEmpty == false {
+                        text += " "
+                    }
+                }
+                if forceThinking && index == lastUserMessageIndex && index == lastMessageIndex {
                     text += "\(settings.thinkingStartSequence)\n\(settings.forceThinkingInstruct)"
                 }
                 renderedText = text
