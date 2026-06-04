@@ -221,4 +221,32 @@ final class ChatStore {
         try chatRepository.save(chats[chatIndex])
         await waitForObserver()
     }
+
+    func resetChat(_ chat: ChatModel) async throws {
+        guard let index = chats.firstIndex(where: { $0.id == chat.id }) else {
+            throw AppDBError.recordNotFound("chat: \(chat.id.uuidString)")
+        }
+
+        // remove messages from transientMessages
+        transientMessages = transientMessages.filter { $0.value.chatId != chat.id.uuidString }
+
+        chats[index].messages.removeAll()
+        try messageRepository.deleteAll(for: chat.id)
+
+        // create alt greetings text history
+        let altGreetings = chat.characterCards.first?.altGreetings?.compactMap { greeting in 
+            TextGenerationHistory(text: greeting, tokenCount: 0)
+        }
+        
+        let initialMessage = MessageModel(
+            chatId: chat.id.uuidString,
+            actor: .bot,
+            text: chat.characterCards.first?.firstMessage ?? "",
+            textGenerationHistory: altGreetings ?? []
+        )
+
+        try messageRepository.save(initialMessage)
+        await waitForObserver()
+        
+    }
 }

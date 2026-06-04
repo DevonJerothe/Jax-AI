@@ -181,15 +181,12 @@ final class ChatViewModel {
     }
 
     func clearChat() async {
-        guard var chat = model else {
+        guard let chat = model else {
             return
         }
 
-        chat.messages.removeAll()
-        chat.addMessage(chat.characterCards.first?.firstMessage ?? "", forActor: .bot)
-
         do {
-            try await chatStore.saveChat(chat)
+            try await chatStore.resetChat(chat)
         } catch {
             print("Failed to clear chat: \(error)")
         }
@@ -205,7 +202,14 @@ final class ChatViewModel {
         chat.isPrivate = isPrivate
 
         do {
-            try await chatStore.saveChat(chat)
+            if chat.messages.count == 1 {
+                // If we only have 1 message (first mes) we can simply clear chat to apply any 
+                // new changes
+                await clearChat()
+            } else {
+                // we dont want to reset messages if active chats are happening.
+                try await chatStore.saveChat(chat)
+            }
         } catch {
             print("Failed to update chat settings: \(error)")
         }
@@ -458,8 +462,8 @@ final class ChatViewModel {
         let currentModel = ServiceContainer.shared.selectedModelName
         let currentConnectionType = ServiceContainer.shared.selectedConnectionType
         if isFinal && currentConnectionType == .KoboldAPI {
-            let tokenCount = await languageModelService.getTokenCount(string: updatedMessage.text)
-            updatedMessage.tokenCount = tokenCount
+//            let tokenCount = await languageModelService.getTokenCount(string: updatedMessage.text)
+//            updatedMessage.tokenCount = tokenCount
             updatedMessage.tokenCountModel = currentModel
         }
 

@@ -61,8 +61,7 @@ struct ChatSettingsView: View {
     var body: some View {
         ScrollView {
             VStack {
-                if chatNotesCount > 0 {
-                    SettingsCard("Chat Notes") {
+                SettingsCard("Chat Notes") {
                         Button {
                             navManager.navigateToChatNotes(chatID: viewModel.chatID)
                         } label: {
@@ -76,8 +75,6 @@ struct ChatSettingsView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 24)
-                }
-
                 // MARK: - Connection Related Settings
                 // this will change the connections settings for the app and all chats
                 // potentially we could have a per chat connection settings option
