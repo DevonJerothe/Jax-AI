@@ -116,8 +116,8 @@ struct PocketAIApp: App {
             BooruBrowserView()
         case .chubAIBrowserView:
             ChubAIBrowserView()
-        case .chubImportView:
-            ChubImportView()
+        case .charImportView:
+            CharImportView()
         }
     }
 

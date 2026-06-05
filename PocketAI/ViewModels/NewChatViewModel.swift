@@ -5,7 +5,6 @@
 //  Created by devon jerothe on 4/4/25.
 //
 
-import SwiftLLMSDK
 import SwiftUI
 
 @MainActor
@@ -13,24 +12,17 @@ import SwiftUI
 final class NewChatViewModel {
     private let characterStore: CharacterStore
     private let chatStore: ChatStore
-    private let characterImporter: CharacterImporterService
     
-    var urlEntry: String = ""
     var chatName: String = ""
     var systemPrompt: String = ""
     var initialMessage: String = ""
     var imgData: Data?
-
-    var importError: String?
 
     var characterCard: CharacterCardModel?
 
     init(characterStore: CharacterStore? = nil, chatStore: ChatStore? = nil) {
         self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
         self.chatStore = chatStore ?? ServiceContainer.shared.getChatStore()
-
-        // For now only support chub AI cards.. tbh not even sure other sources
-        self.characterImporter = ChubImporter(urlSession: URLSession.shared)
     }
 
     func getAvatarImg() -> Image? {
@@ -48,35 +40,6 @@ final class NewChatViewModel {
             return self.characterCard == nil
         case .charHub: 
             return true 
-        }
-    }
-
-    func importCharacterCard(stringURL: String) async {
-        guard let cardURL = URL(string: stringURL) else {
-            print("Failed to load URL")
-            return
-        }
-
-        do {
-            let llmCard = try await characterImporter.getCardViaURL(cardURL)
-            switch llmCard {
-            case .success(let card):
-                // Convert LLM Card type to our DB Model
-                let characterCard = CharacterCardModel.init(fromChub: card)
-                await MainActor.run {
-                    // LLM model is non sendable so we get dumb swift warnings if in MainActor
-                    self.characterCard = characterCard
-                }
-            case .failure(let error):
-                if case APIError.unsupportedURLImport = error {
-                    self.importError = "Unsupported Character Card URL"
-                } else {
-                    self.importError = error.localizedDescription
-                }
-                print("Import ERROR: \(error.localizedDescription)")
-            }
-        } catch (let error) {
-            print("Import ERROR: \(error.localizedDescription)")
         }
     }
 

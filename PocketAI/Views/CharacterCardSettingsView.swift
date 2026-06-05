@@ -22,6 +22,7 @@ struct CharacterCardSettingsView: View {
 
     private let characterID: UUID?
     private let dismissOnSave: Bool
+    private let navigateToCharacterListOnSave: Bool
     var isNew: Bool = false
 
     private enum FocusedField: Hashable {
@@ -42,10 +43,12 @@ struct CharacterCardSettingsView: View {
         characterID: UUID? = nil,
         characterCard: CharacterCardModel = CharacterCardModel(),
         isNew: Bool = false,
-        dismissOnSave: Bool = false
+        dismissOnSave: Bool = false,
+        navigateToCharacterListOnSave: Bool = false
     ) {
         self.characterID = characterID
         self.dismissOnSave = dismissOnSave
+        self.navigateToCharacterListOnSave = navigateToCharacterListOnSave
         _characterCard = State(initialValue: characterCard)
         _setPrivate = State(initialValue: characterCard.isPrivate)
         self.isNew = isNew
@@ -196,7 +199,9 @@ struct CharacterCardSettingsView: View {
                             try await ServiceContainer.shared.getCharacterStore().saveCharacterCard(characterCard)
                             focusedField = nil
                             UIApplication.shared.endEditing()
-                            if dismissOnSave {
+                            if navigateToCharacterListOnSave {
+                                navManager.navigateToCharacterCards()
+                            } else if dismissOnSave {
                                 dismiss()
                             } else {
                                 navManager.popBack()
