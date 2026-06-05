@@ -236,6 +236,7 @@ public struct CharImportView: View {
             }
         case .failure(let error):
             viewModel.importError = error.localizedDescription
+            viewModel.characterCard = nil
         }
     }
 }
