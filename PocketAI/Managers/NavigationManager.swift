@@ -26,7 +26,7 @@ class NavigationManager {
         case newChatView(Bool)
         case booruBrowserView
         case chubAIBrowserView
-        case chubImportView
+        case charImportView
     }
 
     enum SheetType: Identifiable {
@@ -244,13 +244,13 @@ class NavigationManager {
         }
     }
 
-    func navigateToChubImport(keepCurrentPath: Bool = false) {
+    func navigateToCharImport(keepCurrentPath: Bool = false) {
         if keepCurrentPath {
-            appendToCurrentPath(Destination.chubImportView)
+            appendToCurrentPath(Destination.charImportView)
         } else {
             currentTab = .characterList
             clearPath(for: .characterList)
-            characterListPath.append(Destination.chubImportView)
+            characterListPath.append(Destination.charImportView)
         }
     }
 

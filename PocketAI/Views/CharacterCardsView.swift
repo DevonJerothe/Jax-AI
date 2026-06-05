@@ -42,8 +42,8 @@ struct CharacterCardsView: View {
                     Button("Create From Scratch") {
                         navManager.navigateToNewChat(keepCurrentPath: true, createCharacterCard: true)
                     }
-                    Button("Import from ChubAI") {
-                        navManager.navigateToChubImport(keepCurrentPath: true)
+                    Button("Import New Character") {
+                        navManager.navigateToCharImport(keepCurrentPath: true)
                     }
                     Button("Browse ChubAI") {
                         navManager.navigateToChubAIBrowser(keepCurrentPath: true) 
