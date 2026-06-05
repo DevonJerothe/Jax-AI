@@ -34,4 +34,16 @@ class MessageRepository: Repository {
             try record.delete(db)
         }
     }
+
+    func deleteAll(for chatId: UUID) throws {
+        try dbManager.write { db in 
+            try MessageRecord
+                .filter(Column("chatId") == chatId.uuidString)
+                .deleteAll(db)
+
+            var chatRecord = try ChatRecord.fetchOne(db, key: chatId.uuidString)
+            chatRecord?.updatedAt = Date()
+            try chatRecord?.save(db)
+        }
+    }
 }
