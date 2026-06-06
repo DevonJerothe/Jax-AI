@@ -1,11 +1,12 @@
 import Foundation
 import GRDB
 
-struct LoreBookModel: Hashable {
+struct LoreBookModel: Hashable, Identifiable {
     var id: UUID = UUID()
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
     var name: String
+    var description: String?
     var scanDepth: Int
     var tokenBudget: Int?
     var recursiveScanning: Bool
@@ -18,6 +19,7 @@ struct LoreBookModel: Hashable {
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
         name: String,
+        description: String? = nil,
         scanDepth: Int,
         tokenBudget: Int? = nil,
         recursiveScanning: Bool = false,
@@ -29,6 +31,7 @@ struct LoreBookModel: Hashable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.name = name
+        self.description = description
         self.scanDepth = scanDepth
         self.tokenBudget = tokenBudget
         self.recursiveScanning = recursiveScanning
@@ -38,7 +41,7 @@ struct LoreBookModel: Hashable {
     }
 }
 
-struct LoreBookEntryModel: Hashable {
+struct LoreBookEntryModel: Hashable, Identifiable {
     var id: UUID = UUID()
     var loreBookId: String = ""
     var name: String
@@ -87,6 +90,7 @@ extension LoreBookModel {
         self.createdAt = record.createdAt
         self.updatedAt = record.updatedAt
         self.name = record.name
+        self.description = record.description
         self.scanDepth = record.scanDepth
         self.tokenBudget = record.tokenBudget
         self.recursiveScanning = record.recursiveScanning
@@ -101,6 +105,7 @@ extension LoreBookModel {
             createdAt: createdAt,
             updatedAt: updatedAt,
             name: name,
+            description: description,
             scanDepth: scanDepth,
             tokenBudget: tokenBudget,
             recursiveScanning: recursiveScanning,
@@ -158,6 +163,7 @@ struct LoreBookRecord: Codable, FetchableRecord, MutablePersistableRecord, Senda
     var createdAt: Date
     var updatedAt: Date
     var name: String
+    var description: String?
     var scanDepth: Int
     var tokenBudget: Int?
     var recursiveScanning: Bool
@@ -169,6 +175,7 @@ struct LoreBookRecord: Codable, FetchableRecord, MutablePersistableRecord, Senda
             builder.column("createdAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
             builder.column("updatedAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
             builder.column("name", .text).notNull()
+            builder.column("description", .text)
             builder.column("scanDepth", .integer).notNull().defaults(to: 2)
             builder.column("tokenBudget", .integer)
             builder.column("recursiveScanning", .boolean).notNull().defaults(to: false)

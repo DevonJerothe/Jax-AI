@@ -98,6 +98,10 @@ struct PocketAIApp: App {
             CharacterCardSettingsView(characterID: characterID)
         case .characterCardsView:
             CharacterCardsView()
+        case .loreBookListView:
+            LoreBookListView()
+        case .loreBookView(let loreBookID):
+            LoreBookView(loreBookID: loreBookID)
         case .settingsView:
             GeneralSettingsView()
         case .connectionSettings:

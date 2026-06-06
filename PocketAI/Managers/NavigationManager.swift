@@ -19,6 +19,8 @@ class NavigationManager {
         case chatView(UUID)
         case characterView(UUID)
         case characterCardsView
+        case loreBookListView
+        case loreBookView(UUID?)
         case chatSettings(UUID)
         case chatNotes(UUID)
         case settingsView
@@ -181,6 +183,28 @@ class NavigationManager {
         } else {
             currentTab = .characterList
             clearPath(for: .characterList)
+        }
+    }
+
+    func navigateToLoreBooks(keepCurrentPath: Bool = false) {
+        presentedSheet = nil
+        if keepCurrentPath {
+            appendToCurrentPath(Destination.loreBookListView)
+        } else {
+            currentTab = .characterList
+            clearPath(for: .characterList)
+            characterListPath.append(Destination.loreBookListView)
+        }
+    }
+
+    func navigateToLoreBook(loreBookID: UUID?, keepCurrentPath: Bool = false) {
+        presentedSheet = nil
+        if keepCurrentPath {
+            appendToCurrentPath(Destination.loreBookView(loreBookID))
+        } else {
+            currentTab = .characterList
+            clearPath(for: .characterList)
+            characterListPath.append(Destination.loreBookView(loreBookID))
         }
     }
 

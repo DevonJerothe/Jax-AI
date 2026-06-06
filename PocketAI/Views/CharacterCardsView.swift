@@ -37,10 +37,24 @@ struct CharacterCardsView: View {
         .navigationTitle("My Characters")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    navManager.navigateToLoreBooks(keepCurrentPath: true)
+                } label: {
+                    Image(systemName: "book.closed")
+                }
+            }
+
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button("Create From Scratch") {
                         navManager.navigateToNewChat(keepCurrentPath: true, createCharacterCard: true)
+                    }
+                    Button("Lorebooks") {
+                        navManager.navigateToLoreBooks(keepCurrentPath: true)
+                    }
+                    Button("Create Lorebook") {
+                        navManager.navigateToLoreBook(loreBookID: nil, keepCurrentPath: true)
                     }
                     Button("Import New Character") {
                         navManager.navigateToCharImport(keepCurrentPath: true)

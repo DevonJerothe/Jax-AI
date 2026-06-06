@@ -133,6 +133,15 @@ class DBManager {
             try LoreBookEntryRecord.migrateTable(db)
             try ChatLoreBookJoinRecord.migrateTable(db)
         }
+
+        migrator.registerMigration("v7_lore_book_description") { db in
+            let loreBookColumns = try db.columns(in: LoreBookRecord.databaseTableName).map(\.name)
+            if loreBookColumns.contains("description") == false {
+                try db.alter(table: LoreBookRecord.databaseTableName) { t in
+                    t.add(column: "description", .text)
+                }
+            }
+        }
         try migrator.migrate(dbQueue)
     }
 
