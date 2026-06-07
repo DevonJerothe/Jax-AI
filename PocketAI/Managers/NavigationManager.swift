@@ -19,7 +19,7 @@ class NavigationManager {
         case chatView(UUID)
         case characterView(UUID)
         case characterCardsView
-        case loreBookListView
+        case loreBookListView(UUID?)
         case loreBookView(UUID?)
         case chatSettings(UUID)
         case chatNotes(UUID)
@@ -28,7 +28,7 @@ class NavigationManager {
         case newChatView(Bool)
         case booruBrowserView
         case chubAIBrowserView
-        case charImportView
+        case charImportView(CharImportType)
     }
 
     enum SheetType: Identifiable {
@@ -70,7 +70,7 @@ class NavigationManager {
     var characterListPath = NavigationPath()
     var settingsPath = NavigationPath()
     var presentedSheet: SheetType? = nil
-    
+
     private func getCurrentPath() -> NavigationPath {
         switch currentTab {
         case .chatList:
@@ -81,7 +81,7 @@ class NavigationManager {
             return self.settingsPath
         }
     }
-    
+
     // Helper method to modify the correct navigation path based on current tab
     private func appendToCurrentPath(_ destination: Destination) {
         switch currentTab {
@@ -93,7 +93,7 @@ class NavigationManager {
             settingsPath.append(destination)
         }
     }
-    
+
     // Helper method to clear the correct navigation path based on tab
     private func clearPath(for tab: Tab) {
         switch tab {
@@ -186,14 +186,14 @@ class NavigationManager {
         }
     }
 
-    func navigateToLoreBooks(keepCurrentPath: Bool = false) {
+    func navigateToLoreBooks(chatID: UUID? = nil, keepCurrentPath: Bool = false) {
         presentedSheet = nil
         if keepCurrentPath {
-            appendToCurrentPath(Destination.loreBookListView)
+            appendToCurrentPath(Destination.loreBookListView(chatID))
         } else {
             currentTab = .characterList
             clearPath(for: .characterList)
-            characterListPath.append(Destination.loreBookListView)
+            characterListPath.append(Destination.loreBookListView(chatID))
         }
     }
 
@@ -235,8 +235,8 @@ class NavigationManager {
     func navigateToNewChat(keepCurrentPath: Bool = false, sheet: Bool = false, createCharacterCard: Bool = false) {
         if sheet {
             presentedSheet = .newChat
-            return 
-        } 
+            return
+        }
         presentedSheet = nil
         if keepCurrentPath {
             appendToCurrentPath(Destination.newChatView(createCharacterCard))
@@ -268,13 +268,16 @@ class NavigationManager {
         }
     }
 
-    func navigateToCharImport(keepCurrentPath: Bool = false) {
+    func navigateToCharImport(
+        importType: CharImportType = .characterCard,
+        keepCurrentPath: Bool = false
+    ) {
         if keepCurrentPath {
-            appendToCurrentPath(Destination.charImportView)
+            appendToCurrentPath(Destination.charImportView(importType))
         } else {
             currentTab = .characterList
             clearPath(for: .characterList)
-            characterListPath.append(Destination.charImportView)
+            characterListPath.append(Destination.charImportView(importType))
         }
     }
 

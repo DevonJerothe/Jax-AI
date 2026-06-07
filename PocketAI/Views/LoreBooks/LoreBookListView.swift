@@ -10,6 +10,10 @@ struct LoreBookListView: View {
         GridItem(.flexible(maximum: 220), spacing: 16),
     ]
 
+    init(chatID: UUID? = nil) {
+        _viewModel = State(initialValue: LoreBookViewModel(chatID: chatID))
+    }
+
     var body: some View {
         @Bindable var viewModel = viewModel
 
@@ -64,8 +68,15 @@ struct LoreBookListView: View {
         .searchable(text: $viewModel.loreBookSearchText, prompt: "Search lorebooks")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    navManager.navigateToLoreBook(loreBookID: nil, keepCurrentPath: true)
+                Menu {
+                    Button("Create From Scratch") {
+                        navManager.navigateToLoreBook(loreBookID: nil, keepCurrentPath: true)
+                    }
+
+                    Button("Import Lorebook") {
+                        navManager.navigateToCharImport(
+                            importType: .loreBook, keepCurrentPath: true)
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }

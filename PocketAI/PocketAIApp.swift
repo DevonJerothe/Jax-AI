@@ -98,8 +98,8 @@ struct PocketAIApp: App {
             CharacterCardSettingsView(characterID: characterID)
         case .characterCardsView:
             CharacterCardsView()
-        case .loreBookListView:
-            LoreBookListView()
+        case .loreBookListView(let chatID):
+            LoreBookListView(chatID: chatID)
         case .loreBookView(let loreBookID):
             LoreBookView(loreBookID: loreBookID)
         case .settingsView:
@@ -120,8 +120,8 @@ struct PocketAIApp: App {
             BooruBrowserView()
         case .chubAIBrowserView:
             ChubAIBrowserView()
-        case .charImportView:
-            CharImportView()
+        case .charImportView(let importType):
+            CharImportView(importType: importType)
         }
     }
 

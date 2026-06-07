@@ -5,6 +5,7 @@ import SwiftUI
 @Observable
 final class LoreBookViewModel {
     private let loreBookStore: LoreBookStore
+    private let chatStore: ChatStore
     private let connectionManager: ConnectionStatusManager
 
     var loreBookSearchText = ""
@@ -15,13 +16,31 @@ final class LoreBookViewModel {
 
     var loreBook: LoreBookModel = LoreBookModel(name: "", description: nil, scanDepth: 2)
 
-    init(loreBookStore: LoreBookStore? = nil, connectionManager: ConnectionStatusManager? = nil) {
+    var chatID: UUID?
+    var chatModel: ChatModel? {
+        guard let chatID else {
+            return nil
+        }
+        return chatStore.chat(withID: chatID)
+    }
+
+    init(
+        chatID: UUID? = nil,
+        loreBookStore: LoreBookStore? = nil,
+        chatStore: ChatStore? = nil,
+        connectionManager: ConnectionStatusManager? = nil
+    ) {
         self.loreBookStore = loreBookStore ?? ServiceContainer.shared.getLoreBookStore()
-        self.connectionManager =
-            connectionManager ?? ServiceContainer.shared.getConnectionStatusManager()
+        self.chatStore = chatStore ?? ServiceContainer.shared.getChatStore()
+        self.connectionManager = connectionManager ?? ServiceContainer.shared.getConnectionStatusManager()
     }
 
     var loreBooks: [LoreBookModel] {
+
+        if let chatModel {
+            return chatModel.loreBooks
+        }
+        
         guard connectionManager.connectionSettings.locked else {
             return loreBookStore.loreBooks
         }
@@ -83,8 +102,13 @@ final class LoreBookViewModel {
             return
         }
 
-        loreBook = storedLoreBook
-        tokenBudgetText = storedLoreBook.tokenBudget.map(String.init) ?? ""
+        loadLoreBook(storedLoreBook)
+    }
+
+    func loadImportedLoreBook(_ importedLoreBook: LoreBookModel) {
+        entrySearchText = ""
+        selectedEntryID = nil
+        loadLoreBook(importedLoreBook)
     }
 
     func deleteLoreBook(loreBook: LoreBookModel) async {
@@ -157,6 +181,11 @@ final class LoreBookViewModel {
             }
             self.loreBook.entries[index] = value
         }
+    }
+
+    private func loadLoreBook(_ loreBook: LoreBookModel) {
+        self.loreBook = loreBook
+        tokenBudgetText = loreBook.tokenBudget.map(String.init) ?? ""
     }
 
     private func normalizedLoreBookForSaving() -> LoreBookModel {

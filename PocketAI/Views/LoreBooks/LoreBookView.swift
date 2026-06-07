@@ -7,9 +7,11 @@ struct LoreBookView: View {
     @State private var viewModel = LoreBookViewModel()
 
     private let loreBookID: UUID?
+    private let importedLoreBook: LoreBookModel?
 
-    init(loreBookID: UUID? = nil) {
+    init(loreBookID: UUID? = nil, importedLoreBook: LoreBookModel? = nil) {
         self.loreBookID = loreBookID
+        self.importedLoreBook = importedLoreBook
     }
 
     var body: some View {
@@ -24,8 +26,12 @@ struct LoreBookView: View {
                 settingsContent
             }
         }
-        .task(id: loreBookID) {
-            viewModel.loadLoreBook(withID: loreBookID)
+        .task(id: loreBookID ?? importedLoreBook?.id) {
+            if let importedLoreBook {
+                viewModel.loadImportedLoreBook(importedLoreBook)
+            } else {
+                viewModel.loadLoreBook(withID: loreBookID)
+            }
         }
     }
 

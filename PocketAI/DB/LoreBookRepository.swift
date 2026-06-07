@@ -26,10 +26,11 @@ class LoreBookRepository: Repository {
 
     func get(id: UUID) throws -> LoreBookModel? {
         try dbManager.read { db in
-            try loreBooksRequest()
-                .filter(Column("id") == id.uuidString)
-                .fetchOne(db)
-                .map(model(from:))
+            guard let record = try LoreBookRecord.fetchOne(db, key: id.uuidString) else {
+                return nil
+            }
+
+            return try model(from: record, db: db)
         }
     }
 
@@ -74,22 +75,42 @@ class LoreBookRepository: Repository {
         }
     }
 
-    private func loreBooksRequest() -> QueryInterfaceRequest<LoreBookWithEntriesAndChats> {
-        LoreBookRecord
-            .including(all: LoreBookRecord.entries.order(Column("order").asc))
-            .including(all: LoreBookRecord.chats)
-            .order(Column("updatedAt").desc)
-            .asRequest(of: LoreBookWithEntriesAndChats.self)
-    }
-
     private func fetchLoreBooks(_ db: Database) throws -> [LoreBookModel] {
-        try loreBooksRequest().fetchAll(db).map(model(from:))
+        try LoreBookRecord
+            .order(Column("updatedAt").desc)
+            .fetchAll(db)
+            .map { record in
+                try model(from: record, db: db)
+            }
     }
 
-    private func model(from record: LoreBookWithEntriesAndChats) -> LoreBookModel {
-        var loreBook = LoreBookModel(record: record.loreBook)
-        loreBook.entries = record.entries.map { LoreBookEntryModel(record: $0) }
-        loreBook.chats = record.chats.map { ChatModel(record: $0) }
+    private func model(from record: LoreBookRecord, db: Database) throws -> LoreBookModel {
+        var loreBook = LoreBookModel(record: record)
+        loreBook.entries =
+            try LoreBookEntryRecord
+            .filter(Column("loreBookId") == record.id)
+            .order(Column("order").asc)
+            .fetchAll(db)
+            .map { LoreBookEntryModel(record: $0) }
+        loreBook.chats = try chats(for: record.id, db: db)
         return loreBook
+    }
+
+    private func chats(for loreBookId: String, db: Database) throws -> [ChatModel] {
+        let chatIds =
+            try ChatLoreBookJoinRecord
+            .filter(Column("loreBookId") == loreBookId)
+            .fetchAll(db)
+            .map { $0.chatId }
+
+        guard chatIds.isEmpty == false else {
+            return []
+        }
+
+        return
+            try ChatRecord
+            .filter(chatIds.contains(Column("id")))
+            .fetchAll(db)
+            .map { ChatModel(record: $0) }
     }
 }
