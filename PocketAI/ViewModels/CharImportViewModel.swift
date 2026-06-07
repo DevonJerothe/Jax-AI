@@ -65,7 +65,7 @@ final class CharImportViewModel {
                 characterCard = CharacterCardModel(fromChub: card)
             case .loreBook:
                 let importedLoreBook = try await charImporter.importLoreBook(from: url)
-                loreBook = LoreBookModel(fromImportedLoreBook: importedLoreBook)
+                loreBook = LoreBookModel(fromImport: importedLoreBook)
             }
         } catch {
             importError = userFacingImportError(for: error)
@@ -85,57 +85,5 @@ final class CharImportViewModel {
         }
 
         return description
-    }
-}
-
-extension LoreBookModel {
-    fileprivate init(fromImportedLoreBook importedLoreBook: SwiftLLMSDK.LoreBookModel) {
-        let entries = importedLoreBook.entries ?? [:]
-        let loreBookID = UUID()
-
-        self.init(
-            id: loreBookID,
-            name: importedLoreBook.name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-                ?? "Imported Lorebook",
-            description: importedLoreBook.description?.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            ).nilIfEmpty,
-            scanDepth: importedLoreBook.scanDepth ?? 2,
-            tokenBudget: importedLoreBook.tokenBudget,
-            recursiveScanning: importedLoreBook.recursiveScanning ?? false,
-            entries:
-                entries
-                .enumerated()
-                .map { index, pair in 
-                    LoreBookEntryModel(
-                        loreBookId: loreBookID.uuidString,
-                        name: pair.value.entryName(fallback: pair.key, index: index),
-                        enabled: pair.value.enabled ?? !(pair.value.disable ?? false),
-                        keys: pair.value.keys ?? pair.value.key ?? [],
-                        secondaryKeys: pair.value.secondaryKeys ?? pair.value.keysecondary ?? [],
-                        content: pair.value.content ?? "",
-                        constant: pair.value.constant,
-                        order: pair.value.order,
-                        position: pair.value.position,
-                        caseSensitive: pair.value.caseSensitive,
-                        depth: pair.value.depth ?? pair.value.extensions?.depth
-                    )
-                }
-        )
-    }
-}
-
-extension SwiftLLMSDK.LoreBookEntry {
-    fileprivate func entryName(fallback: String, index: Int) -> String {
-        name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-            ?? comment?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-            ?? fallback.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-            ?? "Entry \(index + 1)"
-    }
-}
-
-extension String {
-    fileprivate var nilIfEmpty: String? {
-        isEmpty ? nil : self
     }
 }

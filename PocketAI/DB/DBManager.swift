@@ -142,6 +142,26 @@ class DBManager {
                 }
             }
         }
+
+        migrator.registerMigration("v8_character_lore_book") { db in 
+            let loreBookColumns = try db.columns(in: LoreBookRecord.databaseTableName).map(\.name)
+
+            if loreBookColumns.contains("characterCardId") == false {
+                try db.alter(table: LoreBookRecord.databaseTableName) { t in 
+                    t.add(column: "characterCardId", .text).references(CharacterCardRecord.databaseTableName, onDelete: .setNull)
+                }
+            }
+
+            // Ensure column is unique
+            try db.create(
+                index: "idx_lorebooks_characterCardId_unique",
+                on: LoreBookRecord.databaseTableName,
+                columns: ["characterCardId"],
+                unique: true,
+                ifNotExists: true
+            )
+            
+        }
         try migrator.migrate(dbQueue)
     }
 

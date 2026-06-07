@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import SwiftLLMSDK
 
 struct LoreBookModel: Hashable, Identifiable {
     var id: UUID = UUID()
@@ -14,8 +15,11 @@ struct LoreBookModel: Hashable, Identifiable {
     var entries: [LoreBookEntryModel] = []
     var chats: [ChatModel] = []
 
+    var characterCardId: String? 
+
     init(
         id: UUID = UUID(),
+        characterCardId: UUID? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
         name: String,
@@ -28,6 +32,7 @@ struct LoreBookModel: Hashable, Identifiable {
         chats: [ChatModel] = []
     ) {
         self.id = id
+        self.characterCardId = characterCardId?.uuidString
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.name = name
@@ -38,6 +43,37 @@ struct LoreBookModel: Hashable, Identifiable {
         self.isPrivate = isPrivate
         self.entries = entries
         self.chats = chats
+    }
+
+    init(fromImport: LoreBook, forCharacter: UUID? = nil) {
+        let entries = fromImport.entries ?? [:]
+        let loreBookID = UUID()
+
+        self.characterCardId = forCharacter?.uuidString
+        self.id = loreBookID
+        self.createdAt = Date() 
+        self.updatedAt = Date()
+        self.name = fromImport.name ?? "Imported LoreBook"
+        self.description = fromImport.description
+        self.scanDepth = fromImport.scanDepth ?? 2 
+        self.tokenBudget = fromImport.tokenBudget
+        self.recursiveScanning = fromImport.recursiveScanning ?? false
+
+        self.entries = entries.enumerated().map { index, pair in 
+            LoreBookEntryModel(
+                loreBookId: loreBookID.uuidString,
+                name: pair.value.name ?? pair.value.comment ?? "Entry \(index + 1)", 
+                enabled: pair.value.enabled ?? !(pair.value.disable ?? false),
+                keys: pair.value.keys ?? pair.value.key ?? [],
+                secondaryKeys: pair.value.secondaryKeys ?? pair.value.keysecondary ?? [],
+                content: pair.value.content ?? "", 
+                constant: pair.value.constant ?? false, 
+                order: pair.value.order ?? 1, 
+                position: pair.value.position?.intValue ?? 2,
+                caseSensitive: pair.value.caseSensitive ?? false, 
+                depth: pair.value.depth ?? pair.value.extensions?.depth ?? 2
+            )
+        }
     }
 }
 
@@ -87,6 +123,7 @@ struct LoreBookEntryModel: Hashable, Identifiable {
 extension LoreBookModel {
     init(record: LoreBookRecord) {
         self.id = UUID(uuidString: record.id) ?? UUID()
+        self.characterCardId = record.characterCardId
         self.createdAt = record.createdAt
         self.updatedAt = record.updatedAt
         self.name = record.name
@@ -102,6 +139,7 @@ extension LoreBookModel {
     var record: LoreBookRecord {
         LoreBookRecord(
             id: id.uuidString,
+            characterCardId: characterCardId,
             createdAt: createdAt,
             updatedAt: updatedAt,
             name: name,
@@ -160,6 +198,7 @@ struct LoreBookRecord: Codable, FetchableRecord, MutablePersistableRecord, Senda
     )
 
     var id: String
+    var characterCardId: String?
     var createdAt: Date
     var updatedAt: Date
     var name: String
@@ -172,6 +211,7 @@ struct LoreBookRecord: Codable, FetchableRecord, MutablePersistableRecord, Senda
     public static func migrateTable(_ db: Database) throws {
         try db.create(table: databaseTableName, ifNotExists: true) { builder in
             builder.column("id", .text).primaryKey().notNull()
+            builder.column("characterCardId", .text).unique().references(CharacterCardRecord.databaseTableName, onDelete: .setNull)
             builder.column("createdAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
             builder.column("updatedAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
             builder.column("name", .text).notNull()

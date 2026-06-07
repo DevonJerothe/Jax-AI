@@ -107,7 +107,7 @@ struct LoreBookView: View {
             )
 
             AppSheetOptionCard {
-                Toggle(isOn: $viewModel.loreBook.isPrivate) {
+                Toggle(isOn: $viewModel.setPrivate) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Private Lorebook")
                             .foregroundColor(appTheme.primaryText.color)

@@ -123,6 +123,11 @@ struct CharacterCardSettingsView: View {
                     .tint(appTheme.tintColor.color)
                     .padding(.horizontal, 16)
 
+                    if let loreBook = characterCard.characterBook {
+                        LoreBookPreview(loreBook: loreBook)
+                        .padding()
+                    }
+
                     collapsibleField(
                         title: "Description Preview",
                         text: Binding(

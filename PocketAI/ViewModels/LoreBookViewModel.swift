@@ -15,6 +15,7 @@ final class LoreBookViewModel {
     var errorMessage: String?
 
     var loreBook: LoreBookModel = LoreBookModel(name: "", description: nil, scanDepth: 2)
+    var setPrivate: Bool = false
 
     var chatID: UUID?
     var chatModel: ChatModel? {
@@ -244,6 +245,7 @@ final class LoreBookViewModel {
     private func loadLoreBook(_ loreBook: LoreBookModel) {
         self.loreBook = loreBook
         tokenBudgetText = loreBook.tokenBudget.map(String.init) ?? ""
+        setPrivate = loreBook.isPrivate
     }
 
     private func normalizedLoreBookForSaving() -> LoreBookModel {
@@ -265,6 +267,8 @@ final class LoreBookViewModel {
             entry.order = entry.order ?? index
             return entry
         }
+
+        loreBook.isPrivate = setPrivate
 
         return loreBook
     }

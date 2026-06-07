@@ -44,6 +44,10 @@ struct ChatModel: Hashable {
         self.memory = fromCard.description ?? ""
         self.isPrivate = fromCard.isPrivate
 
+        if let characterBook = fromCard.characterBook {
+            self.loreBooks = [characterBook]
+        }
+
         self.addMessage(fromCard.firstMessage, forActor: .bot)
     }
 

@@ -61,7 +61,7 @@ struct LoreBookPreview: View {
             .foregroundStyle(appTheme.secondaryText.color)
         }
         .padding(14)
-        .frame(maxWidth: 220, minHeight: 170, alignment: .topLeading)
+        .frame(minHeight: 170, alignment: .topLeading)
         .background(appTheme.secondaryBackgroundColor.color)
         .cornerRadius(12)
         .contentShape(RoundedRectangle(cornerRadius: 12))
