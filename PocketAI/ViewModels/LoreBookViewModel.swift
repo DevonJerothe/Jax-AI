@@ -24,15 +24,29 @@ final class LoreBookViewModel {
         return chatStore.chat(withID: chatID)
     }
 
+    var attachableLoreBooks: [LoreBookModel] {
+        guard connectionManager.connectionSettings.locked else {
+            return loreBookStore.loreBooks
+        }
+
+        return loreBookStore.loreBooks.filter { !$0.isPrivate }
+    }
+
+    var attachedLoreBookIDs: Set<UUID> {
+        Set(chatModel?.loreBooks.map(\.id) ?? [])
+    }
+
     init(
         chatID: UUID? = nil,
         loreBookStore: LoreBookStore? = nil,
         chatStore: ChatStore? = nil,
         connectionManager: ConnectionStatusManager? = nil
     ) {
+        self.chatID = chatID
         self.loreBookStore = loreBookStore ?? ServiceContainer.shared.getLoreBookStore()
         self.chatStore = chatStore ?? ServiceContainer.shared.getChatStore()
-        self.connectionManager = connectionManager ?? ServiceContainer.shared.getConnectionStatusManager()
+        self.connectionManager =
+            connectionManager ?? ServiceContainer.shared.getConnectionStatusManager()
     }
 
     var loreBooks: [LoreBookModel] {
@@ -40,7 +54,7 @@ final class LoreBookViewModel {
         if let chatModel {
             return chatModel.loreBooks
         }
-        
+
         guard connectionManager.connectionSettings.locked else {
             return loreBookStore.loreBooks
         }
@@ -120,6 +134,22 @@ final class LoreBookViewModel {
         }
     }
 
+    func removeLoreBookFromChat(_ loreBook: LoreBookModel) async {
+        guard var chatModel else {
+            errorMessage = "No active chat found."
+            return
+        }
+
+        chatModel.loreBooks.removeAll { $0.id == loreBook.id }
+
+        do {
+            try await chatStore.saveChat(chatModel)
+        } catch {
+            errorMessage = "Failed to remove lorebook from chat."
+            print(error)
+        }
+    }
+
     func loreBook(withID loreBookID: UUID) -> LoreBookModel? {
         loreBookStore.loreBook(withID: loreBookID)
     }
@@ -132,6 +162,34 @@ final class LoreBookViewModel {
 
     func saveLoreBook(_ loreBook: LoreBookModel) async throws {
         try await loreBookStore.saveLoreBook(loreBook)
+    }
+
+    func attachLoreBooks(withIDs loreBookIDs: Set<UUID>) async {
+        guard !loreBookIDs.isEmpty else {
+            return
+        }
+
+        guard var chatModel else {
+            errorMessage = "No active chat found."
+            return
+        }
+
+        let existingIDs = Set(chatModel.loreBooks.map(\.id))
+        let loreBooksToAttach = attachableLoreBooks.filter {
+            loreBookIDs.contains($0.id) && !existingIDs.contains($0.id)
+        }
+
+        guard !loreBooksToAttach.isEmpty else {
+            return
+        }
+
+        do {
+            chatModel.loreBooks.append(contentsOf: loreBooksToAttach)
+            try await chatStore.saveChat(chatModel)
+        } catch {
+            errorMessage = "Failed to attach lorebook."
+            print(error)
+        }
     }
 
     func addEntry() {

@@ -4,6 +4,7 @@ struct LoreBookListView: View {
     @Environment(NavigationManager.self) private var navManager
     @Environment(\.appTheme) private var appTheme
     @State private var viewModel = LoreBookViewModel()
+    @State private var showingAttachLoreBookSheet = false
 
     private let columns: [GridItem] = [
         GridItem(.flexible(maximum: 220), spacing: 16),
@@ -50,10 +51,18 @@ struct LoreBookListView: View {
                                 .withBottomContextMenu {
                                     Button(role: .destructive) {
                                         Task {
-                                            await viewModel.deleteLoreBook(loreBook: loreBook)
+                                            if viewModel.chatID == nil {
+                                                await viewModel.deleteLoreBook(loreBook: loreBook)
+                                            } else {
+                                                await viewModel.removeLoreBookFromChat(loreBook)
+                                            }
                                         }
                                     } label: {
-                                        Label("Delete", systemImage: "trash")
+                                        if viewModel.chatID == nil {
+                                            Label("Delete", systemImage: "trash")
+                                        } else {
+                                            Label("Remove from Chat", systemImage: "minus.circle")
+                                        }
                                     }
                                 }
                         }
@@ -77,12 +86,21 @@ struct LoreBookListView: View {
                         navManager.navigateToCharImport(
                             importType: .loreBook, keepCurrentPath: true)
                     }
+
+                    if viewModel.chatID != nil {
+                        Button("Attach Lorebook") {
+                            showingAttachLoreBookSheet = true
+                        }
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
             }
         }
         .toolbar(.visible, for: .navigationBar)
+        .sheet(isPresented: $showingAttachLoreBookSheet) {
+            AttachLoreBookSheetView(viewModel: viewModel)
+        }
         .alert("Lorebook Error", isPresented: errorAlertBinding) {
             Button("OK", role: .cancel) {
                 viewModel.errorMessage = nil
