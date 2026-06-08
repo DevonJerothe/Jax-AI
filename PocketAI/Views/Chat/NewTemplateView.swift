@@ -40,19 +40,18 @@ struct NewTemplateView: View {
                         text: $templateContent
                     )
 
-                    AppSheetOptionCard {
-                        Toggle(isOn: $isEnabled) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Enabled")
-                                    .foregroundStyle(appTheme.primaryText.color)
+                AppSheetOptionCard {
+                    ThemedToggleRow(isOn: $isEnabled) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Enabled")
+                                .foregroundStyle(appTheme.primaryText.color)
 
                                 Text("Include this template in new model context.")
                                     .font(.caption)
-                                    .foregroundStyle(appTheme.secondaryText.color)
-                            }
+                                .foregroundStyle(appTheme.secondaryText.color)
                         }
-                        .tint(appTheme.tintColor.color)
                     }
+                }
                 }
 
                 actionRow
