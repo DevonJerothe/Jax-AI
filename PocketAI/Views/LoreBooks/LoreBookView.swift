@@ -4,14 +4,22 @@ import UIKit
 struct LoreBookView: View {
     @Environment(NavigationManager.self) private var navManager
     @Environment(\.appTheme) private var appTheme
+    @Environment(\.dismiss) private var dismiss
+
     @State private var viewModel = LoreBookViewModel()
 
     private let loreBookID: UUID?
     private let importedLoreBook: LoreBookModel?
+    private let onSave: ((LoreBookModel) -> Void)?
 
-    init(loreBookID: UUID? = nil, importedLoreBook: LoreBookModel? = nil) {
+    init(
+        loreBookID: UUID? = nil,
+        importedLoreBook: LoreBookModel? = nil,
+        onSave: ((LoreBookModel) -> Void)? = nil
+    ) {
         self.loreBookID = loreBookID
         self.importedLoreBook = importedLoreBook
+        self.onSave = onSave
     }
 
     var body: some View {
@@ -65,8 +73,13 @@ struct LoreBookView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") {
-                    Task {
-                        await saveLoreBook()
+                    if let onSave {
+                        onSave(viewModel.loreBook)
+                        dismiss()
+                    } else {
+                        Task {
+                            await saveLoreBook()
+                        }
                     }
                 }
             }
