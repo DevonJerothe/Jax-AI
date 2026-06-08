@@ -50,12 +50,6 @@ struct CharacterCardsView: View {
                     Button("Create From Scratch") {
                         navManager.navigateToNewChat(keepCurrentPath: true, createCharacterCard: true)
                     }
-                    Button("Lorebooks") {
-                        navManager.navigateToLoreBooks(keepCurrentPath: true)
-                    }
-                    Button("Create Lorebook") {
-                        navManager.navigateToLoreBook(loreBookID: nil, keepCurrentPath: true)
-                    }
                     Button("Import New Character") {
                         navManager.navigateToCharImport(keepCurrentPath: true)
                     }
