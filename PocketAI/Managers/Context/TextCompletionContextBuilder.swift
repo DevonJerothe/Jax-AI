@@ -72,6 +72,8 @@ struct TextCompletionContextBuilder {
             $0 + $1.tokenCount
         }
 
+        // debug prints
+        print("selectedMemoryTokens: \(selectedMemoryTokens)\nselectedPromptTokens: \(selectedPromptTokens)")
         return TextCompletionContent(
             memory: selectedMemoryBlocks.map(\.renderedText).joined(separator: "\n"),
             prompt: selectedPromptBlocks.map(\.renderedText).joined(),
@@ -141,8 +143,13 @@ struct TextCompletionContextBuilder {
             sortedBlocks[$0].kind == .message
                 && (sortedBlocks[$0].actor == .assistant || sortedBlocks[$0].actor == .user)
         })
-        let lastUserMessageIndex = sortedBlocks.indices.last(where: {
-            sortedBlocks[$0].actor == .user && sortedBlocks[$0].kind == .message
+        let lastRenderableIndex = sortedBlocks.indices.last(where: {
+            switch sortedBlocks[$0].actor {
+                case .system, .assistant, .user:
+                    return true
+                default:
+                    return false
+            }
         })
 
         func textWithRolePrefix(_ text: String, prefix: String) -> String {
@@ -153,6 +160,29 @@ struct TextCompletionContextBuilder {
             return "\(prefix) \(text)"
         }
 
+        func nextActorSuffix(after actor: OpenRouterMessageRole) -> String {
+            switch actor {
+                case .assistant: 
+                    guard continued == false else {
+                        return ""
+                    }
+                    return settings.userStopSequence
+                case .user: 
+                    var suffix = settings.botStopSequence
+                    if settings.botStopSequence.isEmpty == false {
+                        suffix += " "
+                    }
+
+                    if forceThinking {
+                        suffix += "\(settings.thinkingStartSequence)\n\(settings.forceThinkingInstruct)"
+                    }
+
+                    return suffix
+                default: 
+                    return ""
+            }
+        }
+
         var renderedBlocks: [RenderedContextBlock] = []
 
         for (index, block) in sortedBlocks.enumerated() {
@@ -160,22 +190,22 @@ struct TextCompletionContextBuilder {
             switch block.actor {
             case .system:
                 renderedText = "\(settings.systemStopSequence)\n\(block.text)"
+
+                if index == lastRenderableIndex, let lastMessageIndex {
+                    renderedText += nextActorSuffix(after: sortedBlocks[lastMessageIndex].actor)
+                }
             case .assistant:
                 var text = textWithRolePrefix(block.text, prefix: settings.botStopSequence)
-                if continued == false && index == lastMessageIndex {
-                    text += settings.userStopSequence
+
+                if index == lastRenderableIndex, let lastMessageIndex {
+                    text += nextActorSuffix(after: sortedBlocks[lastMessageIndex].actor)
                 }
                 renderedText = text
             case .user:
                 var text = textWithRolePrefix(block.text, prefix: settings.userStopSequence)
-                if index == lastMessageIndex {
-                    text += settings.botStopSequence
-                    if settings.botStopSequence.isEmpty == false {
-                        text += " "
-                    }
-                }
-                if forceThinking && index == lastUserMessageIndex && index == lastMessageIndex {
-                    text += "\(settings.thinkingStartSequence)\n\(settings.forceThinkingInstruct)"
+
+                if index == lastRenderableIndex, let lastMessageIndex {
+                    text += nextActorSuffix(after: sortedBlocks[lastMessageIndex].actor)
                 }
                 renderedText = text
             default:
