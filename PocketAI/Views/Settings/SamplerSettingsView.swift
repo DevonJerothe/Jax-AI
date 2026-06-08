@@ -216,14 +216,10 @@ struct SamplerSettingsView: View {
                 SettingsCard("Reasoning") {
                     sequenceField(title: "Thinking Start Sequence", text: $thinkingStartSequenceText)
                     sequenceField(title: "Thinking Stop Sequence", text: $thinkingStopSequenceText)
-                    Toggle(isOn: forceThinkingBinding) {
+                    ThemedToggleRow(isOn: forceThinkingBinding) {
                         Text("Force Thinking")
                             .foregroundColor(appTheme.primaryText.color)
                     }
-                    .padding()
-                    .background(appTheme.secondaryBackgroundColor.color)
-                    .cornerRadius(12)
-                    .tint(appTheme.tintColor.color)
 
                     if forceThinkingBinding.wrappedValue {
                         sequenceField(title: "Force Thinking Instruct", text: $forceThinkingInstructText)
@@ -274,39 +270,14 @@ struct SamplerSettingsView: View {
     }
 
     private func sequenceField(title: String, text: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(appTheme.primaryText.color)
-
-            TextField(title, text: text)
-                .styledFormField()
-                .font(.system(.body, design: .monospaced))
-        }
+        ThemedTextField(
+            title: title,
+            placeholder: title,
+            text: text,
+            autocapitalization: .never,
+            monospaced: true
+        )
     }
-
-    // private func samplerSlider(
-    //     title: String,
-    //     value: Binding<Double>,
-    //     range: ClosedRange<Double>,
-    //     step: Double,
-    //     displayValue: String
-    // ) -> some View {
-    //     VStack(alignment: .leading) {
-    //         HStack {
-    //             Text(title)
-    //                 .foregroundColor(.primary)
-
-    //             Spacer()
-
-    //             Text(displayValue)
-    //                 .foregroundColor(.secondary)
-    //                 .font(.subheadline)
-    //         }
-
-    //         Slider(value: value, in: range, step: step)
-    //     }
-    // }
 
     private func formattedDecimal(_ value: Double) -> String {
         value.formatted(.number.precision(.fractionLength(2)))

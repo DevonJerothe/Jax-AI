@@ -1,10 +1,12 @@
+import SwiftLLMSDK
 import SwiftUI
 
-public struct BooruBrowserView: View {
+public struct ChubAIBrowserView: View {
     @Environment(\.appTheme) private var appTheme
 
-    @State private var viewModel: BotBooruViewModel = .init()
+    @State private var viewModel: ChubAIViewModel = .init()
     @State private var showSettings = false
+    @State private var showTopicSearch = false
     @State private var selectedCharacterCard: CharacterCardModel?
     @State private var showCharacterEditor = false
 
@@ -13,10 +15,9 @@ public struct BooruBrowserView: View {
             if viewModel.loggedIn == false {
                 Spacer()
                 ContentUnavailableView {
-                    Label(
-                        "Log in to BotBooru", systemImage: "person.crop.circle.badge.questionmark")
+                    Label("Log in to Chub AI", systemImage: "person.crop.circle.badge.questionmark")
                 } description: {
-                    Text("Open settings to connect your BotBooru account.")
+                    Text("Open settings to connect your Chub AI account")
                 } actions: {
                     Button("Settings") {
                         showSettings = true
@@ -27,23 +28,41 @@ public struct BooruBrowserView: View {
                 }
                 Spacer()
             } else {
-                if viewModel.posts.isEmpty == false {
-                    BooruBrowserResultsView(viewModel: viewModel) { characterCard in
-                        selectedCharacterCard = characterCard
-                        showCharacterEditor = true
-                    }
+                if viewModel.cards.isEmpty == false {
+                    PaginatedResultsGridView(
+                        items: viewModel.cards,
+                        isLoading: viewModel.isLoading,
+                        canLoadMore: viewModel.hasMore,
+                        loadMore: {
+                            await viewModel.loadMore()
+                        },
+                        cardBuilder: { card in
+                            ChubBrowserCard(card: card)
+                                .onTapGesture {
+                                    Task {
+                                        if let characterCard = await viewModel.getCharacter(
+                                            card: card)
+                                        {
+                                            selectedCharacterCard = characterCard
+                                            showCharacterEditor = true
+                                        }
+                                    }
+                                }
+                        }
+                    )
+                    .padding(.horizontal, 16)
                 } else if viewModel.isLoading {
                     Spacer()
                     LoadingIndicator(size: 30)
                     Spacer()
                 } else {
                     Spacer()
-                    Text("No posts found...")
+                    Text("No cards found...")
                     Spacer()
                 }
             }
         }
-        .navigationBarTitle("Booru Browser")
+        .navigationBarTitle("Chub AI Browser")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
@@ -57,7 +76,10 @@ public struct BooruBrowserView: View {
             }
         }
         .navigationDestination(isPresented: $showSettings) {
-            BooruBrowserSettingsView(viewModel: viewModel)
+            ChubAISettingsView(viewModel: viewModel)
+        }
+        .navigationDestination(isPresented: $showTopicSearch) {
+            ChubAITopicSearchView(viewModel: viewModel)
         }
         .navigationDestination(isPresented: $showCharacterEditor) {
             if let selectedCharacterCard {
@@ -68,10 +90,18 @@ public struct BooruBrowserView: View {
                 )
             }
         }
+        .task {
+            await viewModel.getTags()
+            await viewModel.loadInitialCards()
+        }
+        .onChange(of: showSettings) { old, new in
+            guard old == true, new == false else { return }
+            Task { await viewModel.searchCards(refresh: true) }
+        }
         .safeAreaInset(edge: .top, spacing: 6) {
             if viewModel.loggedIn {
                 HStack {
-                    TextField("Search the booru..", text: $viewModel.searchQuery)
+                    TextField("Search the hub..", text: $viewModel.searchQuery)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .padding(12)
@@ -79,7 +109,7 @@ public struct BooruBrowserView: View {
                         .background(appTheme.secondaryBackgroundColor.color)
                         .cornerRadius(12)
                         .onSubmit {
-                            Task { await viewModel.getPosts(refresh: true) }
+                            Task { await viewModel.searchCards(refresh: true) }
                         }
                         .glassEffect(
                             .regular.interactive(),
@@ -90,56 +120,50 @@ public struct BooruBrowserView: View {
 
                     Menu {
                         Picker("Sort", selection: sortSelection) {
-                            ForEach(BotBooruSort.allCases) { sort in
+                            ForEach(ChubSort.allCases) { sort in
                                 Text(sort.title)
                                     .tag(sort)
                             }
                         }
+
                     } label: {
                         Image(systemName: "line.3.horizontal.decrease")
                             .foregroundColor(appTheme.secondaryText.color)
                             .glassCapsule()
                     }
                     .buttonStyle(.plain)
-                    .padding(.trailing, showsSortTimeMenu ? 4 : 19)
+                    .padding(.trailing, 4)
 
-                    if showsSortTimeMenu {
-                        Menu {
-                            Picker("Time", selection: sortTimeSelection) {
-                                ForEach(BotBooruSortTime.allCases) { sortTime in
-                                    Text(sortTime.title)
-                                        .tag(sortTime)
-                                }
+                    // Tag selection menu
+                    Menu {
+                        ForEach(viewModel.selectedTopics) { tag in
+                            Button {
+                                viewModel.selectedTopics.removeAll { $0.id == tag.id }
+                                Task { await viewModel.searchCards(refresh: true) }
+                            } label: {
+                                Label(tag.name, systemImage: "xmark.circle")
                             }
-                        } label: {
-                            Image(systemName: "clock.fill")
-                                .foregroundColor(appTheme.secondaryText.color)
-                                .glassCapsule()
                         }
-                        .buttonStyle(.plain)
-                        .padding(.trailing, 19)
-                        .transition(
-                            .asymmetric(
-                                insertion: .move(edge: .trailing).combined(with: .opacity),
-                                removal: .move(edge: .trailing).combined(with: .opacity)
-                            )
-                        )
+
+                        Button {
+                            showTopicSearch = true
+                        } label: {
+                            Label("Add Topic", systemImage: "plus")
+                        }
+                    } label: {
+                        Image(systemName: "tag.fill")
+                            .foregroundColor(appTheme.secondaryText.color)
+                            .glassCapsule()
                     }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 19)
                 }
-                // .animation(.snappy(duration: 0.22), value: showsSortTimeMenu)
             }
         }
         .background(appTheme.backgroundColor.color)
-        .task {
-            await viewModel.loadInitialPosts()
-        }
     }
 
-    private var showsSortTimeMenu: Bool {
-        viewModel.sort != .latest
-    }
-
-    private var sortSelection: Binding<BotBooruSort> {
+    private var sortSelection: Binding<ChubSort> {
         Binding {
             viewModel.sort
         } set: { sort in
@@ -147,29 +171,72 @@ public struct BooruBrowserView: View {
             withAnimation(.snappy(duration: 0.22)) {
                 viewModel.sort = sort
             }
-            Task { await viewModel.getPosts(refresh: true) }
-        }
-    }
-
-    private var sortTimeSelection: Binding<BotBooruSortTime> {
-        Binding {
-            viewModel.sortTime
-        } set: { sortTime in
-            guard viewModel.sortTime != sortTime else { return }
-            viewModel.sortTime = sortTime
-            Task { await viewModel.getPosts(refresh: true) }
+            Task { await viewModel.searchCards(refresh: true) }
         }
     }
 }
 
-struct BooruBrowserSettingsView: View {
+struct ChubBrowserCard: View {
+    let card: ChubCardNode
+
+    var body: some View {
+        ThumbnailInfoCard(
+            imageURL: card.thumbnail,
+            title: card.name ?? "",
+            subtitle: card.tagline ?? card.description ?? "No description available.",
+            leadingMetadata: card.topics?.prefix(3).joined(separator: ", ") ?? "",
+            trailingMetadata: AppDateFormatting.thumbnailTimestamp(fromISO8601: card.createdAt ?? "")
+        )
+    }
+}
+
+struct ChubAITopicSearchView: View {
+    @Bindable var viewModel: ChubAIViewModel
+    @Environment(\.appTheme) private var appTheme
+    @Environment(\.dismiss) private var dismiss
+    @State private var search = ""
+
+    var body: some View {
+        let filteredTags = viewModel.tags
+            .filter {
+                search.isEmpty || $0.name.localizedCaseInsensitiveContains(search)
+                    || $0.title.localizedCaseInsensitiveContains(search)
+            }
+            .filter { tag in !viewModel.selectedTopics.contains { $0.id == tag.id } }
+
+        List(filteredTags.prefix(50)) { tag in
+            Button {
+                viewModel.selectedTopics.append(tag)
+                Task { await viewModel.searchCards(refresh: true) }
+                dismiss()
+            } label: {
+                Text(tag.title.isEmpty ? tag.name : tag.title)
+                    .foregroundStyle(appTheme.primaryText.color)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(appTheme.backgroundColor.color)
+        .navigationTitle("Add Topic")
+        .searchable(text: $search, prompt: "Search topics")
+    }
+}
+
+struct ChubAISettingsView: View {
     @Environment(\.appTheme) private var appTheme
 
-    @Bindable var viewModel: BotBooruViewModel
+    @Bindable var viewModel: ChubAIViewModel
+    @State private var tagSearch = ""
     @State private var username = ""
     @State private var password = ""
 
     var body: some View {
+        let filteredTags = viewModel.tags
+            .filter {
+                tagSearch.isEmpty || $0.name.localizedCaseInsensitiveContains(tagSearch)
+                    || $0.title.localizedCaseInsensitiveContains(tagSearch)
+            }
+            .filter { tag in !viewModel.excludedTopics.contains { $0.id == tag.id } }
+
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 SettingsCard {
@@ -180,9 +247,9 @@ struct BooruBrowserSettingsView: View {
                                 ? "checkmark.circle.fill" : "xmark.circle"
                         )
                         Spacer()
-                        Text(viewModel.authSettings.username ?? "")
+                        Text(viewModel.chubSettings.userName ?? "")
                             .font(.caption)
-                            .foregroundStyle(appTheme.secondaryText.color)
+                            .foregroundColor(appTheme.secondaryText.color)
                     }
                     if viewModel.loggedIn {
                         HStack(spacing: 12) {
@@ -268,137 +335,69 @@ struct BooruBrowserSettingsView: View {
                     }
                 }
 
-                SettingsCard("Browsing") {
-                    Toggle("Hide AI Assisted Content", isOn: authBinding(\.hideAI))
+                SettingsCard("Excluded Topics") {
+                    TextField("Search tags", text: $tagSearch)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .styledFormField()
+
+                    if tagSearch.isEmpty == false {
+                        ForEach(filteredTags.prefix(20)) { tag in
+                            Button {
+                                viewModel.excludedTopics.append(tag)
+                                var settings = viewModel.chubSettings
+                                settings.excludedTopics = viewModel.excludedTopics
+                                viewModel.updateChubSettings(settings)
+                                tagSearch = ""
+                            } label: {
+                                Text(tag.title.isEmpty ? tag.name : tag.title)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    ForEach(viewModel.excludedTopics) { tag in
+                        HStack(spacing: 6) {
+                            Text(tag.name)
+                                .font(.caption)
+
+                            Button {
+                                viewModel.excludedTopics.removeAll { $0.id == tag.id }
+                                var settings = viewModel.chubSettings
+                                settings.excludedTopics = viewModel.excludedTopics
+                                viewModel.updateChubSettings(settings)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundColor(appTheme.secondaryText.color)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(8)
+                        .background(appTheme.secondaryAction.color)
+                        .cornerRadius(12)
+                    }
                 }
-                .tint(appTheme.tintColor.color)
-                .disabled(viewModel.loggedIn == false)
             }
             .padding(16)
         }
         .background(appTheme.backgroundColor.color)
-        .navigationTitle("Booru Settings")
+        .navigationTitle("Chub AI Settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
-        .onAppear {
-            username = viewModel.authSettings.username ?? ""
+        .task {
+            await viewModel.getTags()
         }
     }
 
-    private func authBinding(_ keyPath: WritableKeyPath<BotBooruAuthSettings, Bool>) -> Binding<
-        Bool
-    > {
+    private func chubBinding(_ keyPath: WritableKeyPath<ChubAISettings, Bool>) -> Binding<Bool> {
         Binding {
-            viewModel.authSettings[keyPath: keyPath]
+            viewModel.chubSettings[keyPath: keyPath]
         } set: { value in
-            var settings = viewModel.authSettings
+            var settings = viewModel.chubSettings
             settings[keyPath: keyPath] = value
-            viewModel.updateAuthSettings(settings)
+            viewModel.updateChubSettings(settings)
         }
-    }
-}
-
-struct BooruBrowserResultsView: View {
-    @Bindable var viewModel: BotBooruViewModel
-    let onSelectCharacter: (CharacterCardModel) -> Void
-
-    var body: some View {
-        PaginatedResultsGridView(
-            items: viewModel.posts,
-            isLoading: viewModel.isLoading,
-            canLoadMore: viewModel.posts.count < viewModel.count,
-            loadMore: {
-                await viewModel.loadMore()
-            },
-            cardBuilder: { post in
-                BooruBrowserPostCard(post: post)
-                    .onTapGesture {
-                        Task {
-                            if let characterCard = await viewModel.getCharacter(post: post) {
-                                onSelectCharacter(characterCard)
-                            }
-                        }
-                    }
-            }
-        )
-        .padding(.horizontal, 16)
-    }
-}
-
-struct BooruBrowserPostCard: View {
-    @Environment(\.appTheme) private var appTheme
-
-    let post: BotBooruPostItem
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            AsyncImage(url: post.thumbnail) { state in
-                switch state {
-                case .empty:
-                    HStack {
-                        Spacer()
-                        LoadingIndicator(size: 30)
-                        Spacer()
-                    }
-                    .frame(height: 150)
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(height: 150)
-                        .frame(maxWidth: 195)
-                        .clipped()
-                case .failure(_):
-                    Rectangle()
-                        .fill(appTheme.secondaryAction.color)
-                        .frame(height: 150)
-                        .overlay(
-                            Image(systemName: "photo")
-                                .font(.largeTitle)
-                                .foregroundStyle(appTheme.secondaryText.color)
-                        )
-                @unknown default:
-                    Rectangle()
-                        .fill(appTheme.secondaryAction.color)
-                        .frame(height: 150)
-                        .overlay(
-                            Image(systemName: "photo")
-                                .font(.largeTitle)
-                                .foregroundStyle(appTheme.secondaryText.color)
-                        )
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(post.characterName)
-                    .font(.headline)
-                    .foregroundColor(appTheme.primaryText.color)
-                
-                Text(post.creatorNote ?? "")
-                    .font(.caption)
-                    .foregroundColor(appTheme.secondaryText.color)
-                    .lineLimit(3)
-
-                Spacer()
-                HStack {
-                    Text(post.tags.map { $0.name ?? "" }.prefix(3).joined(separator: ", "))
-                        .font(.caption2)
-                        .foregroundColor(appTheme.secondaryText.color)
-                        .truncationMode(.tail)
-
-                    Spacer()
-
-                    Text(post.createdAt.formatted(date: .abbreviated, time: .omitted))
-                        .font(.caption2)
-                        .foregroundColor(appTheme.secondaryText.color)
-                        .lineLimit(3)
-                }
-            }
-            .padding([.leading, .trailing, .bottom], 12)
-            .padding(.top, 8)
-        }
-        .background(appTheme.secondaryBackgroundColor.color)
-        .cornerRadius(12)
-        .contentShape(RoundedRectangle(cornerRadius: 12))
     }
 }

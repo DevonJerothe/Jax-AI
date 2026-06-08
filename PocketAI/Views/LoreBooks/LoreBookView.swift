@@ -120,7 +120,7 @@ struct LoreBookView: View {
             )
 
             AppSheetOptionCard {
-                Toggle(isOn: $viewModel.setPrivate) {
+                ThemedToggleRow(isOn: $viewModel.setPrivate) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Private Lorebook")
                             .foregroundColor(appTheme.primaryText.color)
@@ -130,7 +130,6 @@ struct LoreBookView: View {
                             .foregroundStyle(appTheme.secondaryText.color)
                     }
                 }
-                .tint(appTheme.tintColor.color)
             }
         }
         .padding(.horizontal, 16)
@@ -146,17 +145,11 @@ struct LoreBookView: View {
             )
 
             AppSheetOptionCard {
-                Stepper(value: $viewModel.loreBook.scanDepth, in: 0...50) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Scan Depth")
-                            .foregroundStyle(appTheme.primaryText.color)
-
-                        Text("\(viewModel.loreBook.scanDepth)")
-                            .font(.caption)
-                            .foregroundStyle(appTheme.secondaryText.color)
-                    }
-                }
-                .tint(appTheme.tintColor.color)
+                ThemedStepperRow(
+                    title: "Scan Depth",
+                    value: $viewModel.loreBook.scanDepth,
+                    range: 0...50
+                )
             }
 
             LoreBookTextField(
@@ -168,7 +161,7 @@ struct LoreBookView: View {
             )
 
             AppSheetOptionCard {
-                Toggle(isOn: $viewModel.loreBook.recursiveScanning) {
+                ThemedToggleRow(isOn: $viewModel.loreBook.recursiveScanning) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Recursive Scanning")
                             .foregroundColor(appTheme.primaryText.color)
@@ -178,7 +171,6 @@ struct LoreBookView: View {
                             .foregroundStyle(appTheme.secondaryText.color)
                     }
                 }
-                .tint(appTheme.tintColor.color)
             }
         }
         .padding(.horizontal, 16)

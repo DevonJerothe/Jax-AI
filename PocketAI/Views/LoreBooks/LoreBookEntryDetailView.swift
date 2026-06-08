@@ -58,7 +58,7 @@ struct LoreBookEntryDetailView: View {
             )
 
             AppSheetOptionCard {
-                Toggle(
+                ThemedToggleRow(
                     isOn: Binding(
                         get: { entry.enabled ?? true },
                         set: { entry.enabled = $0 }
@@ -73,11 +73,10 @@ struct LoreBookEntryDetailView: View {
                             .foregroundStyle(appTheme.secondaryText.color)
                     }
                 }
-                .tint(appTheme.tintColor.color)
             }
 
             AppSheetOptionCard {
-                Toggle(
+                ThemedToggleRow(
                     isOn: Binding(
                         get: { entry.constant ?? false },
                         set: { entry.constant = $0 }
@@ -92,7 +91,6 @@ struct LoreBookEntryDetailView: View {
                             .foregroundStyle(appTheme.secondaryText.color)
                     }
                 }
-                .tint(appTheme.tintColor.color)
             }
         }
         .padding(.horizontal, 16)
@@ -109,7 +107,7 @@ struct LoreBookEntryDetailView: View {
             keyEditor("Secondary Keys", text: $secondaryKeysText)
 
             AppSheetOptionCard {
-                Toggle(
+                ThemedToggleRow(
                     isOn: Binding(
                         get: { entry.caseSensitive ?? false },
                         set: { entry.caseSensitive = $0 }
@@ -118,7 +116,6 @@ struct LoreBookEntryDetailView: View {
                     Text("Case Sensitive")
                         .foregroundStyle(appTheme.primaryText.color)
                 }
-                .tint(appTheme.tintColor.color)
             }
         }
         .padding(.horizontal, 16)
@@ -178,21 +175,14 @@ struct LoreBookEntryDetailView: View {
     }
 
     private func keyEditor(_ title: String, text: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(appTheme.primaryText.color)
-
-            TextField("Comma separated keys", text: text, axis: .vertical)
-                .lineLimit(2...5)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                .foregroundStyle(appTheme.primaryText.color)
-                .padding()
-                .background(appTheme.secondaryBackgroundColor.color)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
+        ThemedTextField(
+            title: title,
+            placeholder: "Comma separated keys",
+            text: text,
+            autocapitalization: .never,
+            axis: .vertical,
+            lineLimit: 2...5
+        )
     }
 
     private func optionalIntBinding(_ keyPath: WritableKeyPath<LoreBookEntryModel, Int?>)

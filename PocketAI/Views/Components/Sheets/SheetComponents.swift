@@ -51,84 +51,46 @@ private struct AppSheetHeightPreferenceKey: PreferenceKey {
 }
 
 struct AppSheetHeader: View {
-    @Environment(\.appTheme) private var appTheme
-
     let title: String
     let subtitle: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundStyle(appTheme.primaryText.color)
-
-            Text(subtitle)
-                .font(.subheadline)
-                .foregroundStyle(appTheme.secondaryText.color)
-        }
+        ThemedSectionHeader(title: title, subtitle: subtitle)
     }
 }
 
 struct AppSheetField: View {
-    @Environment(\.appTheme) private var appTheme
-
     let title: String
     let placeholder: String
     @Binding var text: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(appTheme.primaryText.color)
-
-            TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(appTheme.secondaryText.color))
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                .foregroundStyle(appTheme.primaryText.color)
-                .padding()
-                .background(appTheme.secondaryBackgroundColor.color)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
+        ThemedTextField(
+            title: title,
+            placeholder: placeholder,
+            text: $text,
+            autocapitalization: .never
+        )
     }
 }
 
 struct AppSheetEditor: View {
-    @Environment(\.appTheme) private var appTheme
-
     let title: String
     let placeholder: String
     @Binding var text: String
     var height: CGFloat = 260
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(appTheme.primaryText.color)
-
-            EnhancedTextEditor(
-                text: $text,
-                placeholder: placeholder,
-                maxHeight: height,
-                minHeight: height,
-                textColor: UIColor(appTheme.primaryText.color),
-                placeholderColor: UIColor(appTheme.secondaryText.color)
-            )
-            .frame(height: height)
-            .foregroundStyle(appTheme.primaryText.color)
-            .background(appTheme.secondaryBackgroundColor.color)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
+        ThemedTextEditor(
+            title: title,
+            placeholder: placeholder,
+            text: $text,
+            height: height
+        )
     }
 }
 
 struct AppSheetOptionCard<Content: View>: View {
-    @Environment(\.appTheme) private var appTheme
-
     let content: Content
 
     init(@ViewBuilder content: () -> Content) {
@@ -136,12 +98,9 @@ struct AppSheetOptionCard<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        ThemedOptionCard {
             content
         }
-        .padding()
-        .background(appTheme.secondaryBackgroundColor.color)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

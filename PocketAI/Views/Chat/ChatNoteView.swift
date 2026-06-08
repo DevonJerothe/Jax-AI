@@ -40,7 +40,7 @@ struct ChatNoteView: View {
                 )
 
                 AppSheetOptionCard {
-                    Toggle(isOn: $noteInjectInMemory) {
+                    ThemedToggleRow(isOn: $noteInjectInMemory) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Inject in Memory")
                                 .foregroundStyle(appTheme.primaryText.color)
@@ -50,20 +50,9 @@ struct ChatNoteView: View {
                                 .foregroundStyle(appTheme.secondaryText.color)
                         }
                     }
-                    .tint(appTheme.tintColor.color)
 
                     if noteInjectInMemory == false {
-                        Stepper(value: $noteDepthValue, in: 1...Int.max) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Note Depth")
-                                    .foregroundStyle(appTheme.primaryText.color)
-
-                                Text("\(noteDepthValue)")
-                                    .font(.caption)
-                                    .foregroundStyle(appTheme.secondaryText.color)
-                            }
-                        }
-                        .tint(appTheme.tintColor.color)
+                        ThemedStepperRow(title: "Note Depth", value: $noteDepthValue, range: 1...Int.max)
                     }
                 }
                 .animation(.snappy(duration: 0.2), value: noteInjectInMemory)

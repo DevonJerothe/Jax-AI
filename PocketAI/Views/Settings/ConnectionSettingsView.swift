@@ -95,18 +95,13 @@ struct ConnectionSettingsView: View {
                 }
 
                 SettingsCard("Generation") {
-                    VStack(alignment: .leading) {
-                        HStack {
-                            Text("Response Length")
-                                .foregroundColor(appTheme.primaryText.color)
-                            Spacer()
-                            Text("\(Int(responseLengthBinding.wrappedValue))")
-                                .foregroundColor(appTheme.secondaryText.color)
-                                .font(.subheadline)
-                        }
-                        Slider(value: responseLengthBinding, in: 120...3000, step: 60)
-                            .tint(appTheme.tintColor.color)
-                    }
+                    ThemedSliderRow(
+                        title: "Response Length",
+                        value: responseLengthBinding,
+                        range: 120...3000,
+                        step: 60,
+                        displayValue: "\(Int(responseLengthBinding.wrappedValue))"
+                    )
                 }
 
                 connectionSpecificSections()
@@ -206,13 +201,13 @@ struct ConnectionSettingsView: View {
     @ViewBuilder
     private func koboldAPISettingsSections() -> some View {
         SettingsCard("KoboldAPI") {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Host")
-                    .foregroundColor(appTheme.primaryText.color)
-                TextField("", text: hostBinding, prompt: Text("e.g., 127.0.0.1"))
-                    .keyboardType(.URL)
-                    .styledFormField()
-            }
+            ThemedTextField(
+                title: "Host",
+                placeholder: "e.g., 127.0.0.1",
+                text: hostBinding,
+                keyboardType: .URL,
+                autocapitalization: .never
+            )
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Port")
@@ -222,36 +217,24 @@ struct ConnectionSettingsView: View {
                     .styledFormField()
             }
 
-            VStack(alignment: .leading) {
-                HStack {
-                    Text("Context Limit")
-                        .foregroundColor(appTheme.primaryText.color)
-                    Spacer()
-                    Text("\(Int(contextLengthBinding.wrappedValue))")
-                        .foregroundColor(appTheme.secondaryText.color)
-                        .font(.subheadline)
-                }
-                Slider(
-                    value: contextLengthBinding,
-                    in: 1024...Double(connectionManager.maxContextLength),
-                    step: 1024
-                )
-                .tint(appTheme.tintColor.color)
-            }
+            ThemedSliderRow(
+                title: "Context Limit",
+                value: contextLengthBinding,
+                range: 1024...Double(connectionManager.maxContextLength),
+                step: 1024,
+                displayValue: "\(Int(contextLengthBinding.wrappedValue))"
+            )
         }
     }
 
     @ViewBuilder
     private func openRouterSettingsSections() -> some View {
         SettingsCard("OpenRouter") {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("API Key")
-                    .foregroundColor(appTheme.primaryText.color)
-                SecureField("Enter your API key", text: apiKeyBinding)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .styledFormField()
-            }
+            ThemedSecureField(
+                title: "API Key",
+                placeholder: "Enter your API key",
+                text: apiKeyBinding
+            )
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Selected Model")

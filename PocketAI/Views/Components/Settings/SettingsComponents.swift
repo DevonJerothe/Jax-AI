@@ -68,8 +68,6 @@ struct SettingsNavigationRow: View {
 }
 
 struct SamplerSlider: View {
-    @Environment(\.appTheme) private var appTheme
-
     var title: String
     var value: Binding<Double> 
     var range: ClosedRange<Double>
@@ -77,20 +75,12 @@ struct SamplerSlider: View {
     var displayValue: String 
 
     var body: some View {
-        VStack(alignment: .leading) {
-            HStack {
-                Text(title)
-                    .foregroundColor(appTheme.primaryText.color)
-
-                Spacer()
-
-                Text(displayValue)
-                    .foregroundColor(appTheme.secondaryText.color)
-                    .font(.subheadline)
-            }
-
-            Slider(value: value, in: range, step: step)
-                .tint(appTheme.tintColor.color)
-        }
+        ThemedSliderRow(
+            title: title,
+            value: value,
+            range: range,
+            step: step,
+            displayValue: displayValue
+        )
     }
 }

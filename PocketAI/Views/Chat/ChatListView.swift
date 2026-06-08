@@ -110,6 +110,7 @@ struct CharacterCardView: View {
                 .font(.caption)
                 .fontWeight(.medium)
                 .foregroundColor(appTheme.primaryText.color)
+                .frame(maxWidth: 150)
                 .lineLimit(1)
         }
     }
@@ -182,7 +183,7 @@ struct RecentChatRow: View {
             Spacer()
 
             // Timestamp
-            Text(getFormattedTimestamp())
+            Text(formattedTimestamp)
                 .font(.caption)
                 .foregroundColor(appTheme.secondaryText.color)
         }
@@ -194,31 +195,11 @@ struct RecentChatRow: View {
         }
     }
 
-    private func getLastMessagePreview() -> String {
-        // Get the last message from the chat
-        guard let lastMessage = chat.messages.last else {
-            return "No messages yet"
-        }
-        return lastMessage.text.isEmpty ? "..." : lastMessage.text
-    }
-
-    private func getFormattedTimestamp() -> String {
-        // Format the timestamp of the last message
+    private var formattedTimestamp: String {
         guard let lastMessage = chat.messages.last else {
             return ""
         }
 
-        let formatter = DateFormatter()
-        let calendar = Calendar.current
-
-        if calendar.isDateInToday(lastMessage.createdAt) {
-            formatter.dateFormat = "h:mm a"
-            return formatter.string(from: lastMessage.createdAt)
-        } else if calendar.isDateInYesterday(lastMessage.createdAt) {
-            return "Yesterday"
-        } else {
-            formatter.dateFormat = "EEE"
-            return formatter.string(from: lastMessage.createdAt)
-        }
+        return AppDateFormatting.chatListTimestamp(from: lastMessage.createdAt)
     }
 }
