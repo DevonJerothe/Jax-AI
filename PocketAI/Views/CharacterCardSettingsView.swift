@@ -9,6 +9,7 @@ struct CharacterCardSettingsView: View {
     @Environment(\.appTheme) private var appTheme
     @State private var characterCard: CharacterCardModel
     @State private var setPrivate: Bool
+    @State private var showLoreBookEditor: Bool = false
 
     @State private var selectedImage: PhotosPickerItem?
     @State private var descriptionPreviewExpanded = false
@@ -64,6 +65,13 @@ struct CharacterCardSettingsView: View {
                 )
             } else {
                 settingsContent
+            }
+        }
+        .navigationDestination(isPresented: $showLoreBookEditor) {
+            if let loreBook = characterCard.characterBook {
+                LoreBookView(importedLoreBook: loreBook) { updatedBook in
+                   characterCard.characterBook = updatedBook
+                }
             }
         }
     }
@@ -122,6 +130,16 @@ struct CharacterCardSettingsView: View {
                     .cornerRadius(12)
                     .tint(appTheme.tintColor.color)
                     .padding(.horizontal, 16)
+
+                    // TODO: Handle navigation to non saved LoreBooks 
+                    // we need to be able to allow character book edits before saving to DB. 
+                    if let loreBook = characterCard.characterBook {
+                        LoreBookPreview(loreBook: loreBook)
+                        .padding()
+                        .onTapGesture {
+                            showLoreBookEditor = true
+                        }
+                    }
 
                     collapsibleField(
                         title: "Description Preview",

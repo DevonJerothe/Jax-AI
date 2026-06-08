@@ -1,26 +1,35 @@
-import SwiftLLMSDK
 import Foundation
+import SwiftLLMSDK
+
+public enum CharImportType: Hashable {
+    case characterCard
+    case loreBook
+}
 
 @MainActor
 @Observable
 final class CharImportViewModel {
 
     private let charImporter: CharImporter
+    let importType: CharImportType
 
     var urlEntry: String = ""
     var characterCard: CharacterCardModel?
+    var loreBook: LoreBookModel?
     var importError: String?
     var isImporting = false
 
-    init() {
+    init(importType: CharImportType = .characterCard) {
+        self.importType = importType
         self.charImporter = CharImporter(urlSession: URLSession.shared)
     }
 
-    var canImportRemoteCard: Bool {
-        urlEntry.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false && isImporting == false
+    var canImportRemoteContent: Bool {
+        urlEntry.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            && isImporting == false
     }
 
-    func importRemoteCard() async {
+    func importRemoteContent() async {
         let trimmedURL = urlEntry.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard let url = URL(string: trimmedURL), url.scheme?.isEmpty == false else {
@@ -28,16 +37,18 @@ final class CharImportViewModel {
             return
         }
 
-        await importCard(from: url)
+        await importContent(from: url)
     }
 
-    func importLocalCard(from url: URL) async {
-        await importCard(from: url)
+    func importLocalContent(from url: URL) async {
+        await importContent(from: url)
     }
 
-    private func importCard(from url: URL) async {
+    private func importContent(from url: URL) async {
         isImporting = true
         importError = nil
+        characterCard = nil
+        loreBook = nil
 
         let shouldStopAccessing = url.startAccessingSecurityScopedResource()
         defer {
@@ -48,8 +59,14 @@ final class CharImportViewModel {
         }
 
         do {
-            let card = try await charImporter.importCard(from: url)
-            characterCard = CharacterCardModel(fromChub: card)
+            switch importType {
+            case .characterCard:
+                let card = try await charImporter.importCard(from: url)
+                characterCard = CharacterCardModel(fromChub: card)
+            case .loreBook:
+                let importedLoreBook = try await charImporter.importLoreBook(from: url)
+                loreBook = LoreBookModel(fromImport: importedLoreBook)
+            }
         } catch {
             importError = userFacingImportError(for: error)
         }
@@ -59,7 +76,12 @@ final class CharImportViewModel {
         let description = error.localizedDescription
 
         if description == "The data couldn’t be read because it isn’t in the correct format." {
-            return "The selected file does not contain a supported character card."
+            switch importType {
+            case .characterCard:
+                return "The selected file does not contain a supported character card."
+            case .loreBook:
+                return "The selected file does not contain a supported lorebook JSON file."
+            }
         }
 
         return description

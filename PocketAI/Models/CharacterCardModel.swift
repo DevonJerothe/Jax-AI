@@ -28,6 +28,7 @@ struct CharacterCardModel: Hashable {
     var isPrivate: Bool = false
 
     var chats: [ChatModel] = []
+    var characterBook: LoreBookModel?
     var imageURL: URL?
     var imageData: Data?
     
@@ -43,7 +44,8 @@ struct CharacterCardModel: Hashable {
         altGreetings: [String] = [],
         tags: [String] = [],
         imageData: Data? = nil,
-        chats: [ChatModel] = []
+        chats: [ChatModel] = [],
+        characterBook: LoreBookModel? = nil
     ) {
         self.name = name
         self.description = description
@@ -57,6 +59,7 @@ struct CharacterCardModel: Hashable {
         self.tags = tags
         self.imageData = imageData
         self.chats = chats
+        self.characterBook = characterBook
     }
 
     init(fromChub: CharacterCard) {
@@ -79,6 +82,10 @@ struct CharacterCardModel: Hashable {
         
         // There should always be a png file if importing from chub
         self.imageData = fromChub.pngData
+
+        if let characterBook = chubData?.characterBook {
+            self.characterBook = LoreBookModel(fromImport: characterBook)
+        }
     }
 
     // MARK: - Helping functions
@@ -140,6 +147,7 @@ extension CharacterCardModel {
         self.tags = try? record.tags?.decodeStringArray() ?? []
 
         self.chats = []
+        self.characterBook = nil
         self.imageURL = record.imagePath.flatMap(URL.init(string:))
     }
 
@@ -172,6 +180,10 @@ struct CharacterCardRecord: Codable, FetchableRecord, MutablePersistableRecord, 
         through: chatCharacterJoins, 
         using: ChatCharacterJoinRecord.chat
     ) 
+    static let characterBook = hasOne(
+        LoreBookRecord.self, 
+        using: ForeignKey([Column("characterCardId")])
+    ).forKey("characterBook")
 
     var id: String 
     var name: String?
@@ -213,4 +225,5 @@ struct CharacterCardRecord: Codable, FetchableRecord, MutablePersistableRecord, 
 struct CharacterCardWithChats: Decodable, FetchableRecord {
     let characterCard: CharacterCardRecord
     let chats: [ChatRecord]
+    let characterBook: LoreBookRecord?
 }

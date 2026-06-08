@@ -58,23 +58,37 @@ struct ChatSettingsView: View {
         viewModel.model?.chatNotes.count ?? 0
     }
 
+    private var loreBooksCount: Int {
+        viewModel.model?.loreBooks.count ?? 0
+    }
+
     var body: some View {
         ScrollView {
             VStack {
-                SettingsCard("Chat Notes") {
-                        Button {
-                            navManager.navigateToChatNotes(chatID: viewModel.chatID)
-                        } label: {
-                            SettingsNavigationRow(
-                                title: "View Notes",
-                                subtitle: "\(chatNotesCount) note\(chatNotesCount == 1 ? "" : "s")",
-                                systemImage: "note.text"
-                            )
-                        }
-                        .buttonStyle(.plain)
+                SettingsCard("Chat Memory") {
+                    Button {
+                        navManager.navigateToChatNotes(chatID: viewModel.chatID)
+                    } label: {
+                        SettingsNavigationRow(
+                            title: "View Notes",
+                            subtitle: "\(chatNotesCount) note\(chatNotesCount == 1 ? "" : "s")",
+                            systemImage: "note.text"
+                        )
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 24)
+                    .buttonStyle(.plain)
+
+                    Button {
+                        navManager.navigateToLoreBooks(chatID: viewModel.chatID, keepCurrentPath: true)
+                    } label: {
+                        SettingsNavigationRow(
+                            title: "Lore Books",
+                            subtitle: "\(loreBooksCount) lore book\(loreBooksCount == 1 ? "" : "s")",
+                            systemImage: "book.closed"
+                        )
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 24)
                 // MARK: - Connection Related Settings
                 // this will change the connections settings for the app and all chats
                 // potentially we could have a per chat connection settings option

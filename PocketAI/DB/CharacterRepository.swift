@@ -22,15 +22,29 @@ class CharacterRepository: Repository {
         let observer = ValueObservation.tracking { db in
             let characterRequest = CharacterCardRecord
                 .including(all: CharacterCardRecord.chats)
+                .including(optional: CharacterCardRecord.characterBook)
                 .order(Column("createdAt").desc)
                 .asRequest(of: CharacterCardWithChats.self)
 
             // fetch DTO
             let charactersWithChats = try characterRequest.fetchAll(db)
 
-            let characters = charactersWithChats.map { model in
+            let characters = try charactersWithChats.map { model in
                 var character = CharacterCardModel(record: model.characterCard)
                 character.chats = model.chats.map { ChatModel(record: $0) }
+
+                // get associated character card entries
+                if let loreBookRecord = model.characterBook {
+                    var loreBook = LoreBookModel(record: loreBookRecord)
+                    loreBook.entries = try LoreBookEntryRecord
+                        .filter(Column("loreBookId") == loreBookRecord.id)
+                        .order(Column("order").asc)
+                        .fetchAll(db)
+                        .map { LoreBookEntryModel(record: $0) }
+
+                    character.characterBook = loreBook
+                }
+                
                 return character
             }
 
@@ -44,15 +58,29 @@ class CharacterRepository: Repository {
         try dbManager.read { db in
             let characterRequest = CharacterCardRecord
                 .including(all: CharacterCardRecord.chats)
+                .including(optional: CharacterCardRecord.characterBook)
                 .order(Column("createdAt").desc)
                 .asRequest(of: CharacterCardWithChats.self)
 
             // fetch DTO
             let charactersWithChats = try characterRequest.fetchAll(db)
 
-            let characters = charactersWithChats.map { model in
+            let characters = try charactersWithChats.map { model in
                 var character = CharacterCardModel(record: model.characterCard)
                 character.chats = model.chats.map { ChatModel(record: $0) }
+
+                // get associated character card entries
+                if let loreBookRecord = model.characterBook {
+                    var loreBook = LoreBookModel(record: loreBookRecord)
+                    loreBook.entries = try LoreBookEntryRecord
+                        .filter(Column("loreBookId") == loreBookRecord.id)
+                        .order(Column("order").asc)
+                        .fetchAll(db)
+                        .map { LoreBookEntryModel(record: $0) }
+
+                    character.characterBook = loreBook
+                }
+                
                 return character
             }
 
@@ -64,14 +92,28 @@ class CharacterRepository: Repository {
         try dbManager.read { db in
             let characterRequest = CharacterCardRecord
                 .including(all: CharacterCardRecord.chats)
+                .including(optional: CharacterCardRecord.characterBook)
                 .filter(Column("id") == id.uuidString)
                 .asRequest(of: CharacterCardWithChats.self)
             
             let characterWithChats = try characterRequest.fetchOne(db)
             
-            let character = characterWithChats.map { model in
+            let character = try characterWithChats.map { model in
                 var charModel = CharacterCardModel(record: model.characterCard)
                 charModel.chats = model.chats.map { ChatModel(record: $0) }
+
+                // get associated character card entries
+                if let loreBookRecord = model.characterBook {
+                    var loreBook = LoreBookModel(record: loreBookRecord)
+                    loreBook.entries = try LoreBookEntryRecord
+                        .filter(Column("loreBookId") == loreBookRecord.id)
+                        .order(Column("order").asc)
+                        .fetchAll(db)
+                        .map { LoreBookEntryModel(record: $0) }
+
+                    charModel.characterBook = loreBook
+                }
+                
                 return charModel
             }
 
@@ -83,6 +125,41 @@ class CharacterRepository: Repository {
         try dbManager.write { db in
             var record = item.record
             try record.save(db)
+            
+            // Save any attached CharacterBook
+            if var characterBook = item.characterBook {
+                characterBook.characterCardId = item.id.uuidString
+
+                var loreBookRecord = characterBook.record
+                try loreBookRecord.save(db)
+
+                let attachedEntryIds = characterBook.entries.map { $0.id.uuidString }
+                let associatedEntryIds = try LoreBookEntryRecord
+                    .filter(Column("loreBookId") == characterBook.id.uuidString)
+                    .fetchAll(db)
+                    .map { $0.id }
+                let staleEntryIds = Set(associatedEntryIds).subtracting(attachedEntryIds)
+
+                if staleEntryIds.isEmpty == false {
+                    try LoreBookEntryRecord
+                        .filter(Column("loreBookId") == characterBook.id.uuidString)
+                        .filter(staleEntryIds.contains(Column("id")))
+                        .deleteAll(db)
+                }
+
+                for entry in characterBook.entries {
+                    var entry = entry
+                    entry.loreBookId = characterBook.id.uuidString
+                    var entryRecord = entry.record
+                    try entryRecord.save(db)
+                }
+                
+            } else {
+                // Remove any associated LoreBooks
+                try LoreBookRecord
+                    .filter(Column("characterCardId") == item.id.uuidString)
+                    .updateAll(db, Column("characterCardId").set(to: nil))
+            }
 
             guard item.isPrivate else {
                 return

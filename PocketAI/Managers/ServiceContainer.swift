@@ -15,10 +15,11 @@ final class ServiceContainer {
     private let connectionStatusManager: ConnectionStatusManager
     private let chatStore: ChatStore
     private let characterStore: CharacterStore
+    private let loreBookStore: LoreBookStore
     private let personaStore: PersonaStore
     private var hasBootstrappedStores = false
     var tokenizer: CoreBPE?
-    
+
     var isLoading: Bool {
         connectionStatusManager.connectionStatus == .connecting
     }
@@ -34,11 +35,11 @@ final class ServiceContainer {
     var selectedConnectionType: APITypeSelection {
         connectionStatusManager.connectionSettings.connectionType
     }
-    
+
     var selectedModelName: String? {
         self.languageModelService.selectedModel
     }
-    
+
     var availableModels: [OpenRouterModel] {
         self.languageModelService.availableModels
     }
@@ -62,7 +63,7 @@ final class ServiceContainer {
     var getPersona: UserPersonaModel? {
         personaStore.activePersona
     }
-    
+
     private init() {
         self.connectionStatusManager = ConnectionStatusManager()
         self.languageModelService = LanguageModelService(
@@ -74,6 +75,9 @@ final class ServiceContainer {
         )
         self.characterStore = CharacterStore(
             characterRepository: CharacterRepository()
+        )
+        self.loreBookStore = LoreBookStore(
+            loreBookRepository: LoreBookRepository()
         )
         self.personaStore = PersonaStore(
             personaRepository: UserPersonaRepository()
@@ -92,17 +96,21 @@ final class ServiceContainer {
             self.tokenizer = try? await CoreBPE.cl100kBase()
         }
     }
-    
+
     func getChatStore() -> ChatStore {
         return self.chatStore
     }
-    
+
     func getPersonaStore() -> PersonaStore {
         return self.personaStore
     }
-    
+
     func getCharacterStore() -> CharacterStore {
         return self.characterStore
+    }
+
+    func getLoreBookStore() -> LoreBookStore {
+        return self.loreBookStore
     }
 
     func getConnectionStatusManager() -> ConnectionStatusManager {
@@ -132,6 +140,10 @@ final class ServiceContainer {
 
         Task {
             await characterStore.startObserving()
+        }
+
+        Task {
+            await loreBookStore.startObserving()
         }
     }
 }

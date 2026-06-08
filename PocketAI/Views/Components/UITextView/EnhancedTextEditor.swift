@@ -45,6 +45,7 @@ struct RepresentableTextView: UIViewRepresentable {
             .defaultLow, for: .vertical)
         textView.setContentCompressionResistancePriority(
             .defaultLow, for: .horizontal)  // Allow horizontal compression
+        textView.inlinePredictionType = .no
 
 
         // --- Swipe Down Gesture (Dismiss Keyboard) ---

@@ -4,12 +4,17 @@ import UniformTypeIdentifiers
 public struct CharImportView: View {
     @Environment(\.appTheme) private var appTheme
 
-    @State private var viewModel: CharImportViewModel = .init()
+    @State private var viewModel: CharImportViewModel
     @State private var showingFileImporter = false
-    @State private var showCharacterEditor = false
+    @State private var showImportedContentEditor = false
     @FocusState private var isURLFieldFocused: Bool
 
-    public init() {}
+    private let importType: CharImportType
+
+    public init(importType: CharImportType = .characterCard) {
+        self.importType = importType
+        self._viewModel = State(initialValue: CharImportViewModel(importType: importType))
+    }
 
     public var body: some View {
         ScrollView {
@@ -26,15 +31,22 @@ public struct CharImportView: View {
                     errorSection(error)
                 }
 
-                if let characterCard = viewModel.characterCard {
-                    importedCardPreview(characterCard)
+                switch importType {
+                case .characterCard:
+                    if let characterCard = viewModel.characterCard {
+                        importedCardPreview(characterCard)
+                    }
+                case .loreBook:
+                    if let loreBook = viewModel.loreBook {
+                        importedLoreBookPreview(loreBook)
+                    }
                 }
             }
             .padding(.top, 24)
             .padding(.bottom, 32)
         }
         .background(appTheme.backgroundColor.color)
-        .navigationTitle("Import Character")
+        .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .scrollDismissesKeyboard(.immediately)
         .scrollIndicators(.hidden)
@@ -45,35 +57,92 @@ public struct CharImportView: View {
         ) { result in
             handleFileImport(result)
         }
-        .navigationDestination(isPresented: $showCharacterEditor) {
-            if let characterCard = viewModel.characterCard {
-                CharacterCardSettingsView(
-                    characterCard: characterCard,
-                    isNew: true,
-                    dismissOnSave: true,
-                    navigateToCharacterListOnSave: true
-                )
+        .navigationDestination(isPresented: $showImportedContentEditor) {
+            switch importType {
+            case .characterCard:
+                if let characterCard = viewModel.characterCard {
+                    CharacterCardSettingsView(
+                        characterCard: characterCard,
+                        isNew: true,
+                        dismissOnSave: true,
+                        navigateToCharacterListOnSave: true
+                    )
+                }
+            case .loreBook:
+                if let loreBook = viewModel.loreBook {
+                    LoreBookView(importedLoreBook: loreBook)
+                }
             }
         }
     }
 
     private var supportedContentTypes: [UTType] {
-        [
-            .json,
-            .png,
-            UTType(filenameExtension: "card") ?? .data,
-            .data
-        ]
+        switch importType {
+        case .characterCard:
+            return [
+                .json,
+                .png,
+                UTType(filenameExtension: "card") ?? .data,
+                .data,
+            ]
+        case .loreBook:
+            return [.json]
+        }
+    }
+
+    private var navigationTitle: String {
+        switch importType {
+        case .characterCard:
+            return "Import Character"
+        case .loreBook:
+            return "Import Lorebook"
+        }
+    }
+
+    private var headerTitle: String {
+        switch importType {
+        case .characterCard:
+            return "Import Character Card"
+        case .loreBook:
+            return "Import Lorebook"
+        }
+    }
+
+    private var headerDescription: String {
+        switch importType {
+        case .characterCard:
+            return "Choose a local PNG or JSON card, or paste a remote card URL."
+        case .loreBook:
+            return "Choose a local JSON lorebook, or paste a remote lorebook URL."
+        }
+    }
+
+    private var urlPlaceholder: String {
+        switch importType {
+        case .characterCard:
+            return "https://example.com/character.png"
+        case .loreBook:
+            return "https://example.com/lorebook.json"
+        }
+    }
+
+    private var loadingMessage: String {
+        switch importType {
+        case .characterCard:
+            return "Importing character card..."
+        case .loreBook:
+            return "Importing lorebook..."
+        }
     }
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Import Character Card")
+            Text(headerTitle)
                 .font(.title2)
                 .fontWeight(.semibold)
                 .foregroundColor(appTheme.primaryText.color)
 
-            Text("Choose a local PNG or JSON card, or paste a remote card URL.")
+            Text(headerDescription)
                 .font(.subheadline)
                 .foregroundStyle(appTheme.secondaryText.color)
         }
@@ -113,18 +182,18 @@ public struct CharImportView: View {
                 .foregroundColor(appTheme.primaryText.color)
 
             HStack(spacing: 10) {
-                TextField("https://example.com/character.png", text: $viewModel.urlEntry)
+                TextField(urlPlaceholder, text: $viewModel.urlEntry)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
                     .focused($isURLFieldFocused)
                     .styledFormField()
                     .onSubmit {
-                        importRemoteCard()
+                        importRemoteContent()
                     }
 
                 Button {
-                    importRemoteCard()
+                    importRemoteContent()
                 } label: {
                     if viewModel.isImporting {
                         ProgressView()
@@ -139,7 +208,7 @@ public struct CharImportView: View {
                 .foregroundStyle(appTheme.primaryText.color)
                 .background(appTheme.primaryAction.color)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .disabled(viewModel.canImportRemoteCard == false)
+                .disabled(viewModel.canImportRemoteContent == false)
             }
         }
         .padding(.horizontal, 16)
@@ -150,7 +219,7 @@ public struct CharImportView: View {
             ProgressView()
                 .tint(appTheme.tintColor.color)
 
-            Text("Importing character card...")
+            Text(loadingMessage)
                 .font(.subheadline)
                 .foregroundStyle(appTheme.secondaryText.color)
         }
@@ -179,17 +248,46 @@ public struct CharImportView: View {
     }
 
     private func importedCardPreview(_ characterCard: CharacterCardModel) -> some View {
+        importedContentPreview(
+            title: characterCard.name ?? "Unnamed Character",
+            subtitle: characterCard.cardTagline ?? characterCard.description
+                ?? "Ready to review and save."
+        ) {
+            AvatarImage(image: characterCard.getAvatarImg(), size: 74)
+        }
+    }
+
+    private func importedLoreBookPreview(_ loreBook: LoreBookModel) -> some View {
+        importedContentPreview(
+            title: loreBook.name,
+            subtitle: loreBook.description
+                ?? "\(loreBook.entries.count) entries ready to review and save."
+        ) {
+            Image(systemName: "book.closed")
+                .font(.system(size: 34, weight: .semibold))
+                .foregroundStyle(appTheme.tintColor.color)
+                .frame(width: 74, height: 74)
+                .background(appTheme.backgroundColor.color)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+    }
+
+    private func importedContentPreview<Leading: View>(
+        title: String,
+        subtitle: String,
+        @ViewBuilder leading: () -> Leading
+    ) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 14) {
-                AvatarImage(image: characterCard.getAvatarImg(), size: 74)
+                leading()
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(characterCard.name ?? "Unnamed Character")
+                    Text(title)
                         .font(.headline)
                         .foregroundStyle(appTheme.primaryText.color)
                         .lineLimit(2)
 
-                    Text(characterCard.cardTagline ?? characterCard.description ?? "Ready to review and save.")
+                    Text(subtitle)
                         .font(.subheadline)
                         .foregroundStyle(appTheme.secondaryText.color)
                         .lineLimit(3)
@@ -199,7 +297,7 @@ public struct CharImportView: View {
             }
 
             Button {
-                showCharacterEditor = true
+                showImportedContentEditor = true
             } label: {
                 HStack {
                     Spacer()
@@ -218,11 +316,11 @@ public struct CharImportView: View {
         .padding(.horizontal, 16)
     }
 
-    private func importRemoteCard() {
+    private func importRemoteContent() {
         isURLFieldFocused = false
         Task {
-            await viewModel.importRemoteCard()
-            showCharacterEditor = viewModel.characterCard != nil
+            await viewModel.importRemoteContent()
+            showImportedContentEditor = viewModel.characterCard != nil || viewModel.loreBook != nil
         }
     }
 
@@ -231,12 +329,14 @@ public struct CharImportView: View {
         case .success(let urls):
             guard let url = urls.first else { return }
             Task {
-                await viewModel.importLocalCard(from: url)
-                showCharacterEditor = viewModel.characterCard != nil
+                await viewModel.importLocalContent(from: url)
+                showImportedContentEditor =
+                    viewModel.characterCard != nil || viewModel.loreBook != nil
             }
         case .failure(let error):
             viewModel.importError = error.localizedDescription
             viewModel.characterCard = nil
+            viewModel.loreBook = nil
         }
     }
 }
