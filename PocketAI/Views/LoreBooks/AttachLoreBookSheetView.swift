@@ -49,7 +49,9 @@ struct AttachLoreBookSheetView: View {
                 } else {
                     List(filteredLoreBooks) { loreBook in
                         loreBookRow(loreBook)
-                            .listRowBackground(appTheme.secondaryBackgroundColor.color)
+                            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
@@ -152,8 +154,10 @@ struct AttachLoreBookSheetView: View {
                     .foregroundStyle(
                         isSelected ? appTheme.tintColor.color : appTheme.secondaryText.color)
             }
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
+            .padding(14)
+            .background(appTheme.secondaryBackgroundColor.color)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .opacity(isAttached ? 0.75 : 1)
         }
         .buttonStyle(.plain)

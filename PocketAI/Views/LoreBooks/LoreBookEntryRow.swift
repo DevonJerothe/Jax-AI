@@ -15,8 +15,10 @@ struct LoreBookEntryRow: View {
         HStack(alignment: .center, spacing: 12) {
             Button(action: onSelect) {
                 rowContent
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Toggle("", isOn: $isEnabled)
                 .labelsHidden()
