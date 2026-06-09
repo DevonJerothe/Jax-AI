@@ -76,6 +76,8 @@ struct ChatCompletionContextBuilder {
                 return "<user_note>\n\(block.text)\n</user_note>"
             case .summary:
                 return "<chat_summary>\n\(block.text)\n</chat_summary>"
+            case .loreBook: 
+                return "<lore_entry>\n\(block.text)\n</lore_entry>"
             default: 
                 return block.text
         }

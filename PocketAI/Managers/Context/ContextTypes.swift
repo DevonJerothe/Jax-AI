@@ -13,6 +13,7 @@ struct ContextBlock {
         case userNote
         case summary
         case message
+        case loreBook
     }
 
     enum Priority: Int {
@@ -104,5 +105,40 @@ enum ContextOutput {
             return message
         }
         return nil
+    }
+}
+
+enum ContextMemoryOrder {
+    static let loreBeforeCharacter = -1_000_000
+
+    static let characterDescription = 0 
+    static let characterPersonality = 10 
+    static let characterScenario = 20 
+    static let characterMessageExample = 30 
+    static let characterSystemPrompt = 40 
+
+    static let loreAfterCharacter = 10_000 
+    
+    static let system = 1_000_000
+    static let userNote = 1_000_010
+    static let persona = 1_000_020
+}
+
+enum ContextPromptOrder {
+    static let firstMessage = 1_000
+    static let messageShift = 10
+    static let loreOffset = -2 
+    static let noteOffset = -1 
+
+    static func message(index: Int) -> Int {
+        firstMessage + (index * messageShift)
+    }
+
+    static func loreBeforeMessage(index: Int) -> Int {
+        message(index: index) + loreOffset
+    }
+
+    static func noteBeforeMessage(index: Int) -> Int {
+        message(index: index) + noteOffset
     }
 }

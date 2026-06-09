@@ -13,7 +13,8 @@ extension ContextManager {
                 priority: .required,
                 text: description,
                 tokenCount: charDescriptionTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.characterDescription
             )
             contextBlocks.append(charDescriptionBlock)
         }
@@ -28,7 +29,8 @@ extension ContextManager {
                 priority: .required,
                 text: personality,
                 tokenCount: charPersonalityTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.characterPersonality
             )
             contextBlocks.append(charPersonalityBlock)
         }
@@ -43,7 +45,8 @@ extension ContextManager {
                 priority: .required,
                 text: scenario,
                 tokenCount: charScenarioTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.characterScenario
             )
             contextBlocks.append(charScenarioBlock)
         }
@@ -58,7 +61,8 @@ extension ContextManager {
                 priority: .low,
                 text: messageExample,
                 tokenCount: charMessageExampleTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.characterMessageExample
             )
             contextBlocks.append(charMessageExampleBlock)
         }
@@ -73,7 +77,8 @@ extension ContextManager {
                 priority: .low,
                 text: charSysPrompt,
                 tokenCount: charSysPromptTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.characterSystemPrompt
             )
             contextBlocks.append(charSysPromptBlock)
         }
@@ -97,7 +102,8 @@ extension ContextManager {
                 priority: .required,
                 text: templates,
                 tokenCount: templatesTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.system
             )
             contextBlocks.append(templatesBlock)
         }
@@ -114,7 +120,8 @@ extension ContextManager {
                 priority: .high,
                 text: notes,
                 tokenCount: notesTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.userNote
             )
             contextBlocks.append(notesBlock)
         }
@@ -130,7 +137,8 @@ extension ContextManager {
                 priority: .high,
                 text: personalDescription,
                 tokenCount: personaTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.persona
             )
             contextBlocks.append(personaBlock)
         }
@@ -151,14 +159,14 @@ extension ContextManager {
                 continue
             }
 
-            // order multiplied by 10 to allow note injection
-            let orderIndex = 1000 + (index * 10)
+            // order is multiplied by 10 to allow note injection
             if var noteBlock = await noteInjectorBlock(
                 settings: connectionSettings,
                 personaName: personaName,
                 messageIndex: index
             ) {
-                noteBlock.order = orderIndex - 1
+                // noteBlock.order = orderIndex - 1
+                noteBlock.order = ContextPromptOrder.noteBeforeMessage(index: index)
                 contextBlocks.append(noteBlock)
             }
 
@@ -172,7 +180,7 @@ extension ContextManager {
                 continue
             }
 
-            messageBlock.order = orderIndex
+            messageBlock.order = ContextPromptOrder.message(index: index)
             contextBlocks.append(messageBlock)
         }
     }

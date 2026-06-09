@@ -266,3 +266,13 @@ struct LoreBookWithEntriesAndChats: Decodable, FetchableRecord {
     let entries: [LoreBookEntryRecord]
     let chats: [ChatRecord]
 }
+
+enum LoreBookEntryPosition: Int {
+    case beforeChar = 0
+    case afterChar = 1
+    case atDepth = 2
+
+    init(rawValue: Int?) {
+        self = LoreBookEntryPosition(rawValue: rawValue ?? 2) ?? .atDepth
+    }
+}

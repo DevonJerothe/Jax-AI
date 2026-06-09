@@ -29,6 +29,13 @@ struct TextCompletionContextBuilder {
             }
             return lhs.order < rhs.order
         }
+
+        static func renderSort(
+            _ lhs: RenderedContextBlock,
+            _ rhs: RenderedContextBlock
+        ) -> Bool {
+            lhs.order < rhs.order
+        }
     }
 
     func render(
@@ -111,6 +118,8 @@ struct TextCompletionContextBuilder {
                 renderText = "[Story Note]\n\(block.text)"
             case .characterMessageExample:
                 renderText = "[Character Message Example]\n\(block.text)"
+            case .loreBook: 
+                renderText = "[Lore Entry]\n\(block.text)"
             default:
                 renderText = block.text
             }
@@ -189,7 +198,13 @@ struct TextCompletionContextBuilder {
             var renderedText = ""
             switch block.actor {
             case .system:
-                renderedText = "\(settings.systemStopSequence)\n\(block.text)"
+                renderedText = "\(settings.systemStopSequence)"
+
+                if block.kind == .loreBook {
+                    renderedText += "[Lore Entry]\n\(block.text)"
+                } else {
+                    renderedText += "\(block.text)"
+                }
 
                 if index == lastRenderableIndex, let lastMessageIndex {
                     renderedText += nextActorSuffix(after: sortedBlocks[lastMessageIndex].actor)
@@ -256,7 +271,7 @@ struct TextCompletionContextBuilder {
             remaining -= block.tokenCount
         }
 
-        return selected.sorted(by: RenderedContextBlock.sort)
+        return selected.sorted(by: RenderedContextBlock.renderSort)
     }
 
     private func selectPromptBlocks(
