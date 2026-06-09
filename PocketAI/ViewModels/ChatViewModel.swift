@@ -6,169 +6,528 @@
 //
 
 import Foundation
-import SwiftUI
+import MarkdownStreamer
 import SwiftLLMSDK
+import SwiftUI
+import UIKit
 
+@MainActor
 @Observable
-class ChatViewModel {
-    private var languageModelService: LanguageModelService? 
-    private let messageRepository: MessageRepository
-    private let chatRepository: ChatRepository
+final class ChatViewModel {
+    private let languageModelService: LanguageModelService
+    private let connectionManager: ConnectionStatusManager
+    private let chatStore: ChatStore
+    private let characterStore: CharacterStore
+    private let appTheme: AppTheme = ServiceContainer.shared.currentTheme
+    // private let contextBuilder: ContextManager
 
-    var model: ChatModel
+    // Markdown streaming
+    private(set) var mdReader: MarkdownReader = MarkdownReader()
+    private(set) var streamingMessageID: UUID?
+
+    let chatID: UUID
+
+    var model: ChatModel? {
+        chatStore.chat(withID: chatID)
+    }
+
+    var shouldHidePrivateContent: Bool {
+        connectionManager.connectionSettings.locked && model?.isPrivate == true
+    }
+
+    var isConnected: Bool {
+        connectionManager.connectionStatus == .connected
+    }
+
+    var isStreaming: Bool {
+        guard let status = model?.status else {
+            return false
+        }
+
+        return status == .loading || status == .thinking || status == .streaming
+    }
+
+    var isThinking: Bool {
+        model?.status == .thinking
+    }
 
     var updateScrollView: Bool = false
+    var scrollAfterLayout: Bool = false
+    var scrollReloadToggle: Int = 0
+
     var showSettings: Bool = false
-    var selectionModeActive: Bool = false
-    var selectedMessages: Set<MessageModel> = []
+    var editingMessageID: UUID?
+    var newInstance: Bool = true
+    var isViewActive: Bool = false
+    var isAutoScrollEnabled: Bool = true
+
+    var disableWhileEditing: Bool = false
+
+    private var lastHapticTriggerAt: Date?
 
     init(
-        chatModel: ChatModel,
-        languageModelService: LanguageModelService? = ServiceContainer.shared.getLanguageModelService(),
-        messageRepository: MessageRepository = ServiceContainer.shared.getMessageRepository(),
-        chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository()
+        chatID: UUID,
+        languageModelService: LanguageModelService? = nil,
+        connectionManager: ConnectionStatusManager? = nil,
+        chatStore: ChatStore? = nil,
+        characterStore: CharacterStore? = nil
     ) {
-        self.model = chatModel
-        self.languageModelService = languageModelService
-        self.messageRepository = messageRepository
-        self.chatRepository = chatRepository
-    }
+        self.chatID = chatID
+        self.languageModelService =
+            languageModelService ?? ServiceContainer.shared.getLanguageModelService()
+        self.connectionManager =
+            connectionManager ?? ServiceContainer.shared.getConnectionStatusManager()
+        self.chatStore = chatStore ?? ServiceContainer.shared.getChatStore()
+        self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
 
-    static func create(
-        chatModel: ChatModel
-    ) -> ChatViewModel {
-        return ChatViewModel(
-            chatModel: chatModel,
-            languageModelService: ServiceContainer.shared.getLanguageModelService()
-        )
-    }
+        Task {
+            guard let model = model else { 
+                print("Model not found yet!")
+                return
+            }
 
-    func checkConnection() {
-        if languageModelService == nil {
-            self.languageModelService = ServiceContainer.shared.getLanguageModelService()
+            // Warm up generation. We ensure the contextManager is initialized on each message 
+            // send. This will allow the manager to start building the inital context early if 
+            // a chat is opened long enough before a first send.
+            await self.languageModelService.initContextManager(chatModel: model)
         }
     }
 
-    func fetchModel() async {
-        let name = await languageModelService?.getModel()
-        switch name {
-            case .success(let name):
-                self.model.modelName = name
-            case .failure(let error):
-                self.model.error = error.localizedDescription
-        case .none:
-            print("not connected")
+    func fetchCharacterCard() -> CharacterCardModel? {
+        guard let characterID = model?.characterCards.first?.id else {
+            return nil
         }
-    }
 
-    func fetchMaxContextLength() async {
-        let maxContext = await languageModelService?.getMaxContextLength()
-        switch maxContext {
-            case .success(let maxContext):
-                self.model.maxContextLength = maxContext
-            case .failure(let error):
-                self.model.error = error.localizedDescription
-        case .none:
-            print("not connected")
-        }
+        return characterStore.character(withID: characterID)
     }
 
     func sendMessage(prompt: String) async {
-        await MainActor.run {
-            if !prompt.isEmpty {
-                self.model.addMessage(prompt, forActor: .user)
-                try! messageRepository.save(self.model.messages.last!)
-            }
-            self.model.addMessage(forActor: .bot, isLoading: true)
-            self.updateScrollView.toggle()
+        guard let chat = model else {
+            return
         }
-        await generateResponse(model.messages.count - 1)
+
+        newInstance = false
+
+        let userMessage = MessageModel(
+            chatId: chat.id.uuidString,
+            actor: .user,
+            text: prompt
+        )
+
+        let placeholder = MessageModel(
+            chatId: chat.id.uuidString,
+            actor: .bot,
+            text: "",
+            status: .loading
+        )
+
+        do {
+            if prompt.isEmpty == false {
+                try await chatStore.addMessage(userMessage, to: chat.id)
+            }
+            try await chatStore.addMessage(placeholder, to: chat.id)
+            updateScrollView.toggle()
+            await generateResponse(for: placeholder.id)
+        } catch {
+            print("Failed to queue message: \(error)")
+        }
     }
 
     func regenerateMessage(_ message: MessageModel, continueResponse: Bool = false) async {
-        let lastIndex = self.model.messages.count - 1
-        await MainActor.run {
-            self.model.messages[lastIndex].loading = true
-            self.updateScrollView.toggle()
+        guard let chat = model else {
+            return
         }
-        await generateResponse(lastIndex, isContinued: continueResponse)
+
+        var updatedMessage = message
+        updatedMessage.addNewGeneration()
+        updatedMessage.error = .none
+        updatedMessage.status = .loading
+
+        if continueResponse == false {
+            updatedMessage.text = ""
+        }
+
+        do {
+            try await chatStore.updateMessage(updatedMessage, in: chat.id, save: false)
+            isAutoScrollEnabled = true
+            scrollAfterLayout.toggle()
+            scrollReloadToggle += 1
+            await generateResponse(for: updatedMessage.id, isContinued: continueResponse)
+        } catch {
+            print("Failed to regenerate message: \(error)")
+        }
     }
 
-    func clearChat() {
-        self.model.resetChat()
-        try! chatRepository.save(self.model)
-    }
+    func navigateGeneration(_ message: MessageModel, forward: Bool) async {
+        // check if message is the last message in the chat
+        guard let chat = model, message.id == chat.messages.last?.id else {
+            return
+        }
 
-    func updateChatSettings(
-        memory: String,
-        firstMessage: String
-    ) {
-        self.model.memory = memory
-        self.model.firstMessage = firstMessage
-
-        print(self.model.memory)
-        print(self.model.firstMessage)
-
-        self.showSettings.toggle()
-
-        try! chatRepository.save(self.model)
-    }
-
-    func toggleSelection(_ message: MessageModel) {
-        if selectedMessages.contains(message) {
-            selectedMessages.remove(message)
+        var updatedMessage = message
+        if forward {
+            updatedMessage.nextGeneration()
         } else {
-            selectedMessages.insert(message)
+            updatedMessage.previousGeneration()
+        }
+
+        do {
+            try await chatStore.updateMessage(updatedMessage, in: chat.id)
+            isAutoScrollEnabled = true
+            scrollAfterLayout.toggle()
+        } catch {
+            print("Failed to navigate message generation: \(error)")
         }
     }
 
-    func deleteMessages() async {
-        await MainActor.run {
-            self.model.messages.removeAll(where: { self.selectedMessages.contains($0) })
-            selectedMessages.removeAll()
-            selectionModeActive = false
+    func clearChat() async {
+        guard let chat = model else {
+            return
         }
-        try! chatRepository.save(self.model)
-    }
 
-    func cancelDeleteMessages() {
-        selectedMessages.removeAll()
-        selectionModeActive = false
-    }
-
-    func shouldShowToolbar(_ message: MessageModel) -> Bool {
-        if let lastBotIndex = model.messages.lastIndex(where: { $0.actor == .bot }), lastBotIndex != 0 {
-            return model.messages[lastBotIndex].id == message.id
+        do {
+            try await chatStore.resetChat(chat)
+        } catch {
+            print("Failed to clear chat: \(error)")
         }
-        return false
     }
 
-    private func isBelowContextLimit() -> Bool {
-        return true
+    func updateChatSettings(characterCard: CharacterCardModel, isPrivate: Bool) async {
+        guard var chat = model else {
+            return
+        }
+
+        chat.characterCards = [characterCard]
+        chat.memory = characterCard.description ?? chat.memory
+        chat.isPrivate = isPrivate
+
+        do {
+            if chat.messages.count == 1 {
+                // If we only have 1 message (first mes) we can simply clear chat to apply any 
+                // new changes
+                try await chatStore.resetChat(chat)
+            } 
+            try await chatStore.saveChat(chat)
+            
+        } catch {
+            print("Failed to update chat settings: \(error)")
+        }
     }
 
-    private func generateResponse(_ forIndex: Int, isContinued: Bool = false) async {
-        let promptModel: PromptModel = PromptModel(prompt: model.getFullPrompt(continueResponse: isContinued), memory: model.memory, promptTemplate: TemplatePrompts().defaultRolePlayPrompt)
+    func addNote(text: String, depth: Int, injectInMemory: Bool) async {
+        guard let chat = model else {
+            return
+        }
 
-        let response = await languageModelService?.sendMessage(promptModel: promptModel)
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.isEmpty == false else {
+            return
+        }
 
-        switch response {
-        case .success(let response):
-            let responseText = response.results.first?.text ?? "ERROR"
-            await MainActor.run {
-                if isContinued {
-                    self.model.messages[forIndex].text.append(responseText)
-                } else {
-                    self.model.messages[forIndex].text = responseText
-                }
-                self.model.messages[forIndex].loading = false
-                try! messageRepository.save(self.model.messages[forIndex])
-                self.updateScrollView.toggle()
+        let clampedDepth = injectInMemory ? 0 : max(depth, 1)
+        let note = ChatNoteModel(
+            note: trimmedText,
+            depth: clampedDepth,
+            injectInMemory: injectInMemory
+        )
+
+        do {
+            try await chatStore.addChatNote(note, to: chat.id)
+        } catch {
+            print("Failed to add chat note: \(error)")
+        }
+    }
+
+    func updateNote(noteID: UUID, text: String, depth: Int, injectInMemory: Bool) async {
+        guard var chat = model,
+              let noteIndex = chat.chatNotes.firstIndex(where: { $0.id == noteID })
+        else {
+            return
+        }
+
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.isEmpty == false else {
+            return
+        }
+
+        chat.chatNotes[noteIndex].note = trimmedText
+        chat.chatNotes[noteIndex].depth = injectInMemory ? 0 : max(depth, 1)
+        chat.chatNotes[noteIndex].injectInMemory = injectInMemory
+        chat.chatNotes[noteIndex].updatedAt = Date()
+        chat.updatedAt = Date()
+
+        do {
+            try await chatStore.saveChat(chat)
+        } catch {
+            print("Failed to update chat note: \(error)")
+        }
+    }
+
+    func deleteNote(noteID: UUID) async {
+        guard var chat = model else {
+            return
+        }
+
+        chat.chatNotes.removeAll { $0.id == noteID }
+        chat.updatedAt = Date()
+
+        do {
+            try await chatStore.saveChat(chat)
+        } catch {
+            print("Failed to delete chat note: \(error)")
+        }
+    }
+
+    func updateMessage(_ message: MessageModel, newText: String) async {
+        guard let chat = model else {
+            return
+        }
+
+        var updatedMessage = message
+
+        // for KoboldAPI we need to update token count after any edit
+        let tokenCount = await languageModelService.getTokenCount(string: newText)
+        updatedMessage.updateCurrentGeneration(text: newText, tokenCount: tokenCount)
+
+        do {
+            print("updating message")
+            try await chatStore.updateMessage(updatedMessage, in: chat.id)
+        } catch {
+            print("Failed to update message: \(error)")
+        }
+    }
+
+    func deleteMessage(_ message: MessageModel) async {
+        guard let chat = model else {
+            return
+        }
+
+        disableWhileEditing = false
+
+        do {
+            try await chatStore.deleteMessage(message, from: chat.id)
+            isAutoScrollEnabled = true
+            scrollAfterLayout.toggle()
+            scrollReloadToggle += 1
+        } catch {
+            print("Failed to delete message: \(error)")
+        }
+    }
+
+    private func generateResponse(
+        for messageID: UUID, isContinued: Bool = false, streamed: Bool = true
+    ) async {
+        guard let chat = model,
+            let messageIndex = chat.messages.firstIndex(where: { $0.id == messageID })
+        else {
+            return
+        }
+
+        guard isConnected else {
+            await finalizeDisconnectedMessage(at: messageIndex, in: chat)
+            return
+        }
+
+        if streamed {
+            generateStreamedResponse(
+                for: messageID,
+                chat: chat,
+                isContinued: isContinued,
+                excludeThinking: true,  // OpenRouter is sometimes passing <think> tags. We should just open this up as a setting
+            )
+            return
+        }
+
+        let response = await languageModelService.sendMessage(
+            chatModel: chat, continued: isContinued)
+        let responseText =
+            response?.text ?? "There was an error processing your request. Please try again later."
+        let settings = connectionManager.connectionSettings
+        let sanitizedResponse = ReasoningStreamParser.visibleText(
+            from: responseText,
+            thinkingStartSequence: settings.thinkingStartSequence,
+            thinkingStopSequence: settings.thinkingStopSequence
+        )
+        let originalText = isContinued ? chat.messages[messageIndex].text : ""
+        let visibleResponse = StreamAccumulator(
+            originalText: originalText,
+            continuationSeparator: " "
+        ).combinedVisibleText(sanitizedResponse)
+
+        await applyResponseUpdate(
+            for: messageID,
+            responseText: visibleResponse,
+            delta: "",
+            disconnect: response?.disconnect ?? true,
+            isFinal: true,
+            shouldShowThinking: false
+        )
+    }
+
+    private func generateStreamedResponse(
+        for messageID: UUID,
+        chat: ChatModel,
+        isContinued: Bool,
+        excludeThinking: Bool
+    ) {
+        Task {
+            let userPersona = ServiceContainer.shared.getPersona
+
+            do {
+                try chatStore.setChatStatus(for: chatID, to: .loading)
+            } catch {
+                print("Failed to set chat status: \(error)")
             }
-        case .failure(let error):
-            self.model.error = error.localizedDescription
-        case .none:
-            print("not connected")
+
+            let originalText =
+                isContinued
+                ? chat.messages.first(where: { $0.id == messageID })?.text ?? ""
+                : ""
+            var rawAccumulator = StreamAccumulator()
+            let visibleAccumulator = StreamAccumulator(
+                originalText: originalText,
+                continuationSeparator: " "
+            )
+            var reasoningParser = ReasoningStreamParser(
+                startsInsideReasoning: connectionManager.connectionSettings.forceThinking,
+                thinkingStartSequence: connectionManager.connectionSettings.thinkingStartSequence,
+                thinkingStopSequence: connectionManager.connectionSettings.thinkingStopSequence
+            )
+            let stream = await languageModelService.sendStreamedMessage(
+                chatModel: chat,
+                userPersona: userPersona,
+                continued: isContinued
+            )
+
+            for await response in stream {
+                let responseText = response.text ?? ""
+                let rawResponse = rawAccumulator.ingest(responseText)
+                let isFinal = response.streaming == false
+                let parsedResponse =
+                    excludeThinking
+                    ? reasoningParser.parse(rawResponse, isFinal: isFinal)
+                    : ReasoningParseResult(visibleText: rawResponse, shouldShowThinking: false)
+                let visibleResponse =
+                    parsedResponse.visibleText.isEmpty
+                    ? ""
+                    : visibleAccumulator.combinedVisibleText(parsedResponse.visibleText)
+
+                await applyResponseUpdate(
+                    for: messageID,
+                    responseText: visibleResponse,
+                    delta: response.deltaText ?? "",
+                    disconnect: response.disconnect,
+                    isFinal: isFinal,
+                    shouldShowThinking: parsedResponse.shouldShowThinking
+                )
+            }
         }
+    }
+
+    private func applyResponseUpdate(
+        for messageID: UUID,
+        responseText: String,
+        delta: String,
+        disconnect: Bool,
+        isFinal: Bool,
+        shouldShowThinking: Bool
+    ) async {
+        guard let chat = model,
+            let message = chat.messages.first(where: { $0.id == messageID })
+        else {
+            return
+        }
+
+        var updatedMessage = message
+        updatedMessage.error = disconnect ? .apiError : .none
+
+        if responseText.isEmpty == false {
+            updatedMessage.text = responseText
+        }
+
+        if disconnect {
+            updatedMessage.text =
+                responseText.isEmpty
+                ? "There was an error processing your request. Please try again later."
+                : responseText
+        }
+
+        updatedMessage.status =
+            isFinal
+            ? .done
+            : (shouldShowThinking ? .thinking : .streaming)
+
+        // for KoboldAPI we need to fetch token count after full message is received
+        let currentModel = ServiceContainer.shared.selectedModelName
+        let currentConnectionType = ServiceContainer.shared.selectedConnectionType
+        if isFinal && currentConnectionType == .KoboldAPI {
+//            let tokenCount = await languageModelService.getTokenCount(string: updatedMessage.text)
+//            updatedMessage.tokenCount = tokenCount
+            updatedMessage.tokenCountModel = currentModel
+        }
+
+        // Messages that are streaming should be read from our mdReader.
+        let mdTheme = MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .bot)
+        if isFinal {
+            await mdReader.finish(theme: mdTheme)
+            streamingMessageID = nil
+        } else if responseText.isEmpty == false && shouldShowThinking == false {
+            if streamingMessageID != messageID {
+                mdReader = MarkdownReader()
+                streamingMessageID = messageID
+            }
+            await mdReader.appendAccumulated(responseText, theme: mdTheme)
+        }
+
+        do {
+            try await chatStore.updateMessage(updatedMessage, in: chat.id, save: isFinal)
+            try chatStore.setChatStatus(
+                for: chatID,
+                to: isFinal ? .idle : (shouldShowThinking ? .thinking : .streaming)
+            )
+        } catch {
+            print("Failed to update streamed response: \(error)")
+        }
+
+        if (responseText.isEmpty == false && isAutoScrollEnabled) || isFinal {
+            updateScrollView.toggle()
+        }
+
+        if updatedMessage.status == .streaming {
+            triggerHapticIfNeeded()
+        }
+    }
+
+    private func finalizeDisconnectedMessage(at messageIndex: Int, in chat: ChatModel) async {
+        guard chat.messages.indices.contains(messageIndex) else {
+            return
+        }
+
+        var updatedMessage = chat.messages[messageIndex]
+        updatedMessage.error = .disconnect
+        updatedMessage.status = .done
+        updatedMessage.text =
+            "Looks like you're not connected to a model. Please check your connection settings."
+
+        do {
+            try await chatStore.updateMessage(updatedMessage, in: chat.id)
+            try chatStore.setChatStatus(for: chatID, to: .idle)
+            updateScrollView.toggle()
+        } catch {
+            print("Failed to finalize disconnected message: \(error)")
+        }
+    }
+
+    private func triggerHapticIfNeeded() {
+        let now = Date()
+        guard isViewActive,
+            lastHapticTriggerAt == nil || now.timeIntervalSince(lastHapticTriggerAt!) >= 0.2
+        else {
+            return
+        }
+
+        let generator = UIImpactFeedbackGenerator(style: .soft)
+        generator.impactOccurred()
+        lastHapticTriggerAt = now
     }
 }

@@ -7,68 +7,61 @@
 
 import Foundation
 import SwiftUI
-import SwiftLLMSDK
-import GRDB
 
+@MainActor
 @Observable
-class ChatListViewModel {
-    private let chatRepository: ChatRepository
-    private var serviceContainer = ServiceContainer.shared
+final class ChatListViewModel {
+    private let chatStore: ChatStore
+    private let characterStore: CharacterStore
+    private let connectionManager: ConnectionStatusManager
 
-    var modelName: String?
-    var chats: [ChatModel] = []
-    var connected: Bool = false
     var showNewChatSheet: Bool = false
     var showConnectionSheet: Bool = false
 
-    init(chatRepository: ChatRepository = ServiceContainer.shared.getChatRepository()) {
-        self.chatRepository = chatRepository
+    init(
+        chatStore: ChatStore? = nil,
+        characterStore: CharacterStore? = nil,
+        connectionManager: ConnectionStatusManager? = nil
+    ) {
+        self.chatStore = chatStore ?? ServiceContainer.shared.getChatStore()
+        self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
+        self.connectionManager = connectionManager ?? ServiceContainer.shared.getConnectionStatusManager()
     }
 
-    @MainActor
-    func createNewChat(chatModel: ChatModel) {
+    var chats: [ChatModel] {
+        guard connectionManager.connectionSettings.locked else {
+            return chatStore.chats
+        }
+
+        return chatStore.chats.filter { $0.isPrivate == false }
+    }
+
+    var characterCards: [CharacterCardModel] {
+        guard connectionManager.connectionSettings.locked else {
+            return characterStore.characters
+        }
+
+        return characterStore.characters.filter { $0.isPrivate == false }
+    }
+
+    func createNewChat(fromCharacter: CharacterCardModel) async -> ChatModel? {
         do {
-            try chatRepository.save(chatModel)
-            chats.append(chatModel)
+            let newChat = ChatModel(fromCard: fromCharacter)
+            try await chatStore.addChat(newChat)
+            return newChat
         } catch {
             print("Failed to save chat: \(error)")
-            if let dbError = error as? GRDB.DatabaseError {
-                print("Database error code: \(dbError.resultCode), message: \(dbError.message ?? "No message")")
-                print("SQL: \(dbError.sql ?? "No SQL")")
-                print("Description: \(dbError.description)")
-            }
-        }
-    }
-
-    @MainActor
-    func loadChats() {
-        do {
-            print("Loading chats from database...")
-            self.chats = try chatRepository.getAll()
-        } catch {
-            print("Failed to load chats: \(error)")
-            if let dbError = error as? GRDB.DatabaseError {
-                print("Database error code: \(dbError.resultCode), message: \(dbError.message ?? "No message")")
-                print("SQL: \(dbError.sql ?? "No SQL")")
-                print("Description: \(dbError.description)")
-            }
+            return nil
         }
     }
     
-    @MainActor
-    func deleteChat(at indexSet: IndexSet) {
+    func deleteChat(at indexSet: IndexSet) async {
         for index in indexSet {
             let chatToDelete = chats[index]
             do {
-                try chatRepository.delete(chatToDelete)
-                chats.remove(at: index)
+                try await chatStore.deleteChat(chatToDelete)
             } catch {
                 print("Failed to delete chat: \(error)")
-                if let dbError = error as? GRDB.DatabaseError {
-                    print("Database error code: \(dbError.resultCode), message: \(dbError.message ?? "No message")")
-                    print("SQL: \(dbError.sql ?? "No SQL")")
-                    print("Description: \(dbError.description)")
-                }
             }
         }
     }

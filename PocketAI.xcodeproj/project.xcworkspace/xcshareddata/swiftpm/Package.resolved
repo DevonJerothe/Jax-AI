@@ -1,5 +1,5 @@
 {
-  "originHash" : "fe56a11f5f1035d13191fc7708e393e00eba353752833918c2c90017c2ada2d7",
+  "originHash" : "0be477fbe32d2902e0ae4bfdff1e4763652eeff1219c530a127f059ab070fa7a",
   "pins" : [
     {
       "identity" : "grdb.swift",
@@ -11,12 +11,12 @@
       }
     },
     {
-      "identity" : "networkimage",
+      "identity" : "markdownstreamer",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/gonzalezreal/NetworkImage",
+      "location" : "https://github.com/DevonJerothe/MarkdownStreamer.git",
       "state" : {
-        "revision" : "2849f5323265386e200484b0d0f896e73c3411b9",
-        "version" : "6.0.1"
+        "revision" : "360c50ecd582b81586758ce3580329bbfa995caf",
+        "version" : "1.1.0"
       }
     },
     {
@@ -29,12 +29,12 @@
       }
     },
     {
-      "identity" : "swift-cmark",
+      "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swiftlang/swift-cmark",
+      "location" : "https://github.com/apple/swift-collections.git",
       "state" : {
-        "revision" : "3ccff77b2dc5b96b77db3da0d68d28068593fa53",
-        "version" : "0.5.0"
+        "revision" : "8c0c0a8b49e080e54e5e328cc552821ff07cd341",
+        "version" : "1.2.1"
       }
     },
     {
@@ -47,21 +47,21 @@
       }
     },
     {
-      "identity" : "swift-markdown-ui",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/gonzalezreal/swift-markdown-ui",
-      "state" : {
-        "revision" : "5f613358148239d0292c0cef674a3c2314737f9e",
-        "version" : "2.4.1"
-      }
-    },
-    {
       "identity" : "swift-png",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/tayloraswift/swift-png",
       "state" : {
         "revision" : "d444d98aa32f022bf4a8e74b5a697c7ee856a6ad",
         "version" : "4.4.9"
+      }
+    },
+    {
+      "identity" : "swift-tiktoken",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/DePasqualeOrg/swift-tiktoken.git",
+      "state" : {
+        "revision" : "e088d534d80dd1875ca3edfd69a16a6c25ab84c4",
+        "version" : "0.0.1"
       }
     }
   ],
