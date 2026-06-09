@@ -136,11 +136,11 @@ struct ChatView: View {
                 )
                 .onChange(of: viewModel.updateScrollView) {
                     guard viewModel.isAutoScrollEnabled else { return }
-                    scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.1)
+                    scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0)
                 }
                 .onChange(of: viewModel.scrollAfterLayout) {
                     guard viewModel.isAutoScrollEnabled else { return }
-                    scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.3)
+                    scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0)
                 }
                 .onChange(of: editScrollRequest) {
                     guard let messageID = editScrollMessageID else { return }
@@ -149,7 +149,7 @@ struct ChatView: View {
                 }
                 .onChange(of: isInputFocused) { _, isFocused in
                     if isFocused && viewModel.isAutoScrollEnabled {
-                        scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.2)
+                        scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.1)
                     }
                 }
 
@@ -252,7 +252,7 @@ struct ChatView: View {
                 }
                 .background(
                     appTheme.secondaryBackgroundColor.color
-                        .ignoresSafeArea(.all, edges: .bottom)
+                        .ignoresSafeArea(edges: .bottom)
                 )
             }
         }
