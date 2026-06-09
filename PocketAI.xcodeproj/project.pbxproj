@@ -475,6 +475,8 @@
 		};
 		E9E949DF2D808E9E0008861E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = E9E949BC2D808E9C0008861E /* PocketAI */;
+			baseConfigurationReferenceRelativePath = Configs/OpenSource.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -513,6 +515,8 @@
 		};
 		E9E949E02D808E9E0008861E /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = E9E949BC2D808E9C0008861E /* PocketAI */;
+			baseConfigurationReferenceRelativePath = Configs/AppStore.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -551,6 +555,8 @@
 		};
 		E9E949E22D808E9E0008861E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = E9E949BC2D808E9C0008861E /* PocketAI */;
+			baseConfigurationReferenceRelativePath = Configs/OpenSource.xcconfig;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -570,6 +576,8 @@
 		};
 		E9E949E32D808E9E0008861E /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = E9E949BC2D808E9C0008861E /* PocketAI */;
+			baseConfigurationReferenceRelativePath = Configs/AppStore.xcconfig;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -589,6 +597,8 @@
 		};
 		E9E949E52D808E9E0008861E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = E9E949BC2D808E9C0008861E /* PocketAI */;
+			baseConfigurationReferenceRelativePath = Configs/OpenSource.xcconfig;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -606,6 +616,8 @@
 		};
 		E9E949E62D808E9E0008861E /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = E9E949BC2D808E9C0008861E /* PocketAI */;
+			baseConfigurationReferenceRelativePath = Configs/AppStore.xcconfig;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
