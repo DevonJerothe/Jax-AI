@@ -13,7 +13,8 @@ extension ContextManager {
                 priority: .required,
                 text: description,
                 tokenCount: charDescriptionTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.characterDescription
             )
             contextBlocks.append(charDescriptionBlock)
         }
@@ -28,7 +29,8 @@ extension ContextManager {
                 priority: .required,
                 text: personality,
                 tokenCount: charPersonalityTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.characterPersonality
             )
             contextBlocks.append(charPersonalityBlock)
         }
@@ -43,7 +45,8 @@ extension ContextManager {
                 priority: .required,
                 text: scenario,
                 tokenCount: charScenarioTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.characterScenario
             )
             contextBlocks.append(charScenarioBlock)
         }
@@ -58,7 +61,8 @@ extension ContextManager {
                 priority: .low,
                 text: messageExample,
                 tokenCount: charMessageExampleTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.characterMessageExample
             )
             contextBlocks.append(charMessageExampleBlock)
         }
@@ -73,13 +77,14 @@ extension ContextManager {
                 priority: .low,
                 text: charSysPrompt,
                 tokenCount: charSysPromptTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.characterSystemPrompt
             )
             contextBlocks.append(charSysPromptBlock)
         }
 
     }
-    
+
     func buildMemoryBlocks() async {
         let persona = await ServiceContainer.shared.getPersona
         let personaName = persona?.name
@@ -97,7 +102,8 @@ extension ContextManager {
                 priority: .required,
                 text: templates,
                 tokenCount: templatesTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.system
             )
             contextBlocks.append(templatesBlock)
         }
@@ -114,7 +120,8 @@ extension ContextManager {
                 priority: .high,
                 text: notes,
                 tokenCount: notesTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.userNote
             )
             contextBlocks.append(notesBlock)
         }
@@ -130,7 +137,8 @@ extension ContextManager {
                 priority: .high,
                 text: personalDescription,
                 tokenCount: personaTokens,
-                target: .memory
+                target: .memory,
+                order: ContextMemoryOrder.persona
             )
             contextBlocks.append(personaBlock)
         }
@@ -140,25 +148,19 @@ extension ContextManager {
         continued: Bool = false,
         forceThinking: Bool = false
     ) async {
-        let connectionSettings = settings
         let persona = await ServiceContainer.shared.getPersona
         let personaName = persona?.name
 
-        let messages = chat.messages
+        let visibleMessages = chat.messages.filter { $0.exclude == false }
+        let visibleMessageCount = visibleMessages.count
 
-        for (index, message) in messages.enumerated() {
-            guard message.exclude == false else {
-                continue
-            }
-
-            // order multiplied by 10 to allow note injection
-            let orderIndex = 1000 + (index * 10)
+        for (index, message) in visibleMessages.enumerated() {
             if var noteBlock = await noteInjectorBlock(
-                settings: connectionSettings,
                 personaName: personaName,
-                messageIndex: index
+                insertionIndex: index,
+                visibleMessageCount: visibleMessageCount
             ) {
-                noteBlock.order = orderIndex - 1
+                noteBlock.order = ContextPromptOrder.noteBeforeMessage(index: index)
                 contextBlocks.append(noteBlock)
             }
 
@@ -172,20 +174,33 @@ extension ContextManager {
                 continue
             }
 
-            messageBlock.order = orderIndex
+            messageBlock.order = ContextPromptOrder.message(index: index)
             contextBlocks.append(messageBlock)
+        }
+
+        if var noteBlock = await noteInjectorBlock(
+            personaName: personaName,
+            insertionIndex: visibleMessageCount,
+            visibleMessageCount: visibleMessageCount
+        ) {
+            noteBlock.order = ContextPromptOrder.noteAtDepth(
+                0, visibleMessageCount: visibleMessageCount)
+            contextBlocks.append(noteBlock)
         }
     }
 
     func noteInjectorBlock(
-        settings: ConnectionSettingsModel,
         personaName: String?,
-        messageIndex: Int
+        insertionIndex: Int,
+        visibleMessageCount: Int
     ) async -> ContextBlock? {
         guard
             let note = chat.chatNotes.first(where: {
-                let indexToInject = max(0, chat.messages.count - $0.depth)
-                return indexToInject == messageIndex && $0.injectInMemory == false
+                let noteInsertionIndex = ContextPromptOrder.insertionIndex(
+                    depth: $0.depth,
+                    visibleMessageCount: visibleMessageCount
+                )
+                return noteInsertionIndex == insertionIndex && $0.injectInMemory == false
             })?.note
         else {
             return nil

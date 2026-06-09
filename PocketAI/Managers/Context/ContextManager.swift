@@ -12,6 +12,7 @@ final class ContextManager {
     private var tokenCache: TokenCountCache = .init()
     var contextBlocks: [ContextBlock] = []
 
+    private var loreBookContextBuilder: LoreBookContextBuilder = .init()
     private var textCompletionBuilder: TextCompletionContextBuilder = .init()
     private var chatCompletionBuilder: ChatCompletionContextBuilder = .init()
 
@@ -26,6 +27,7 @@ final class ContextManager {
     func prepare() async {
         await loadTokenizerIfNeeded()
         await self.loadContextFromChat()
+        await refreshLoreBookBlocks()
     }
 
     public func buildContext(
@@ -47,6 +49,7 @@ final class ContextManager {
         if reloadContext {
             contextBlocks.removeAll()
             await loadContextFromChat()
+            await refreshLoreBookBlocks()
             await buildMessageBlocks(continued: continued)
         }
 
@@ -65,9 +68,9 @@ final class ContextManager {
         case .OpenRouter:
             return .chatCompletion(
                 chatCompletionBuilder.render(
-                    memoryBlocks: contextBlocks.filter { $0.target == .memory }, 
-                    promptBlocks: contextBlocks.filter { $0.target == .prompt }, 
-                    settings: settings, 
+                    memoryBlocks: contextBlocks.filter { $0.target == .memory },
+                    promptBlocks: contextBlocks.filter { $0.target == .prompt },
+                    settings: settings,
                     continued: continued,
                     forceThinking: forceThinking,
                     tokenizer: tokenizer
@@ -90,12 +93,12 @@ final class ContextManager {
 
     private func loadTokenizerIfNeeded() async {
         guard tokenizer == nil else {
-            return 
+            return
         }
 
         if let sharedTokenizer = await ServiceContainer.shared.tokenizer {
             tokenizer = sharedTokenizer
-            return 
+            return
         }
 
         tokenizer = try? await CoreBPE.cl100kBase()
@@ -108,6 +111,7 @@ final class ContextManager {
         }
 
         await loadContextFromChat()
+        await refreshLoreBookBlocks()
     }
 
     public func refreshMessageBlocks(chat: ChatModel) async {
@@ -117,6 +121,7 @@ final class ContextManager {
         }
 
         await buildMessageBlocks()
+        await refreshLoreBookBlocks()
     }
 
     public func updateMessageBlock(message: MessageModel, new: Bool = false) async {
@@ -124,17 +129,20 @@ final class ContextManager {
 
         // Treat as a new message
         if new {
-            // get last index of current message list
-            let lastIndex = chat.messages.count
+            // If the caller has not yet inserted the new message into chat.messages, place it after
+            // the current visible messages.
+            let nextVisibleIndex = chat.messages.filter { $0.exclude == false }.count
 
             if var messageBlock = await buildMessageBlock(
                 message: message,
                 personaName: personaName,
                 continueResponse: false
             ) {
-                messageBlock.order = 1000 + (lastIndex * 10)  // normal loop index starts at 0, count starts at 1.
+                messageBlock.order = ContextPromptOrder.message(index: nextVisibleIndex)
                 contextBlocks.append(messageBlock)
             }
+
+            await refreshLoreBookBlocks()
         } else {
             // find contextBlock to update
             let oldBlock = contextBlocks.first {
@@ -151,6 +159,8 @@ final class ContextManager {
                 updatedBlock.order = oldBlock.order
                 contextBlocks.append(updatedBlock)
             }
+
+            await refreshLoreBookBlocks()
         }
     }
 
@@ -174,5 +184,21 @@ final class ContextManager {
 
     func syncSettigns(_ settings: ConnectionSettingsModel) {
         self.settings = settings
+    }
+
+    private func refreshLoreBookBlocks() async {
+        contextBlocks.removeAll {
+            $0.kind == .loreBook
+        }
+
+        let personaName = await ServiceContainer.shared.getPersona?.name
+        let loreBookBlocks = await loreBookContextBuilder.buildBlocks(
+            loreBooks: chat.loreBooks,
+            chat: chat,
+            personaName: personaName,
+            getTokenCount: getTokenCount
+        )
+
+        contextBlocks.append(contentsOf: loreBookBlocks)
     }
 }

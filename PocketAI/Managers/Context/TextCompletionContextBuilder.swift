@@ -19,8 +19,7 @@ struct TextCompletionContextBuilder {
             source.order
         }
 
-        // sort function
-        static func sort(
+        static func selectionSort(
             _ lhs: RenderedContextBlock,
             _ rhs: RenderedContextBlock
         ) -> Bool {
@@ -28,6 +27,13 @@ struct TextCompletionContextBuilder {
                 return lhs.priority.rawValue < rhs.priority.rawValue
             }
             return lhs.order < rhs.order
+        }
+
+        static func renderSort(
+            _ lhs: RenderedContextBlock,
+            _ rhs: RenderedContextBlock
+        ) -> Bool {
+            lhs.order < rhs.order
         }
     }
 
@@ -72,6 +78,10 @@ struct TextCompletionContextBuilder {
             $0 + $1.tokenCount
         }
 
+        // debug prints
+        print(
+            "selectedMemoryTokens: \(selectedMemoryTokens)\nselectedPromptTokens: \(selectedPromptTokens)"
+        )
         return TextCompletionContent(
             memory: selectedMemoryBlocks.map(\.renderedText).joined(separator: "\n"),
             prompt: selectedPromptBlocks.map(\.renderedText).joined(),
@@ -109,6 +119,8 @@ struct TextCompletionContextBuilder {
                 renderText = "[Story Note]\n\(block.text)"
             case .characterMessageExample:
                 renderText = "[Character Message Example]\n\(block.text)"
+            case .loreBook:
+                renderText = "[Lore Entry]\n\(block.text)"
             default:
                 renderText = block.text
             }
@@ -141,8 +153,13 @@ struct TextCompletionContextBuilder {
             sortedBlocks[$0].kind == .message
                 && (sortedBlocks[$0].actor == .assistant || sortedBlocks[$0].actor == .user)
         })
-        let lastUserMessageIndex = sortedBlocks.indices.last(where: {
-            sortedBlocks[$0].actor == .user && sortedBlocks[$0].kind == .message
+        let lastRenderableIndex = sortedBlocks.indices.last(where: {
+            switch sortedBlocks[$0].actor {
+            case .system, .assistant, .user:
+                return true
+            default:
+                return false
+            }
         })
 
         func textWithRolePrefix(_ text: String, prefix: String) -> String {
@@ -153,29 +170,58 @@ struct TextCompletionContextBuilder {
             return "\(prefix) \(text)"
         }
 
+        func nextActorSuffix(after actor: OpenRouterMessageRole) -> String {
+            switch actor {
+            case .assistant:
+                guard continued == false else {
+                    return ""
+                }
+                return settings.userStopSequence
+            case .user:
+                var suffix = settings.botStopSequence
+                if settings.botStopSequence.isEmpty == false {
+                    suffix += " "
+                }
+
+                if forceThinking {
+                    suffix += "\(settings.thinkingStartSequence)\n\(settings.forceThinkingInstruct)"
+                }
+
+                return suffix
+            default:
+                return ""
+            }
+        }
+
         var renderedBlocks: [RenderedContextBlock] = []
 
         for (index, block) in sortedBlocks.enumerated() {
             var renderedText = ""
             switch block.actor {
             case .system:
-                renderedText = "\(settings.systemStopSequence)\n\(block.text)"
+                renderedText = "\(settings.systemStopSequence)\n"
+
+                if block.kind == .loreBook {
+                    renderedText += "[Lore Entry]\n\(block.text)"
+                } else {
+                    renderedText += block.text
+                }
+
+                if index == lastRenderableIndex, let lastMessageIndex {
+                    renderedText += nextActorSuffix(after: sortedBlocks[lastMessageIndex].actor)
+                }
             case .assistant:
                 var text = textWithRolePrefix(block.text, prefix: settings.botStopSequence)
-                if continued == false && index == lastMessageIndex {
-                    text += settings.userStopSequence
+
+                if index == lastRenderableIndex, let lastMessageIndex {
+                    text += nextActorSuffix(after: sortedBlocks[lastMessageIndex].actor)
                 }
                 renderedText = text
             case .user:
                 var text = textWithRolePrefix(block.text, prefix: settings.userStopSequence)
-                if index == lastMessageIndex {
-                    text += settings.botStopSequence
-                    if settings.botStopSequence.isEmpty == false {
-                        text += " "
-                    }
-                }
-                if forceThinking && index == lastUserMessageIndex && index == lastMessageIndex {
-                    text += "\(settings.thinkingStartSequence)\n\(settings.forceThinkingInstruct)"
+
+                if index == lastRenderableIndex, let lastMessageIndex {
+                    text += nextActorSuffix(after: sortedBlocks[lastMessageIndex].actor)
                 }
                 renderedText = text
             default:
@@ -209,14 +255,14 @@ struct TextCompletionContextBuilder {
 
         // get all required blocks first
         let requiredBlocks = blocks.filter { $0.priority == .required }.sorted(
-            by: RenderedContextBlock.sort)
+            by: RenderedContextBlock.selectionSort)
         for block in requiredBlocks {
             selected.append(block)
             remaining -= block.tokenCount
         }
 
         let nonRequiredBlocks = blocks.filter { $0.priority != .required }.sorted(
-            by: RenderedContextBlock.sort)
+            by: RenderedContextBlock.selectionSort)
         for block in nonRequiredBlocks {
             guard block.tokenCount <= remaining else {
                 continue
@@ -226,7 +272,7 @@ struct TextCompletionContextBuilder {
             remaining -= block.tokenCount
         }
 
-        return selected.sorted(by: RenderedContextBlock.sort)
+        return selected.sorted(by: RenderedContextBlock.renderSort)
     }
 
     private func selectPromptBlocks(

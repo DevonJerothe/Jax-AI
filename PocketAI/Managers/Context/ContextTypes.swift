@@ -13,6 +13,7 @@ struct ContextBlock {
         case userNote
         case summary
         case message
+        case loreBook
     }
 
     enum Priority: Int {
@@ -104,5 +105,59 @@ enum ContextOutput {
             return message
         }
         return nil
+    }
+}
+
+enum ContextMemoryOrder {
+    static let loreBeforeCharacter = -1_000_000_000
+
+    static let characterDescription = 0
+    static let characterPersonality = 10
+    static let characterScenario = 20
+    static let characterMessageExample = 30
+    static let characterSystemPrompt = 40
+
+    static let loreAfterCharacter = 1_000_000
+
+    static let system = 1_000_000_000
+    static let userNote = 1_000_000_010
+    static let persona = 1_000_000_020
+}
+
+enum ContextPromptOrder {
+    static let firstMessage = 1_000_000_000
+    static let messageShift = 1_000_000_000
+    static let loreOffset = -500_000_000
+    static let noteOffset = -1
+
+    static func message(index: Int) -> Int {
+        firstMessage + (index * messageShift)
+    }
+
+    static func insertionIndex(depth: Int, visibleMessageCount: Int) -> Int {
+        let safeDepth = max(0, depth)
+        return min(visibleMessageCount, max(0, visibleMessageCount - safeDepth))
+    }
+
+    static func loreAtDepth(
+        _ depth: Int,
+        visibleMessageCount: Int,
+        entryOrderOffset: Int = 0
+    ) -> Int {
+        message(index: insertionIndex(depth: depth, visibleMessageCount: visibleMessageCount))
+            + loreOffset + entryOrderOffset
+    }
+
+    static func noteAtDepth(_ depth: Int, visibleMessageCount: Int) -> Int {
+        message(index: insertionIndex(depth: depth, visibleMessageCount: visibleMessageCount))
+            + noteOffset
+    }
+
+    static func loreBeforeMessage(index: Int) -> Int {
+        message(index: index) + loreOffset
+    }
+
+    static func noteBeforeMessage(index: Int) -> Int {
+        message(index: index) + noteOffset
     }
 }
