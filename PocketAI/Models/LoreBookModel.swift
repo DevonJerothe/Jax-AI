@@ -68,7 +68,7 @@ struct LoreBookModel: Hashable, Identifiable {
                 secondaryKeys: pair.value.secondaryKeys ?? pair.value.keysecondary ?? [],
                 content: pair.value.content ?? "", 
                 constant: pair.value.constant ?? false, 
-                order: pair.value.order ?? 1, 
+                order: pair.value.order ?? pair.value.insertionOrder ?? pair.value.extensions?.weight ?? 1, 
                 position: pair.value.position?.intValue ?? 2,
                 caseSensitive: pair.value.caseSensitive ?? false, 
                 depth: pair.value.depth ?? pair.value.extensions?.depth ?? 2

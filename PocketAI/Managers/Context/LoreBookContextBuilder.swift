@@ -249,19 +249,25 @@ struct LoreBookContextBuilder {
     ) -> Int {
         switch candidate.position {
         case .beforeChar:
-            return ContextMemoryOrder.loreBeforeCharacter + stableEntryOffset(candidate)
+            return ContextMemoryOrder.loreBeforeCharacter + loreEntryOrderOffset(candidate)
         case .afterChar:
-            return ContextMemoryOrder.loreAfterCharacter + stableEntryOffset(candidate)
+            return ContextMemoryOrder.loreAfterCharacter + loreEntryOrderOffset(candidate)
         case .atDepth:
             return ContextPromptOrder.loreAtDepth(
                 candidate.entry.depth ?? 0,
-                visibleMessageCount: visibleMessages.count
+                visibleMessageCount: visibleMessages.count,
+                entryOrderOffset: loreEntryOrderOffset(candidate)
             )
         }
     }
 
-    private func stableEntryOffset(_ candidate: Candidate) -> Int {
-        (candidate.loreBookIndex * 10_000) + candidate.entryIndex
+    private func loreEntryOrderOffset(_ candidate: Candidate) -> Int {
+        let clampedOrder = min(max(candidate.order, -100_000), 100_000)
+        return (clampedOrder * 1_000) + stableTieBreakOffset(candidate)
+    }
+
+    private func stableTieBreakOffset(_ candidate: Candidate) -> Int {
+        min((candidate.loreBookIndex * 100) + candidate.entryIndex, 999)
     }
 
     private func selectionSort(_ lhs: Candidate, _ rhs: Candidate) -> Bool {
@@ -283,11 +289,11 @@ struct LoreBookContextBuilder {
         if lhsPosition != rhsPosition {
             return lhsPosition < rhsPosition
         }
-        if lhs.loreBookIndex != rhs.loreBookIndex {
-            return lhs.loreBookIndex < rhs.loreBookIndex
-        }
         if lhs.order != rhs.order {
             return lhs.order < rhs.order
+        }
+        if lhs.loreBookIndex != rhs.loreBookIndex {
+            return lhs.loreBookIndex < rhs.loreBookIndex
         }
         if lhs.entryIndex != rhs.entryIndex {
             return lhs.entryIndex < rhs.entryIndex

@@ -109,7 +109,7 @@ enum ContextOutput {
 }
 
 enum ContextMemoryOrder {
-    static let loreBeforeCharacter = -1_000_000
+    static let loreBeforeCharacter = -1_000_000_000
 
     static let characterDescription = 0
     static let characterPersonality = 10
@@ -117,17 +117,17 @@ enum ContextMemoryOrder {
     static let characterMessageExample = 30
     static let characterSystemPrompt = 40
 
-    static let loreAfterCharacter = 10_000
+    static let loreAfterCharacter = 1_000_000
 
-    static let system = 1_000_000
-    static let userNote = 1_000_010
-    static let persona = 1_000_020
+    static let system = 1_000_000_000
+    static let userNote = 1_000_000_010
+    static let persona = 1_000_000_020
 }
 
 enum ContextPromptOrder {
-    static let firstMessage = 1_000
-    static let messageShift = 10
-    static let loreOffset = -2
+    static let firstMessage = 1_000_000_000
+    static let messageShift = 1_000_000_000
+    static let loreOffset = -500_000_000
     static let noteOffset = -1
 
     static func message(index: Int) -> Int {
@@ -139,9 +139,13 @@ enum ContextPromptOrder {
         return min(visibleMessageCount, max(0, visibleMessageCount - safeDepth))
     }
 
-    static func loreAtDepth(_ depth: Int, visibleMessageCount: Int) -> Int {
+    static func loreAtDepth(
+        _ depth: Int,
+        visibleMessageCount: Int,
+        entryOrderOffset: Int = 0
+    ) -> Int {
         message(index: insertionIndex(depth: depth, visibleMessageCount: visibleMessageCount))
-            + loreOffset
+            + loreOffset + entryOrderOffset
     }
 
     static func noteAtDepth(_ depth: Int, visibleMessageCount: Int) -> Int {
