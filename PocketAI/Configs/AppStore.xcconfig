@@ -1,0 +1,9 @@
+//
+//  AppStore.xcconfig
+//  PocketAI
+//
+//  Created by devon jerothe on 6/9/26.
+//
+
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) APPSTORE
+PRODUCT_BUNDLE_IDENTIFIER = com.devonjerothe.PocketAI

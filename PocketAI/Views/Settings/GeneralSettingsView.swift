@@ -3,13 +3,16 @@ import SwiftUI
 struct GeneralSettingsView: View {
     @Environment(ServiceContainer.self) private var serviceContainer
     @Environment(\.appTheme) private var appTheme
-    @State private var booruViewModel: BotBooruViewModel = .init()
-    @State private var chubViewModel: ChubAIViewModel = .init()
     @State private var passcode = ""
     @State private var confirmPasscode = ""
     @State private var passcodeError: String?
     @State private var showSetPasscodeAlert = false
     @State private var showUnlockAlert = false
+    
+    #if !APPSTORE
+    @State private var booruViewModel: BotBooruViewModel = .init()
+    @State private var chubViewModel: ChubAIViewModel = .init()
+    #endif
 
     private var connectionManager: ConnectionStatusManager {
         serviceContainer.getConnectionStatusManager()
@@ -64,6 +67,7 @@ struct GeneralSettingsView: View {
                     }
                 }
 
+                #if !APPSTORE
                 SettingsCard("Browsers") {
                     NavigationLink {
                         BooruBrowserSettingsView(viewModel: booruViewModel)
@@ -89,6 +93,7 @@ struct GeneralSettingsView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                #endif
 
                 SettingsCard("App Settings") {
                     appLockSection

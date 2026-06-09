@@ -26,8 +26,12 @@ class NavigationManager {
         case settingsView
         case connectionSettings
         case newChatView(Bool)
+
+        #if !APPSTORE
         case booruBrowserView
         case chubAIBrowserView
+        #endif
+        
         case charImportView(CharImportType)
     }
 
@@ -247,6 +251,7 @@ class NavigationManager {
         }
     }
 
+    #if !APPSTORE
     func navigateToHubArchive(keepCurrentPath: Bool = false) {
         presentedSheet = nil
         if keepCurrentPath {
@@ -259,6 +264,7 @@ class NavigationManager {
     }
 
     func navigateToChubAIBrowser(keepCurrentPath: Bool = false) {
+        presentedSheet = nil
         if keepCurrentPath {
             appendToCurrentPath(Destination.chubAIBrowserView)
         } else {
@@ -267,6 +273,14 @@ class NavigationManager {
             characterListPath.append(Destination.chubAIBrowserView)
         }
     }
+    #else
+    func navigateToHubArchive(keepCurrentPath: Bool = false) {
+        navigateToCharImport(importType: .characterCard, keepCurrentPath: keepCurrentPath)
+    }
+    func navigateToChubAIBrowser(keepCurrentPath: Bool = false) {
+        navigateToCharImport(importType: .characterCard, keepCurrentPath: keepCurrentPath)
+    }
+    #endif
 
     func navigateToCharImport(
         importType: CharImportType = .characterCard,
