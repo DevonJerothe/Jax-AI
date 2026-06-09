@@ -53,11 +53,13 @@ struct CharacterCardsView: View {
                     Button("Import New Character") {
                         navManager.navigateToCharImport(keepCurrentPath: true)
                     }
-                    Button("Browse ChubAI") {
-                        navManager.navigateToChubAIBrowser(keepCurrentPath: true) 
-                    }
-                    Button("Browse BotBooru") {
-                        navManager.navigateToHubArchive(keepCurrentPath: true) 
+                    if AppFeatures.characterBrowserEnabled {
+                        Button("Browse ChubAI") {
+                            navManager.navigateToChubAIBrowser(keepCurrentPath: true) 
+                        }
+                        Button("Browse BotBooru") {
+                            navManager.navigateToHubArchive(keepCurrentPath: true) 
+                        }
                     }
                 } label: {
                     Image(systemName: "plus") 
