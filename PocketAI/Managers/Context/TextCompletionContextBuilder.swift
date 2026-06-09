@@ -19,8 +19,7 @@ struct TextCompletionContextBuilder {
             source.order
         }
 
-        // sort function
-        static func sort(
+        static func selectionSort(
             _ lhs: RenderedContextBlock,
             _ rhs: RenderedContextBlock
         ) -> Bool {
@@ -80,7 +79,9 @@ struct TextCompletionContextBuilder {
         }
 
         // debug prints
-        print("selectedMemoryTokens: \(selectedMemoryTokens)\nselectedPromptTokens: \(selectedPromptTokens)")
+        print(
+            "selectedMemoryTokens: \(selectedMemoryTokens)\nselectedPromptTokens: \(selectedPromptTokens)"
+        )
         return TextCompletionContent(
             memory: selectedMemoryBlocks.map(\.renderedText).joined(separator: "\n"),
             prompt: selectedPromptBlocks.map(\.renderedText).joined(),
@@ -118,7 +119,7 @@ struct TextCompletionContextBuilder {
                 renderText = "[Story Note]\n\(block.text)"
             case .characterMessageExample:
                 renderText = "[Character Message Example]\n\(block.text)"
-            case .loreBook: 
+            case .loreBook:
                 renderText = "[Lore Entry]\n\(block.text)"
             default:
                 renderText = block.text
@@ -154,10 +155,10 @@ struct TextCompletionContextBuilder {
         })
         let lastRenderableIndex = sortedBlocks.indices.last(where: {
             switch sortedBlocks[$0].actor {
-                case .system, .assistant, .user:
-                    return true
-                default:
-                    return false
+            case .system, .assistant, .user:
+                return true
+            default:
+                return false
             }
         })
 
@@ -171,24 +172,24 @@ struct TextCompletionContextBuilder {
 
         func nextActorSuffix(after actor: OpenRouterMessageRole) -> String {
             switch actor {
-                case .assistant: 
-                    guard continued == false else {
-                        return ""
-                    }
-                    return settings.userStopSequence
-                case .user: 
-                    var suffix = settings.botStopSequence
-                    if settings.botStopSequence.isEmpty == false {
-                        suffix += " "
-                    }
-
-                    if forceThinking {
-                        suffix += "\(settings.thinkingStartSequence)\n\(settings.forceThinkingInstruct)"
-                    }
-
-                    return suffix
-                default: 
+            case .assistant:
+                guard continued == false else {
                     return ""
+                }
+                return settings.userStopSequence
+            case .user:
+                var suffix = settings.botStopSequence
+                if settings.botStopSequence.isEmpty == false {
+                    suffix += " "
+                }
+
+                if forceThinking {
+                    suffix += "\(settings.thinkingStartSequence)\n\(settings.forceThinkingInstruct)"
+                }
+
+                return suffix
+            default:
+                return ""
             }
         }
 
@@ -198,12 +199,12 @@ struct TextCompletionContextBuilder {
             var renderedText = ""
             switch block.actor {
             case .system:
-                renderedText = "\(settings.systemStopSequence)"
+                renderedText = "\(settings.systemStopSequence)\n"
 
                 if block.kind == .loreBook {
                     renderedText += "[Lore Entry]\n\(block.text)"
                 } else {
-                    renderedText += "\(block.text)"
+                    renderedText += block.text
                 }
 
                 if index == lastRenderableIndex, let lastMessageIndex {
@@ -254,14 +255,14 @@ struct TextCompletionContextBuilder {
 
         // get all required blocks first
         let requiredBlocks = blocks.filter { $0.priority == .required }.sorted(
-            by: RenderedContextBlock.sort)
+            by: RenderedContextBlock.selectionSort)
         for block in requiredBlocks {
             selected.append(block)
             remaining -= block.tokenCount
         }
 
         let nonRequiredBlocks = blocks.filter { $0.priority != .required }.sorted(
-            by: RenderedContextBlock.sort)
+            by: RenderedContextBlock.selectionSort)
         for block in nonRequiredBlocks {
             guard block.tokenCount <= remaining else {
                 continue

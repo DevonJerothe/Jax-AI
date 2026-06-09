@@ -68,9 +68,9 @@ final class ContextManager {
         case .OpenRouter:
             return .chatCompletion(
                 chatCompletionBuilder.render(
-                    memoryBlocks: contextBlocks.filter { $0.target == .memory }, 
-                    promptBlocks: contextBlocks.filter { $0.target == .prompt }, 
-                    settings: settings, 
+                    memoryBlocks: contextBlocks.filter { $0.target == .memory },
+                    promptBlocks: contextBlocks.filter { $0.target == .prompt },
+                    settings: settings,
                     continued: continued,
                     forceThinking: forceThinking,
                     tokenizer: tokenizer
@@ -93,12 +93,12 @@ final class ContextManager {
 
     private func loadTokenizerIfNeeded() async {
         guard tokenizer == nil else {
-            return 
+            return
         }
 
         if let sharedTokenizer = await ServiceContainer.shared.tokenizer {
             tokenizer = sharedTokenizer
-            return 
+            return
         }
 
         tokenizer = try? await CoreBPE.cl100kBase()
@@ -129,15 +129,16 @@ final class ContextManager {
 
         // Treat as a new message
         if new {
-            // get last index of current message list
-            let lastIndex = chat.messages.count
+            // If the caller has not yet inserted the new message into chat.messages, place it after
+            // the current visible messages.
+            let nextVisibleIndex = chat.messages.filter { $0.exclude == false }.count
 
             if var messageBlock = await buildMessageBlock(
                 message: message,
                 personaName: personaName,
                 continueResponse: false
             ) {
-                messageBlock.order = 1000 + (lastIndex * 10)  // normal loop index starts at 0, count starts at 1.
+                messageBlock.order = ContextPromptOrder.message(index: nextVisibleIndex)
                 contextBlocks.append(messageBlock)
             }
 

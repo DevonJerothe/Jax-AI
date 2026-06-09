@@ -145,7 +145,8 @@ struct LoreBookContextBuilder {
             return ""
         }
 
-        return visibleMessages
+        return
+            visibleMessages
             .suffix(scanDepth)
             .map { _, message in
                 message.text.replaceChatSequences(user: personaName, char: chatTitle)
@@ -252,13 +253,10 @@ struct LoreBookContextBuilder {
         case .afterChar:
             return ContextMemoryOrder.loreAfterCharacter + stableEntryOffset(candidate)
         case .atDepth:
-            let depth = max(0, candidate.entry.depth ?? 0)
-            let lastVisibleIndex = max(0, visibleMessages.count - 1)
-            let injectionVisibleIndex = min(lastVisibleIndex, max(0, visibleMessages.count - depth))
-            let messageIndex = visibleMessages.indices.contains(injectionVisibleIndex)
-                ? visibleMessages[injectionVisibleIndex].offset
-                : 0
-            return 1_000 + (messageIndex * 10) - 2
+            return ContextPromptOrder.loreAtDepth(
+                candidate.entry.depth ?? 0,
+                visibleMessageCount: visibleMessages.count
+            )
         }
     }
 

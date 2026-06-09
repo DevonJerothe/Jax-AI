@@ -84,7 +84,7 @@ extension ContextManager {
         }
 
     }
-    
+
     func buildMemoryBlocks() async {
         let persona = await ServiceContainer.shared.getPersona
         let personaName = persona?.name
@@ -148,24 +148,18 @@ extension ContextManager {
         continued: Bool = false,
         forceThinking: Bool = false
     ) async {
-        let connectionSettings = settings
         let persona = await ServiceContainer.shared.getPersona
         let personaName = persona?.name
 
-        let messages = chat.messages
+        let visibleMessages = chat.messages.filter { $0.exclude == false }
+        let visibleMessageCount = visibleMessages.count
 
-        for (index, message) in messages.enumerated() {
-            guard message.exclude == false else {
-                continue
-            }
-
-            // order is multiplied by 10 to allow note injection
+        for (index, message) in visibleMessages.enumerated() {
             if var noteBlock = await noteInjectorBlock(
-                settings: connectionSettings,
                 personaName: personaName,
-                messageIndex: index
+                insertionIndex: index,
+                visibleMessageCount: visibleMessageCount
             ) {
-                // noteBlock.order = orderIndex - 1
                 noteBlock.order = ContextPromptOrder.noteBeforeMessage(index: index)
                 contextBlocks.append(noteBlock)
             }
@@ -183,17 +177,30 @@ extension ContextManager {
             messageBlock.order = ContextPromptOrder.message(index: index)
             contextBlocks.append(messageBlock)
         }
+
+        if var noteBlock = await noteInjectorBlock(
+            personaName: personaName,
+            insertionIndex: visibleMessageCount,
+            visibleMessageCount: visibleMessageCount
+        ) {
+            noteBlock.order = ContextPromptOrder.noteAtDepth(
+                0, visibleMessageCount: visibleMessageCount)
+            contextBlocks.append(noteBlock)
+        }
     }
 
     func noteInjectorBlock(
-        settings: ConnectionSettingsModel,
         personaName: String?,
-        messageIndex: Int
+        insertionIndex: Int,
+        visibleMessageCount: Int
     ) async -> ContextBlock? {
         guard
             let note = chat.chatNotes.first(where: {
-                let indexToInject = max(0, chat.messages.count - $0.depth)
-                return indexToInject == messageIndex && $0.injectInMemory == false
+                let noteInsertionIndex = ContextPromptOrder.insertionIndex(
+                    depth: $0.depth,
+                    visibleMessageCount: visibleMessageCount
+                )
+                return noteInsertionIndex == insertionIndex && $0.injectInMemory == false
             })?.note
         else {
             return nil
