@@ -29,7 +29,7 @@ struct LoreBookContextBuilder {
         }
 
         let visibleMessages = chat.messages.enumerated().filter { _, message in
-            message.exclude == false
+            message.exclude == false && message.status == .done
         }
 
         var blocks: [ContextBlock] = []
