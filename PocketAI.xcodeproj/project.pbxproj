@@ -15,13 +15,6 @@
 		E97327162DA9B620009CEAE0 /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97327152DA9B620009CEAE0 /* SwiftLLMSDK */; };
 		E97F95802D80C2D1007C292A /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97F957F2D80C2D1007C292A /* SwiftLLMSDK */; };
 		E9A158542FAFA1AD00A6ADA1 /* MarkdownStreamer in Frameworks */ = {isa = PBXBuildFile; productRef = E9A158532FAFA1AD00A6ADA1 /* MarkdownStreamer */; };
-		E9DB2F632D826261009AEF2B /* Splash in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F622D826261009AEF2B /* Splash */; };
-		E9DB2F652D826261009AEF2B /* SplashHTMLGen in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F642D826261009AEF2B /* SplashHTMLGen */; };
-		E9DB2F672D826261009AEF2B /* SplashImageGen in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F662D826261009AEF2B /* SplashImageGen */; };
-		E9DB2F692D826261009AEF2B /* SplashMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F682D826261009AEF2B /* SplashMarkdown */; };
-		E9DB2F6B2D826261009AEF2B /* SplashTokenizer in Frameworks */ = {isa = PBXBuildFile; productRef = E9DB2F6A2D826261009AEF2B /* SplashTokenizer */; };
-		E9F4B27A2D8A3B04001549FA /* LZ77 in Frameworks */ = {isa = PBXBuildFile; productRef = E9F4B2792D8A3B04001549FA /* LZ77 */; };
-		E9F4B27C2D8A3B04001549FA /* PNG in Frameworks */ = {isa = PBXBuildFile; productRef = E9F4B27B2D8A3B04001549FA /* PNG */; };
 		E9FEE4332FB3BD6200263330 /* MarkdownStreamer in Frameworks */ = {isa = PBXBuildFile; productRef = E9FEE4322FB3BD6200263330 /* MarkdownStreamer */; };
 /* End PBXBuildFile section */
 
@@ -84,21 +77,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E9DB2F6B2D826261009AEF2B /* SplashTokenizer in Frameworks */,
 				E97F95802D80C2D1007C292A /* SwiftLLMSDK in Frameworks */,
 				E94CC7E32D86726D00B4AB0B /* GRDB in Frameworks */,
-				E9F4B27C2D8A3B04001549FA /* PNG in Frameworks */,
-				E9DB2F632D826261009AEF2B /* Splash in Frameworks */,
 				E9A158542FAFA1AD00A6ADA1 /* MarkdownStreamer in Frameworks */,
 				E9FEE4332FB3BD6200263330 /* MarkdownStreamer in Frameworks */,
 				E909E8F42E5113C3009909E7 /* Collections in Frameworks */,
-				E9DB2F652D826261009AEF2B /* SplashHTMLGen in Frameworks */,
-				E9DB2F692D826261009AEF2B /* SplashMarkdown in Frameworks */,
 				E965E89C2FB516BE00B01142 /* MarkdownStreamer in Frameworks */,
 				E97327162DA9B620009CEAE0 /* SwiftLLMSDK in Frameworks */,
 				E965E9E22FB5601100B01142 /* SwiftTiktoken in Frameworks */,
-				E9F4B27A2D8A3B04001549FA /* LZ77 in Frameworks */,
-				E9DB2F672D826261009AEF2B /* SplashImageGen in Frameworks */,
 				E96200112FD8B94C00B1BAE2 /* SwiftLLMSDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -169,14 +155,7 @@
 			name = PocketAI;
 			packageProductDependencies = (
 				E97F957F2D80C2D1007C292A /* SwiftLLMSDK */,
-				E9DB2F622D826261009AEF2B /* Splash */,
-				E9DB2F642D826261009AEF2B /* SplashHTMLGen */,
-				E9DB2F662D826261009AEF2B /* SplashImageGen */,
-				E9DB2F682D826261009AEF2B /* SplashMarkdown */,
-				E9DB2F6A2D826261009AEF2B /* SplashTokenizer */,
 				E94CC7E22D86726D00B4AB0B /* GRDB */,
-				E9F4B2792D8A3B04001549FA /* LZ77 */,
-				E9F4B27B2D8A3B04001549FA /* PNG */,
 				E97327152DA9B620009CEAE0 /* SwiftLLMSDK */,
 				E909E8F32E5113C3009909E7 /* Collections */,
 				E9A158532FAFA1AD00A6ADA1 /* MarkdownStreamer */,
@@ -268,9 +247,7 @@
 			mainGroup = E9E949B12D808E9C0008861E;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */,
 				E94CC7E12D86726D00B4AB0B /* XCRemoteSwiftPackageReference "GRDB.swift" */,
-				E9F4B2782D8A3B04001549FA /* XCRemoteSwiftPackageReference "swift-png" */,
 				E909E8F22E5113C3009909E7 /* XCRemoteSwiftPackageReference "swift-collections" */,
 				E965E89A2FB516BE00B01142 /* XCRemoteSwiftPackageReference "MarkdownStreamer" */,
 				E965E9E02FB5601100B01142 /* XCRemoteSwiftPackageReference "swift-tiktoken" */,
@@ -715,22 +692,6 @@
 				minimumVersion = 0.0.1;
 			};
 		};
-		E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/JohnSundell/Splash";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.16.0;
-			};
-		};
-		E9F4B2782D8A3B04001549FA /* XCRemoteSwiftPackageReference "swift-png" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/tayloraswift/swift-png";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 4.4.9;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -770,41 +731,6 @@
 		E9A158532FAFA1AD00A6ADA1 /* MarkdownStreamer */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = MarkdownStreamer;
-		};
-		E9DB2F622D826261009AEF2B /* Splash */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */;
-			productName = Splash;
-		};
-		E9DB2F642D826261009AEF2B /* SplashHTMLGen */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */;
-			productName = SplashHTMLGen;
-		};
-		E9DB2F662D826261009AEF2B /* SplashImageGen */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */;
-			productName = SplashImageGen;
-		};
-		E9DB2F682D826261009AEF2B /* SplashMarkdown */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */;
-			productName = SplashMarkdown;
-		};
-		E9DB2F6A2D826261009AEF2B /* SplashTokenizer */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = E9DB2F612D826261009AEF2B /* XCRemoteSwiftPackageReference "Splash" */;
-			productName = SplashTokenizer;
-		};
-		E9F4B2792D8A3B04001549FA /* LZ77 */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = E9F4B2782D8A3B04001549FA /* XCRemoteSwiftPackageReference "swift-png" */;
-			productName = LZ77;
-		};
-		E9F4B27B2D8A3B04001549FA /* PNG */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = E9F4B2782D8A3B04001549FA /* XCRemoteSwiftPackageReference "swift-png" */;
-			productName = PNG;
 		};
 		E9FEE4322FB3BD6200263330 /* MarkdownStreamer */ = {
 			isa = XCSwiftPackageProductDependency;
