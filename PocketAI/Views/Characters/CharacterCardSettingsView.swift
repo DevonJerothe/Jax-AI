@@ -324,6 +324,7 @@ struct CharacterCardSettingsView: View {
                         height: 220
                     )
                 }
+                .id(FocusedField.messageExample)
                 VStack(alignment: .leading, spacing: 8) {
                     Text("System Prompt")
                         .font(.subheadline)
@@ -339,6 +340,7 @@ struct CharacterCardSettingsView: View {
                         height: 220
                     )
                 }
+                .id(FocusedField.systemPrompt)
             }
             .padding(.top, 8)
         } label: {
