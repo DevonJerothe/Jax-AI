@@ -35,8 +35,8 @@ struct ChatSettingsView: View {
 
     private var responseLengthBinding: Binding<Double> {
         Binding<Double>(
-            get: { Double(connectionManager.connectionSettings.responseLength ?? 300) },
-            set: { connectionManager.update(\.responseLength, to: Int($0)) }
+            get: { Double(connectionManager.connectionSettings.activeResponseLength ?? 300) },
+            set: { connectionManager.updateActiveResponseLength(Int($0)) }
         )
     }
 

@@ -65,7 +65,7 @@ final class ContextManager {
                     tokenizer: tokenizer
                 )
             )
-        case .OpenRouter:
+        case .OpenRouter, .OpenAI:
             return .chatCompletion(
                 chatCompletionBuilder.render(
                     memoryBlocks: contextBlocks.filter { $0.target == .memory },

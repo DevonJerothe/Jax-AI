@@ -1,5 +1,5 @@
 {
-  "originHash" : "e0db4d0348b876d1b077db5a4d4d23b33e1ff600a71e79a5abbcd19399eb28dc",
+  "originHash" : "43af749f23f6d8b4a69039fb9587655d1b09c49a1d590a8546598f436cfa74c7",
   "pins" : [
     {
       "identity" : "grdb.swift",
@@ -8,15 +8,6 @@
       "state" : {
         "branch" : "master",
         "revision" : "6eba24d16952452a8a54f6a639491f3c8215527f"
-      }
-    },
-    {
-      "identity" : "markdownstreamer",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/DevonJerothe/MarkdownStreamer.git",
-      "state" : {
-        "revision" : "360c50ecd582b81586758ce3580329bbfa995caf",
-        "version" : "1.1.0"
       }
     },
     {
@@ -44,15 +35,6 @@
       "state" : {
         "revision" : "e088d534d80dd1875ca3edfd69a16a6c25ab84c4",
         "version" : "0.0.1"
-      }
-    },
-    {
-      "identity" : "swiftllmsdk",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/DevonJerothe/SwiftLLMSDK",
-      "state" : {
-        "revision" : "53535255cf601c2f2d721873d7519c578ad6c538",
-        "version" : "1.1.0"
       }
     }
   ],

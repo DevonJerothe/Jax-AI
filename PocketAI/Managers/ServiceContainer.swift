@@ -44,6 +44,10 @@ final class ServiceContainer {
         self.languageModelService.availableModels
     }
 
+    var availableOpenAIModels: [OpenAIModel] {
+        self.languageModelService.availableOpenAIModels
+    }
+
     var isLoadingConnection: Bool {
         isLoading
     }
