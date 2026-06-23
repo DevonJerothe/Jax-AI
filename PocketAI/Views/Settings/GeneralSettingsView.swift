@@ -114,6 +114,21 @@ struct GeneralSettingsView: View {
 
                     Divider()
 
+                    Toggle(isOn: Binding(
+                        get: { connectionManager.connectionSettings.autoScrollChat },
+                        set: { connectionManager.update(\.autoScrollChat, to: $0) }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Scroll With Response")
+                            Text("Auto scroll the chat view as content is streamed.")
+                                .font(.caption)
+                                .foregroundStyle(appTheme.secondaryText.color)
+                        }
+                    }
+                    .tint(appTheme.tintColor.color)
+
+                    Divider() 
+
                     NavigationLink {
                         ThemeSettingsView()
                     } label: {
