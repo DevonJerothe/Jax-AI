@@ -5,7 +5,6 @@
 //  Created by devon jerothe on 3/11/25.
 //
 
-import MarkdownStreamer
 import SwiftLLMSDK
 import SwiftUI
 import UIKit
@@ -58,6 +57,14 @@ struct ChatView: View {
                         let lastMessageID = chat.messages.last?.id
                         let messageCount = chat.messages.count
                         let isOnlyMessage = messageCount == 1
+                        let botMarkdownConfig = ChatMarkdownRenderConfig.renderConfig(
+                            appTheme: appTheme,
+                            actor: .bot
+                        )
+                        let userMarkdownConfig = ChatMarkdownRenderConfig.renderConfig(
+                            appTheme: appTheme,
+                            actor: .user
+                        )
                         let _ = ChatPerformanceInstrumentation.chatViewBody(
                             chatID: chat.id,
                             messageCount: messageCount,
@@ -74,7 +81,8 @@ struct ChatView: View {
                                 ChatBubbleView(
                                     message: message,
                                     isStreaming: isStreaming,
-                                    mdReader: isStreaming ? viewModel.mdReader : nil,
+                                    markdownStreamSource: isStreaming ? viewModel.markdownStreamSource : nil,
+                                    markdownConfig: message.actor == .bot ? botMarkdownConfig : userMarkdownConfig,
                                     cardName: cardName,
                                     personaName: personaName,
                                     showToolbar: showToolbar,

@@ -112,7 +112,7 @@ enum ChatPerformanceInstrumentation {
 }
 
 enum MarkdownRenderSource: String {
-    case streamingBlocks
+    case streamingSource
     case completedString
     case userString
 }

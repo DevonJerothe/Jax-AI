@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import MarkdownStreamer
 import SwiftLLMSDK
 import SwiftUI
 import UIKit
@@ -21,8 +20,7 @@ final class ChatViewModel {
     private let appTheme: AppTheme = ServiceContainer.shared.currentTheme
     // private let contextBuilder: ContextManager
 
-    // Markdown streaming
-    private(set) var mdReader: MarkdownReader = MarkdownReader()
+    private(set) var markdownStreamSource = ChatMarkdownStreamSource()
     private(set) var streamingMessageID: UUID?
 
     let chatID: UUID
@@ -476,17 +474,15 @@ final class ChatViewModel {
             updatedMessage.tokenCountModel = currentModel
         }
 
-        // Messages that are streaming should be read from our mdReader.
-        let mdTheme = MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .bot)
         if isFinal {
-            await mdReader.finish(theme: mdTheme)
+            markdownStreamSource.finish()
             streamingMessageID = nil
         } else if responseText.isEmpty == false && shouldShowThinking == false {
             if streamingMessageID != messageID {
-                mdReader = MarkdownReader()
+                markdownStreamSource = ChatMarkdownStreamSource()
                 streamingMessageID = messageID
             }
-            await mdReader.appendAccumulated(responseText, theme: mdTheme)
+            markdownStreamSource.yieldSnapshot(responseText)
         }
 
         ChatPerformanceInstrumentation.streamingUpdate(

@@ -1,6 +1,15 @@
 {
-  "originHash" : "ca5fe33f0ec2656baff3fed673714df87466aa5bf7c5f7d5ae050b201a2d43bd",
+  "originHash" : "8f58e1a2b1fffd67e21563e1a36fdccdcd33347bc62773a78d0483d3cf717e6c",
   "pins" : [
+    {
+      "identity" : "equatable",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ordo-one/equatable",
+      "state" : {
+        "revision" : "63e597c07e1e0622e6c8f2b33c972525a444c8eb",
+        "version" : "1.0.10"
+      }
+    },
     {
       "identity" : "grdb.swift",
       "kind" : "remoteSourceControl",
@@ -11,21 +20,28 @@
       }
     },
     {
-      "identity" : "markdownstreamer",
+      "identity" : "highlightswift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/DevonJerothe/MarkdownStreamer.git",
+      "location" : "https://github.com/appstefan/highlightswift",
       "state" : {
-        "revision" : "360c50ecd582b81586758ce3580329bbfa995caf",
-        "version" : "1.1.0"
+        "revision" : "99c431b38a1444a5fd6a4978307fbbefe3a7af53"
       }
     },
     {
-      "identity" : "splash",
+      "identity" : "iosmath",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/JohnSundell/Splash",
+      "location" : "https://github.com/maitbayev/iosMath",
       "state" : {
-        "revision" : "7f4df436eb78fe64fe2c32c58006e9949fa28ad8",
-        "version" : "0.16.0"
+        "revision" : "066ba2f8353782a644889efe9ceb884ea844180b"
+      }
+    },
+    {
+      "identity" : "swift-cmark",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-cmark.git",
+      "state" : {
+        "revision" : "924936d0427cb25a61169739a7660230bffa6ea6",
+        "version" : "0.8.0"
       }
     },
     {
@@ -38,12 +54,39 @@
       }
     },
     {
+      "identity" : "swift-markdown",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-markdown.git",
+      "state" : {
+        "revision" : "7d9a5ce307528578dfa777d505496bd5f544ad94",
+        "version" : "0.7.3"
+      }
+    },
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "state" : {
+        "revision" : "f99ae8aa18f0cf0d53481901f88a0991dc3bd4a2",
+        "version" : "601.0.1"
+      }
+    },
+    {
       "identity" : "swift-tiktoken",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/DePasqualeOrg/swift-tiktoken.git",
       "state" : {
         "revision" : "e088d534d80dd1875ca3edfd69a16a6c25ab84c4",
         "version" : "0.0.1"
+      }
+    },
+    {
+      "identity" : "swiftstreamingmarkdown",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/DevonJerothe/SwiftStreamingMarkdown.git",
+      "state" : {
+        "branch" : "markdown-streamer-migration",
+        "revision" : "bc994f3e758f7b8deb46d4681795907ca7c29677"
       }
     }
   ],

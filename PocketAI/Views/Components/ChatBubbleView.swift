@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import MarkdownStreamer
+import SwiftStreamingMarkdown
 
 struct ChatBubbleView: View {
 
@@ -15,7 +15,8 @@ struct ChatBubbleView: View {
 
     let message: MessageModel
     let isStreaming: Bool
-    let mdReader: MarkdownReader?
+    let markdownStreamSource: ChatMarkdownStreamSource?
+    let markdownConfig: MarkdownRenderConfig
     let cardName: String
     let personaName: String
     let showToolbar: Bool
@@ -102,9 +103,10 @@ struct ChatBubbleView: View {
                         if isEditing {
                             editingTextView(maxWidth: UIApplication.currentScreenWidth)
                         } else {
-                            if isStreaming, let mdReader = mdReader {
+                            if isStreaming, let markdownStreamSource {
                                 StreamingChatMarkdownView(
-                                    mdReader: mdReader,
+                                    source: markdownStreamSource,
+                                    config: markdownConfig,
                                     messageID: message.id,
                                     actor: message.actor,
                                     maxWidth: UIApplication.currentScreenWidth,
@@ -113,6 +115,8 @@ struct ChatBubbleView: View {
                                 )
                             } else {
                                 let rpText = message.getRolePlayText(cardName: cardName, personaName: personaName)
+
+                                #if DEBUG
                                 let _ = ChatPerformanceInstrumentation.markdownRender(
                                     messageID: message.id,
                                     actor: message.actor,
@@ -120,12 +124,12 @@ struct ChatBubbleView: View {
                                     textLength: rpText.count,
                                     textHash: rpText.hashValue
                                 )
+                                #endif
 
-                                StreamingMarkdownView(
-                                    markdown: rpText,
-                                    theme: MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .bot)
+                                CachedMarkdownView(
+                                    text: rpText,
+                                    config: markdownConfig.withShouldAnimateText(value: false)
                                 )
-                                    .id(message.text.hashValue)
                                     .padding()
                                     .cornerRadius(15)
                                     .frame(
@@ -160,6 +164,8 @@ struct ChatBubbleView: View {
                                 cardName: cardName,
                                 personaName: personaName
                             )
+
+                            #if DEBUG
                             let _ = ChatPerformanceInstrumentation.markdownRender(
                                 messageID: message.id,
                                 actor: message.actor,
@@ -167,10 +173,11 @@ struct ChatBubbleView: View {
                                 textLength: rpText.count,
                                 textHash: rpText.hashValue
                             )
+                            #endif
 
-                            StreamingMarkdownView(
-                                markdown: rpText,
-                                theme: MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .user)
+                            CachedMarkdownView(
+                                text: rpText,
+                                config: markdownConfig.withShouldAnimateText(value: false)
                             )
                             .foregroundStyle(appTheme.primaryText.color)
                             .padding()
@@ -417,8 +424,8 @@ extension ChatBubbleView: Equatable {
 }
 
 private struct StreamingChatMarkdownView: View {
-    @ObservedObject var mdReader: MarkdownReader
-
+    let source: ChatMarkdownStreamSource
+    let config: MarkdownRenderConfig
     let messageID: UUID
     let actor: MessageActor
     let maxWidth: CGFloat
@@ -426,19 +433,20 @@ private struct StreamingChatMarkdownView: View {
     let onScrollViewUpdate: () -> Void
 
     var body: some View {
-        let blocks = mdReader.blocks
+        #if DEBUG
         let _ = ChatPerformanceInstrumentation.markdownRender(
             messageID: messageID,
             actor: actor,
-            source: .streamingBlocks,
-            textLength: blocks.count,
-            textHash: blocks.count.hashValue
+            source: .streamingSource,
+            textLength: 0,
+            textHash: ObjectIdentifier(source).hashValue
         )
+        #endif
 
-        StreamingMarkdownView(
-            blocks: blocks
+        StreamedMarkdownView(
+            source: source,
+            config: config.withShouldAnimateText(value: true)
         )
-        .markdownTokenAnimation(.fade)
         .padding()
         .cornerRadius(15)
         .frame(
@@ -449,8 +457,6 @@ private struct StreamingChatMarkdownView: View {
             geo.size.height
         } action: { newHeight in
             guard newHeight > 0 && isEditing == false else { return }
-
-            print("geo update")
             onScrollViewUpdate()
         }
         .accessibilityElement(children: .ignore)
