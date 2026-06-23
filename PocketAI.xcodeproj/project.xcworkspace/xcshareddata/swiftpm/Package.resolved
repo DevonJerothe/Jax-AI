@@ -1,5 +1,5 @@
 {
-  "originHash" : "8f58e1a2b1fffd67e21563e1a36fdccdcd33347bc62773a78d0483d3cf717e6c",
+  "originHash" : "1447e2d59673b0d48496b75f97e85790b85c6f28e8a290936b6b76cf35735690",
   "pins" : [
     {
       "identity" : "equatable",
@@ -81,12 +81,21 @@
       }
     },
     {
+      "identity" : "swiftllmsdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/DevonJerothe/SwiftLLMSDK",
+      "state" : {
+        "revision" : "60c2ac6d8ca6fb8cb738afa77b3dbf615f1adfee",
+        "version" : "1.2.0"
+      }
+    },
+    {
       "identity" : "swiftstreamingmarkdown",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/DevonJerothe/SwiftStreamingMarkdown.git",
       "state" : {
-        "branch" : "markdown-streamer-migration",
-        "revision" : "bc994f3e758f7b8deb46d4681795907ca7c29677"
+        "branch" : "main",
+        "revision" : "d65d11bcd6269e4103320f5749519ef5781cc8af"
       }
     }
   ],
