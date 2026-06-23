@@ -262,6 +262,7 @@ public struct ConnectionSettingsModel: Codable {
         self.repetitionRange = try container.decodeIfPresent(Int.self, forKey: .repetitionRange) ?? defaults.repetitionRange
         self.repetitionSlope = try container.decodeIfPresent(Double.self, forKey: .repetitionSlope) ?? defaults.repetitionSlope
         self.samplerOrder = try container.decodeIfPresent([Int].self, forKey: .samplerOrder) ?? defaults.samplerOrder
+        self.autoScrollChat = try container.decodeIfPresent(Bool.self, forKey: .autoScrollChat) ?? true
         self.forceThinking = try container.decodeIfPresent(Bool.self, forKey: .forceThinking) ?? false
         self.disableReasoning = try container.decodeIfPresent(Bool.self, forKey: .disableReasoning) ?? false
         self.userTemplates = try container.decodeIfPresent(OrderedDictionary<String, TemplateModel>.self, forKey: .userTemplates) ?? [:]
