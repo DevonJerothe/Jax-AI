@@ -17,16 +17,7 @@ struct TemplatePrompts {
         thinkingStartSequence: String,
         thinkingStopSequence: String
     ) -> String {
-        """
-
-    Formatting Requirements:
-
-    1. Always structure your replies using: \(thinkingStartSequence){reasoning}\(thinkingStopSequence){answer}
-    2. The \(thinkingStartSequence)\(thinkingStopSequence) block should contain at least six reasoning steps when applicable.
-    3. If the answer requires minimal thought, the \(thinkingStartSequence)\(thinkingStopSequence) block may be left empty.
-    4. The user does not see the \(thinkingStartSequence)\(thinkingStopSequence) section. Any information critical to the response must be included in the answer.
-    5. If you notice that you have engaged in circular reasoning or repetition, immediately terminate {reasoning} with a \(thinkingStopSequence) and proceed to the {answer}
-
+    """
     Response Guidelines:
 
     1. Stay in character at all times, fully embodying the role defined by the user in their character card. Never break character or mention anything related to being an AI or a system.

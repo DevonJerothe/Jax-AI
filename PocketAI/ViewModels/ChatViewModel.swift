@@ -57,7 +57,10 @@ final class ChatViewModel {
     var editingMessageID: UUID?
     var newInstance: Bool = true
     var isViewActive: Bool = false
-    var isAutoScrollEnabled: Bool = true
+    var isAutoScrollEnabled: Bool
+    var autoScrollSetting: Bool {
+        connectionManager.connectionSettings.autoScrollChat
+    }
 
     var disableWhileEditing: Bool = false
 
@@ -77,15 +80,16 @@ final class ChatViewModel {
             connectionManager ?? ServiceContainer.shared.getConnectionStatusManager()
         self.chatStore = chatStore ?? ServiceContainer.shared.getChatStore()
         self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
+        self.isAutoScrollEnabled = self.connectionManager.connectionSettings.autoScrollChat
 
         Task {
-            guard let model = model else { 
+            guard let model = model else {
                 print("Model not found yet!")
                 return
             }
 
-            // Warm up generation. We ensure the contextManager is initialized on each message 
-            // send. This will allow the manager to start building the inital context early if 
+            // Warm up generation. We ensure the contextManager is initialized on each message
+            // send. This will allow the manager to start building the inital context early if
             // a chat is opened long enough before a first send.
             await self.languageModelService.initContextManager(chatModel: model)
         }
@@ -147,7 +151,7 @@ final class ChatViewModel {
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id, save: false)
-            isAutoScrollEnabled = true
+            isAutoScrollEnabled = autoScrollSetting
             scrollAfterLayout.toggle()
             scrollReloadToggle += 1
             await generateResponse(for: updatedMessage.id, isContinued: continueResponse)
@@ -171,7 +175,7 @@ final class ChatViewModel {
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id)
-            isAutoScrollEnabled = true
+            isAutoScrollEnabled = autoScrollSetting
             scrollAfterLayout.toggle()
         } catch {
             print("Failed to navigate message generation: \(error)")
@@ -201,12 +205,12 @@ final class ChatViewModel {
 
         do {
             if chat.messages.count == 1 {
-                // If we only have 1 message (first mes) we can simply clear chat to apply any 
+                // If we only have 1 message (first mes) we can simply clear chat to apply any
                 // new changes
                 try await chatStore.resetChat(chat)
-            } 
+            }
             try await chatStore.saveChat(chat)
-            
+
         } catch {
             print("Failed to update chat settings: \(error)")
         }
@@ -238,7 +242,7 @@ final class ChatViewModel {
 
     func updateNote(noteID: UUID, text: String, depth: Int, injectInMemory: Bool) async {
         guard var chat = model,
-              let noteIndex = chat.chatNotes.firstIndex(where: { $0.id == noteID })
+            let noteIndex = chat.chatNotes.firstIndex(where: { $0.id == noteID })
         else {
             return
         }
@@ -304,7 +308,7 @@ final class ChatViewModel {
 
         do {
             try await chatStore.deleteMessage(message, from: chat.id)
-            isAutoScrollEnabled = true
+            isAutoScrollEnabled = autoScrollSetting
             scrollAfterLayout.toggle()
             scrollReloadToggle += 1
         } catch {
@@ -469,8 +473,8 @@ final class ChatViewModel {
         let currentModel = ServiceContainer.shared.selectedModelName
         let currentConnectionType = ServiceContainer.shared.selectedConnectionType
         if isFinal && currentConnectionType == .KoboldAPI {
-//            let tokenCount = await languageModelService.getTokenCount(string: updatedMessage.text)
-//            updatedMessage.tokenCount = tokenCount
+            //            let tokenCount = await languageModelService.getTokenCount(string: updatedMessage.text)
+            //            updatedMessage.tokenCount = tokenCount
             updatedMessage.tokenCountModel = currentModel
         }
 

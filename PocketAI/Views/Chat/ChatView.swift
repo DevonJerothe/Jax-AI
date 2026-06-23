@@ -81,8 +81,10 @@ struct ChatView: View {
                                 ChatBubbleView(
                                     message: message,
                                     isStreaming: isStreaming,
-                                    markdownStreamSource: isStreaming ? viewModel.markdownStreamSource : nil,
-                                    markdownConfig: message.actor == .bot ? botMarkdownConfig : userMarkdownConfig,
+                                    markdownStreamSource: isStreaming
+                                        ? viewModel.markdownStreamSource : nil,
+                                    markdownConfig: message.actor == .bot
+                                        ? botMarkdownConfig : userMarkdownConfig,
                                     cardName: cardName,
                                     personaName: personaName,
                                     showToolbar: showToolbar,
@@ -113,7 +115,8 @@ struct ChatView: View {
                                         viewModel.disableWhileEditing = enabled
                                     },
                                     onScrollViewUpdate: {
-                                        scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0)
+                                        scrollToBottom(
+                                            proxy: proxy, anchor: "bottomAnchor", delay: 0)
                                     }
                                 )
                                 .equatable()
@@ -171,7 +174,9 @@ struct ChatView: View {
 
                 if viewModel.isAutoScrollEnabled == false && isScrollViewAtBottom == false {
                     Button {
-                        setAutoScrollEnabled(true)
+                        if viewModel.autoScrollSetting {
+                            setAutoScrollEnabled(true)
+                        }
                         scrollViewHelper?.stopScrolling()
                         scrollToBottom(
                             proxy: proxy, anchor: "bottomAnchor", delay: 0.0,
@@ -189,6 +194,9 @@ struct ChatView: View {
             }
             .onAppear {
                 scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.0, animated: false)
+            }
+            .onChange(of: viewModel.autoScrollSetting) { _, newValue in
+                setAutoScrollEnabled(newValue)
             }
             .onGeometryChange(for: CGFloat.self) { geo in
                 geo.size.height
@@ -367,7 +375,7 @@ struct ChatView: View {
         var transaction = Transaction()
         transaction.disablesAnimations = true
         withTransaction(transaction) {
-            viewModel.isAutoScrollEnabled = enabled
+            viewModel.isAutoScrollEnabled = enabled && viewModel.autoScrollSetting
         }
     }
 }

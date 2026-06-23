@@ -136,6 +136,7 @@ public struct ConnectionSettingsModel: Codable {
     var forceThinkingInstruct: String
 
     // Chat Settings
+    var autoScrollChat: Bool = true
     var forceThinking: Bool = false // KoboldAPI only
     var disableReasoning: Bool = false
     var userTemplates: OrderedDictionary<String, TemplateModel> = [:]
@@ -162,6 +163,7 @@ public struct ConnectionSettingsModel: Codable {
         repetitionRange: Int = 360,
         repetitionSlope: Double = 0.5,
         samplerOrder: [Int] = [6, 0, 1, 3, 4, 2, 5],
+        autoScrollChat: Bool = true,
         forceThinking: Bool = false,
         disableReasoning: Bool = false,
         resetDeleteMe: Bool = false,
@@ -192,6 +194,7 @@ public struct ConnectionSettingsModel: Codable {
         self.repetitionRange = repetitionRange
         self.repetitionSlope = repetitionSlope
         self.samplerOrder = samplerOrder
+        self.autoScrollChat = autoScrollChat
         self.forceThinking = forceThinking
         self.disableReasoning = disableReasoning
         self.userTemplates = userTemplates
@@ -224,6 +227,7 @@ public struct ConnectionSettingsModel: Codable {
         case repetitionRange
         case repetitionSlope
         case samplerOrder
+        case autoScrollChat
         case forceThinking
         case disableReasoning
         case userTemplates
