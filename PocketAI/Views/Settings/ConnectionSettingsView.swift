@@ -14,6 +14,7 @@ struct ConnectionSettingsView: View {
 
     @State private var isLoadingModels: Bool = false
     @State private var showModelSearch = false
+    @State private var baseURLRefreshTask: Task<Void, Never>?
 
     private var connectionManager: ConnectionStatusManager {
         serviceContainer.getConnectionStatusManager()
@@ -21,49 +22,70 @@ struct ConnectionSettingsView: View {
 
     private var hostBinding: Binding<String> {
         Binding(
-            get: { connectionManager.connectionSettings.host ?? "" },
-            set: { connectionManager.update(\.host, to: $0.isEmpty ? nil : $0) }
+            get: { connectionManager.connectionSettings.activeHost ?? "" },
+            set: { connectionManager.updateActiveHost($0.isEmpty ? nil : $0) }
         )
     }
 
     private var portBinding: Binding<Int> {
         Binding(
-            get: { connectionManager.connectionSettings.port ?? 5000 },
-            set: { connectionManager.update(\.port, to: $0) }
+            get: { connectionManager.connectionSettings.activePort ?? 5000 },
+            set: { connectionManager.updateActivePort($0) }
         )
     }
 
     private var apiKeyBinding: Binding<String> {
         Binding(
-            get: { connectionManager.connectionSettings.apiKey ?? "" },
-            set: { connectionManager.update(\.apiKey, to: $0.isEmpty ? nil : $0) }
+            get: { connectionManager.connectionSettings.activeAPIKey ?? "" },
+            set: { connectionManager.updateActiveAPIKey($0.isEmpty ? nil : $0) }
         )
     }
 
     private var selectedModelBinding: Binding<String> {
         Binding(
-            get: { connectionManager.connectionSettings.selectedModel ?? "deepseek/deepseek-chat-v3-0324:free" },
-            set: { connectionManager.update(\.selectedModel, to: $0) }
+            get: {
+                connectionManager.connectionSettings.activeSelectedModel ?? ""
+            },
+            set: { connectionManager.updateActiveSelectedModel($0.isEmpty ? nil : $0) }
+        )
+    }
+
+    private var openAIBaseURLBinding: Binding<String> {
+        Binding(
+            get: { connectionManager.connectionSettings.openAISettings?.baseURL ?? "" },
+            set: { updateOpenAISettings(\.baseURL, to: $0.isEmpty ? nil : $0) }
+        )
+    }
+
+    private var openAIAPIKeyBinding: Binding<String> {
+        Binding(
+            get: { connectionManager.connectionSettings.activeAPIKey ?? "" },
+            set: { connectionManager.updateActiveAPIKey($0.isEmpty ? nil : $0) }
         )
     }
 
     private var contextLengthBinding: Binding<Double> {
         Binding(
-            get: { Double(connectionManager.connectionSettings.contextLength ?? 4096) },
-            set: { connectionManager.update(\.contextLength, to: Int($0)) }
+            get: { Double(connectionManager.connectionSettings.activeContextLength ?? 4096) },
+            set: { connectionManager.updateActiveContextLength(Int($0)) }
         )
     }
 
     private var responseLengthBinding: Binding<Double> {
         Binding(
-            get: { Double(connectionManager.connectionSettings.responseLength ?? 300) },
-            set: { connectionManager.update(\.responseLength, to: Int($0)) }
+            get: { Double(connectionManager.connectionSettings.activeResponseLength ?? 300) },
+            set: { connectionManager.updateActiveResponseLength(Int($0)) }
         )
     }
 
     private var selectedModelLabel: String {
         let selectedModelID = selectedModelBinding.wrappedValue
         return serviceContainer.availableModels.first { $0.id == selectedModelID }?.name ?? selectedModelID
+    }
+
+    private var openAISelectedModelLabel: String {
+        let selectedModelID = selectedModelBinding.wrappedValue
+        return serviceContainer.availableOpenAIModels.first { $0.id == selectedModelID }?.displayName ?? selectedModelID
     }
 
     var body: some View {
@@ -76,6 +98,9 @@ struct ConnectionSettingsView: View {
                         }
                         Button("OpenRouter") {
                             connectionManager.update(\.connectionType, to: .OpenRouter)
+                        }
+                        Button("OpenAI Server") {
+                            connectionManager.update(\.connectionType, to: .OpenAI)
                         }
                     } label: {
                         HStack {
@@ -157,29 +182,73 @@ struct ConnectionSettingsView: View {
         .navigationTitle("Connection")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showModelSearch) {
-            OpenRouterModelSearchView(
-                models: serviceContainer.availableModels,
-                selectedModel: selectedModelBinding
-            )
+            if connectionManager.connectionSettings.connectionType == .OpenAI {
+                OpenRouterModelSearchView(
+                    models: serviceContainer.availableOpenAIModels,
+                    selectedModel: selectedModelBinding
+                )
+            } else {
+                OpenRouterModelSearchView(
+                    models: serviceContainer.availableModels,
+                    selectedModel: selectedModelBinding
+                )
+            }
         }
         .onAppear {
-            if connectionManager.connectionSettings.connectionType == .OpenRouter {
+            if usesRemoteModelPicker {
                 Task {
                     await loadAvailableModels()
                 }
             }
         }
         .onChange(of: connectionManager.connectionSettings.connectionType) {
-            if connectionManager.connectionSettings.connectionType == .OpenRouter {
+            if usesRemoteModelPicker {
                 Task {
                     await loadAvailableModels()
                 }
             }
         }
+        .onChange(of: connectionManager.connectionSettings.openAISettings?.baseURL) {
+            scheduleOpenAIModelRefresh()
+        }
+    }
+
+    private var usesRemoteModelPicker: Bool {
+        connectionManager.connectionSettings.connectionType == .OpenRouter ||
+        connectionManager.connectionSettings.connectionType == .OpenAI
+    }
+
+    private func updateOpenAISettings<Value>(
+        _ keyPath: WritableKeyPath<OpenAISettings, Value>,
+        to value: Value
+    ) {
+        var settings = connectionManager.connectionSettings
+        var openAISettings = settings.openAISettings ?? OpenAISettings()
+        openAISettings[keyPath: keyPath] = value
+        settings.openAISettings = openAISettings
+        connectionManager.updateSettings(settings)
+    }
+
+    private func scheduleOpenAIModelRefresh() {
+        baseURLRefreshTask?.cancel()
+
+        guard connectionManager.connectionSettings.connectionType == .OpenAI,
+              connectionManager.connectionSettings.openAISettings?.baseURL?.isEmpty == false
+        else {
+            return
+        }
+
+        baseURLRefreshTask = Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else {
+                return
+            }
+            await loadAvailableModels()
+        }
     }
 
     private func loadAvailableModels() async {
-        guard connectionManager.connectionSettings.connectionType == .OpenRouter else {
+        guard usesRemoteModelPicker else {
             return
         }
 
@@ -195,6 +264,8 @@ struct ConnectionSettingsView: View {
             koboldAPISettingsSections()
         case .OpenRouter:
             openRouterSettingsSections()
+        case .OpenAI:
+            openAISettingsSections()
         }
     }
 
@@ -220,7 +291,7 @@ struct ConnectionSettingsView: View {
             ThemedSliderRow(
                 title: "Context Limit",
                 value: contextLengthBinding,
-                range: 1024...Double(connectionManager.maxContextLength),
+                range: 1024...Double(connectionManager.connectionSettings.activeMaxContextLength ?? connectionManager.maxContextLength),
                 step: 1024,
                 displayValue: "\(Int(contextLengthBinding.wrappedValue))"
             )
@@ -245,7 +316,10 @@ struct ConnectionSettingsView: View {
                         .styledFormField()
                 } else {
                     Button {
-                        showModelSearch = true
+                        Task {
+                            await loadAvailableModels()
+                            showModelSearch = true
+                        }
                     } label: {
                         HStack {
                             Text(selectedModelLabel)
@@ -266,21 +340,78 @@ struct ConnectionSettingsView: View {
             }
         }
     }
+
+    @ViewBuilder
+    private func openAISettingsSections() -> some View {
+        SettingsCard("OpenAI Server") {
+            ThemedTextField(
+                title: "Base URL",
+                placeholder: "e.g., https://api.openai.com/v1",
+                text: openAIBaseURLBinding,
+                keyboardType: .URL,
+                autocapitalization: .never
+            )
+
+            ThemedSecureField(
+                title: "API Key",
+                placeholder: "Enter your API key",
+                text: openAIAPIKeyBinding
+            )
+
+            ThemedSliderRow(
+                title: "Context Limit",
+                value: contextLengthBinding,
+                range: 1024...Double(connectionManager.connectionSettings.activeMaxContextLength ?? 256000),
+                step: 1024,
+                displayValue: "\(Int(contextLengthBinding.wrappedValue))"
+            )
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Selected Model")
+                    .foregroundColor(appTheme.primaryText.color)
+                if isLoadingModels {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .styledFormField()
+                } else {
+                    Button {
+                        Task {
+                            await loadAvailableModels()
+                            showModelSearch = true
+                        }
+                    } label: {
+                        HStack {
+                            Text(openAISelectedModelLabel.isEmpty ? "Select a model" : openAISelectedModelLabel)
+                                .foregroundColor(appTheme.primaryText.color)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(appTheme.borderColor.color)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .styledFormField()
+                }
+            }
+        }
+    }
 }
 
-struct OpenRouterModelSearchView: View {
-    let models: [OpenRouterModel]
+struct OpenRouterModelSearchView<Model: ModelPickerItem>: View {
+    let models: [Model]
     @Binding var selectedModel: String
     @Environment(\.appTheme) private var appTheme
     @Environment(\.dismiss) private var dismiss
     @State private var search = ""
 
-    private var filteredModels: [OpenRouterModel] {
+    private var filteredModels: [Model] {
         models.filter { model in
             search.isEmpty ||
-                model.name.localizedCaseInsensitiveContains(search) ||
-                model.id.localizedCaseInsensitiveContains(search) ||
-                model.description.localizedCaseInsensitiveContains(search)
+                model.searchableText.localizedCaseInsensitiveContains(search)
         }
     }
 
@@ -292,7 +423,7 @@ struct OpenRouterModelSearchView: View {
             } label: {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(model.name)
+                        Text(model.displayName)
                             .foregroundColor(appTheme.primaryText.color)
 
                         Text(model.id)

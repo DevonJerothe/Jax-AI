@@ -1,6 +1,15 @@
 {
-  "originHash" : "e0db4d0348b876d1b077db5a4d4d23b33e1ff600a71e79a5abbcd19399eb28dc",
+  "originHash" : "1447e2d59673b0d48496b75f97e85790b85c6f28e8a290936b6b76cf35735690",
   "pins" : [
+    {
+      "identity" : "equatable",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ordo-one/equatable",
+      "state" : {
+        "revision" : "63e597c07e1e0622e6c8f2b33c972525a444c8eb",
+        "version" : "1.0.10"
+      }
+    },
     {
       "identity" : "grdb.swift",
       "kind" : "remoteSourceControl",
@@ -11,21 +20,28 @@
       }
     },
     {
-      "identity" : "markdownstreamer",
+      "identity" : "highlightswift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/DevonJerothe/MarkdownStreamer.git",
+      "location" : "https://github.com/appstefan/highlightswift",
       "state" : {
-        "revision" : "360c50ecd582b81586758ce3580329bbfa995caf",
-        "version" : "1.1.0"
+        "revision" : "99c431b38a1444a5fd6a4978307fbbefe3a7af53"
       }
     },
     {
-      "identity" : "splash",
+      "identity" : "iosmath",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/JohnSundell/Splash",
+      "location" : "https://github.com/maitbayev/iosMath",
       "state" : {
-        "revision" : "7f4df436eb78fe64fe2c32c58006e9949fa28ad8",
-        "version" : "0.16.0"
+        "revision" : "066ba2f8353782a644889efe9ceb884ea844180b"
+      }
+    },
+    {
+      "identity" : "swift-cmark",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-cmark.git",
+      "state" : {
+        "revision" : "924936d0427cb25a61169739a7660230bffa6ea6",
+        "version" : "0.8.0"
       }
     },
     {
@@ -35,6 +51,24 @@
       "state" : {
         "revision" : "8c0c0a8b49e080e54e5e328cc552821ff07cd341",
         "version" : "1.2.1"
+      }
+    },
+    {
+      "identity" : "swift-markdown",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-markdown.git",
+      "state" : {
+        "revision" : "7d9a5ce307528578dfa777d505496bd5f544ad94",
+        "version" : "0.7.3"
+      }
+    },
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "state" : {
+        "revision" : "f99ae8aa18f0cf0d53481901f88a0991dc3bd4a2",
+        "version" : "601.0.1"
       }
     },
     {
@@ -51,8 +85,17 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/DevonJerothe/SwiftLLMSDK",
       "state" : {
-        "revision" : "53535255cf601c2f2d721873d7519c578ad6c538",
-        "version" : "1.1.0"
+        "revision" : "60c2ac6d8ca6fb8cb738afa77b3dbf615f1adfee",
+        "version" : "1.2.0"
+      }
+    },
+    {
+      "identity" : "swiftstreamingmarkdown",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/DevonJerothe/SwiftStreamingMarkdown.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "d65d11bcd6269e4103320f5749519ef5781cc8af"
       }
     }
   ],

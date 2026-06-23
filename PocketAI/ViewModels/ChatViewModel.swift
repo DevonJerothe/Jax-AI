@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import MarkdownStreamer
 import SwiftLLMSDK
 import SwiftUI
 import UIKit
@@ -21,8 +20,7 @@ final class ChatViewModel {
     private let appTheme: AppTheme = ServiceContainer.shared.currentTheme
     // private let contextBuilder: ContextManager
 
-    // Markdown streaming
-    private(set) var mdReader: MarkdownReader = MarkdownReader()
+    private(set) var markdownStreamSource = ChatMarkdownStreamSource()
     private(set) var streamingMessageID: UUID?
 
     let chatID: UUID
@@ -438,24 +436,34 @@ final class ChatViewModel {
             return
         }
 
-        var updatedMessage = message
-        updatedMessage.error = disconnect ? .apiError : .none
-
-        if responseText.isEmpty == false {
-            updatedMessage.text = responseText
-        }
-
-        if disconnect {
-            updatedMessage.text =
-                responseText.isEmpty
-                ? "There was an error processing your request. Please try again later."
-                : responseText
-        }
-
-        updatedMessage.status =
+        let targetMessageStatus: MessageStatus =
             isFinal
             ? .done
             : (shouldShowThinking ? .thinking : .streaming)
+        let targetChatStatus: ChatStatus =
+            isFinal ? .idle : (shouldShowThinking ? .thinking : .streaming)
+        let shouldCommitMessage =
+            isFinal
+            || disconnect
+            || message.status != targetMessageStatus
+        let shouldCommitChatStatus = chat.status != targetChatStatus
+
+        var updatedMessage = message
+        updatedMessage.error = disconnect ? .apiError : .none
+        updatedMessage.status = targetMessageStatus
+
+        if isFinal || disconnect {
+            if responseText.isEmpty == false {
+                updatedMessage.text = responseText
+            }
+
+            if disconnect {
+                updatedMessage.text =
+                    responseText.isEmpty
+                    ? "There was an error processing your request. Please try again later."
+                    : responseText
+            }
+        }
 
         // for KoboldAPI we need to fetch token count after full message is received
         let currentModel = ServiceContainer.shared.selectedModelName
@@ -466,30 +474,41 @@ final class ChatViewModel {
             updatedMessage.tokenCountModel = currentModel
         }
 
-        // Messages that are streaming should be read from our mdReader.
-        let mdTheme = MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .bot)
         if isFinal {
-            await mdReader.finish(theme: mdTheme)
+            markdownStreamSource.finish()
             streamingMessageID = nil
         } else if responseText.isEmpty == false && shouldShowThinking == false {
             if streamingMessageID != messageID {
-                mdReader = MarkdownReader()
+                markdownStreamSource = ChatMarkdownStreamSource()
                 streamingMessageID = messageID
             }
-            await mdReader.appendAccumulated(responseText, theme: mdTheme)
+            markdownStreamSource.yieldSnapshot(responseText)
         }
 
-        do {
-            try await chatStore.updateMessage(updatedMessage, in: chat.id, save: isFinal)
-            try chatStore.setChatStatus(
-                for: chatID,
-                to: isFinal ? .idle : (shouldShowThinking ? .thinking : .streaming)
-            )
-        } catch {
-            print("Failed to update streamed response: \(error)")
+        ChatPerformanceInstrumentation.streamingUpdate(
+            messageID: messageID,
+            responseLength: responseText.count,
+            deltaLength: delta.count,
+            isFinal: isFinal,
+            shouldShowThinking: shouldShowThinking,
+            willUpdateStore: shouldCommitMessage || shouldCommitChatStatus
+        )
+
+        if shouldCommitMessage || shouldCommitChatStatus {
+            do {
+                if shouldCommitMessage {
+                    try await chatStore.updateMessage(updatedMessage, in: chat.id, save: isFinal)
+                }
+
+                if shouldCommitChatStatus {
+                    try chatStore.setChatStatus(for: chatID, to: targetChatStatus)
+                }
+            } catch {
+                print("Failed to update streamed response: \(error)")
+            }
         }
 
-        if (responseText.isEmpty == false && isAutoScrollEnabled) || isFinal {
+        if isFinal {
             updateScrollView.toggle()
         }
 

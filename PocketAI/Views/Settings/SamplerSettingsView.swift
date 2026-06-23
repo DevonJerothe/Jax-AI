@@ -173,7 +173,7 @@ struct SamplerSettingsView: View {
                             SamplerSlider(
                                 title: "Repetition Range",
                                 value: repetitionRangeBinding,
-                                range: 0...Double(connectionManager.connectionSettings.contextLength ?? 4096),
+                                range: 0...Double(connectionManager.connectionSettings.activeContextLength ?? 4096),
                                 step: 64,
                                 displayValue: "\(Int(repetitionRangeBinding.wrappedValue))"
                             )
