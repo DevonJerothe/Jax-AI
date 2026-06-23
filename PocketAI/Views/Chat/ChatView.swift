@@ -58,6 +58,12 @@ struct ChatView: View {
                         let lastMessageID = chat.messages.last?.id
                         let messageCount = chat.messages.count
                         let isOnlyMessage = messageCount == 1
+                        let _ = ChatPerformanceInstrumentation.chatViewBody(
+                            chatID: chat.id,
+                            messageCount: messageCount,
+                            streamingMessageID: viewModel.streamingMessageID,
+                            chatStatus: chat.status
+                        )
 
                         VStack {
                             ForEach(chat.messages, id: \.id) { message in
@@ -98,7 +104,9 @@ struct ChatView: View {
                                     onSetEditing: { enabled in
                                         viewModel.disableWhileEditing = enabled
                                     },
-                                    onScrollViewUpdate: { viewModel.updateScrollView.toggle() }
+                                    onScrollViewUpdate: {
+                                        scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0)
+                                    }
                                 )
                                 .equatable()
                                 .padding(.top, 4)

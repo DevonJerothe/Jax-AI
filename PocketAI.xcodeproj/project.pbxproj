@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		E909E8F42E5113C3009909E7 /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = E909E8F32E5113C3009909E7 /* Collections */; };
+		E942E1882FEAD7BD003E1151 /* MarkdownStreamer in Frameworks */ = {isa = PBXBuildFile; productRef = E942E1872FEAD7BD003E1151 /* MarkdownStreamer */; };
 		E94CC7E32D86726D00B4AB0B /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = E94CC7E22D86726D00B4AB0B /* GRDB */; };
 		E965E9E22FB5601100B01142 /* SwiftTiktoken in Frameworks */ = {isa = PBXBuildFile; productRef = E965E9E12FB5601100B01142 /* SwiftTiktoken */; };
 		E96FCF4F2FDB8C1C00A5132F /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E96FCF4E2FDB8C1C00A5132F /* SwiftLLMSDK */; };
@@ -79,6 +80,7 @@
 			files = (
 				E97F95802D80C2D1007C292A /* SwiftLLMSDK in Frameworks */,
 				E94CC7E32D86726D00B4AB0B /* GRDB in Frameworks */,
+				E942E1882FEAD7BD003E1151 /* MarkdownStreamer in Frameworks */,
 				E9A158542FAFA1AD00A6ADA1 /* MarkdownStreamer in Frameworks */,
 				E9FEE4332FB3BD6200263330 /* MarkdownStreamer in Frameworks */,
 				E96FCF4F2FDB8C1C00A5132F /* SwiftLLMSDK in Frameworks */,
@@ -163,6 +165,7 @@
 				E965E9E12FB5601100B01142 /* SwiftTiktoken */,
 				E96FCF4E2FDB8C1C00A5132F /* SwiftLLMSDK */,
 				E99F840D2FE0AB3500E6326E /* MarkdownStreamer */,
+				E942E1872FEAD7BD003E1151 /* MarkdownStreamer */,
 			);
 			productName = PocketAI;
 			productReference = E9E949BA2D808E9C0008861E /* PocketAI.app */;
@@ -251,7 +254,7 @@
 				E909E8F22E5113C3009909E7 /* XCRemoteSwiftPackageReference "swift-collections" */,
 				E965E9E02FB5601100B01142 /* XCRemoteSwiftPackageReference "swift-tiktoken" */,
 				E96FCF4D2FDB8C1C00A5132F /* XCLocalSwiftPackageReference "../SwiftLLMSDK" */,
-				E99F840C2FE0AB3500E6326E /* XCLocalSwiftPackageReference "../MarkdownStreamer" */,
+				E942E1862FEAD7BD003E1151 /* XCRemoteSwiftPackageReference "MarkdownStreamer" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E9E949BB2D808E9C0008861E /* Products */;
@@ -644,10 +647,6 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../SwiftLLMSDK;
 		};
-		E99F840C2FE0AB3500E6326E /* XCLocalSwiftPackageReference "../MarkdownStreamer" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../MarkdownStreamer;
-		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -657,6 +656,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.2.1;
+			};
+		};
+		E942E1862FEAD7BD003E1151 /* XCRemoteSwiftPackageReference "MarkdownStreamer" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/DevonJerothe/MarkdownStreamer.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.1.0;
 			};
 		};
 		E94CC7E12D86726D00B4AB0B /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
@@ -682,6 +689,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E909E8F22E5113C3009909E7 /* XCRemoteSwiftPackageReference "swift-collections" */;
 			productName = Collections;
+		};
+		E942E1872FEAD7BD003E1151 /* MarkdownStreamer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E942E1862FEAD7BD003E1151 /* XCRemoteSwiftPackageReference "MarkdownStreamer" */;
+			productName = MarkdownStreamer;
 		};
 		E94CC7E22D86726D00B4AB0B /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
