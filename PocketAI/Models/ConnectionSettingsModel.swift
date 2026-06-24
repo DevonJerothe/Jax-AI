@@ -116,7 +116,7 @@ public struct ConnectionSettingsModel: Codable {
     var openRouterSettings: OpenRouterSettings?
     var openAISettings: OpenAISettings?
 
-    // Sampler Settings 
+    // Sampler Settings
     var temperature: Double
     var topP: Double
     var topK: Double
@@ -128,23 +128,26 @@ public struct ConnectionSettingsModel: Codable {
     var repetitionRange: Int
     var repetitionSlope: Double
     var samplerOrder: [Int]
-    var userStopSequence: String 
-    var botStopSequence: String 
-    var systemStopSequence: String 
+    var userStopSequence: String
+    var botStopSequence: String
+    var systemStopSequence: String
     var thinkingStartSequence: String
     var thinkingStopSequence: String
     var forceThinkingInstruct: String
 
     // Chat Settings
     var autoScrollChat: Bool = true
-    var forceThinking: Bool = false // KoboldAPI only
+    // KoboldAPI (Text Completion) only: forces the think tag open with an instruct prompt.
+    var forceThinking: Bool = false
+    // OpenRouter/OpenAI (Chat Completion) only: disables reasoning by sending `.none` for
+    // `reasoningEffort`. When false, `.medium` is sent to request reasoning deltas.
     var disableReasoning: Bool = false
     var userTemplates: OrderedDictionary<String, TemplateModel> = [:]
 
     // App Settings
-    var locked: Bool = false 
+    var locked: Bool = false
     var autoLock: Bool = false
-    var autoConnect: Bool = false 
+    var autoConnect: Bool = false
     var currentTheme: AppTheme = AppTheme.defaultTheme
 
     init(
@@ -247,35 +250,69 @@ public struct ConnectionSettingsModel: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = ConnectionSettingsModel.defaults
 
-        self.connectionType = try container.decodeIfPresent(APITypeSelection.self, forKey: .connectionType) ?? .KoboldAPI
-        self.koboldCPPSettings = try container.decodeIfPresent(KoboldCPPSettings.self, forKey: .koboldCPPSettings)
-        self.openRouterSettings = try container.decodeIfPresent(OpenRouterSettings.self, forKey: .openRouterSettings)
-        self.openAISettings = try container.decodeIfPresent(OpenAISettings.self, forKey: .openAISettings)
-        self.temperature = try container.decodeIfPresent(Double.self, forKey: .temperature) ?? defaults.temperature
+        self.connectionType =
+            try container.decodeIfPresent(APITypeSelection.self, forKey: .connectionType)
+            ?? .KoboldAPI
+        self.koboldCPPSettings = try container.decodeIfPresent(
+            KoboldCPPSettings.self, forKey: .koboldCPPSettings)
+        self.openRouterSettings = try container.decodeIfPresent(
+            OpenRouterSettings.self, forKey: .openRouterSettings)
+        self.openAISettings = try container.decodeIfPresent(
+            OpenAISettings.self, forKey: .openAISettings)
+        self.temperature =
+            try container.decodeIfPresent(Double.self, forKey: .temperature) ?? defaults.temperature
         self.topP = try container.decodeIfPresent(Double.self, forKey: .topP) ?? defaults.topP
         self.topK = try container.decodeIfPresent(Double.self, forKey: .topK) ?? defaults.topK
-        self.typicalP = try container.decodeIfPresent(Double.self, forKey: .typicalP) ?? defaults.typicalP
+        self.typicalP =
+            try container.decodeIfPresent(Double.self, forKey: .typicalP) ?? defaults.typicalP
         self.tfs = try container.decodeIfPresent(Int.self, forKey: .tfs) ?? defaults.tfs
         self.topA = try container.decodeIfPresent(Double.self, forKey: .topA) ?? defaults.topA
         self.minP = try container.decodeIfPresent(Double.self, forKey: .minP) ?? defaults.minP
-        self.repetitionPenalty = try container.decodeIfPresent(Double.self, forKey: .repetitionPenalty) ?? defaults.repetitionPenalty
-        self.repetitionRange = try container.decodeIfPresent(Int.self, forKey: .repetitionRange) ?? defaults.repetitionRange
-        self.repetitionSlope = try container.decodeIfPresent(Double.self, forKey: .repetitionSlope) ?? defaults.repetitionSlope
-        self.samplerOrder = try container.decodeIfPresent([Int].self, forKey: .samplerOrder) ?? defaults.samplerOrder
-        self.autoScrollChat = try container.decodeIfPresent(Bool.self, forKey: .autoScrollChat) ?? true
-        self.forceThinking = try container.decodeIfPresent(Bool.self, forKey: .forceThinking) ?? false
-        self.disableReasoning = try container.decodeIfPresent(Bool.self, forKey: .disableReasoning) ?? false
-        self.userTemplates = try container.decodeIfPresent(OrderedDictionary<String, TemplateModel>.self, forKey: .userTemplates) ?? [:]
+        self.repetitionPenalty =
+            try container.decodeIfPresent(Double.self, forKey: .repetitionPenalty)
+            ?? defaults.repetitionPenalty
+        self.repetitionRange =
+            try container.decodeIfPresent(Int.self, forKey: .repetitionRange)
+            ?? defaults.repetitionRange
+        self.repetitionSlope =
+            try container.decodeIfPresent(Double.self, forKey: .repetitionSlope)
+            ?? defaults.repetitionSlope
+        self.samplerOrder =
+            try container.decodeIfPresent([Int].self, forKey: .samplerOrder)
+            ?? defaults.samplerOrder
+        self.autoScrollChat =
+            try container.decodeIfPresent(Bool.self, forKey: .autoScrollChat) ?? true
+        self.forceThinking =
+            try container.decodeIfPresent(Bool.self, forKey: .forceThinking) ?? false
+        self.disableReasoning =
+            try container.decodeIfPresent(Bool.self, forKey: .disableReasoning) ?? false
+        self.userTemplates =
+            try container.decodeIfPresent(
+                OrderedDictionary<String, TemplateModel>.self, forKey: .userTemplates) ?? [:]
         self.locked = try container.decodeIfPresent(Bool.self, forKey: .locked) ?? false
         self.autoLock = try container.decodeIfPresent(Bool.self, forKey: .autoLock) ?? false
         self.autoConnect = try container.decodeIfPresent(Bool.self, forKey: .autoConnect) ?? false
-        self.userStopSequence = try container.decodeIfPresent(String.self, forKey: .userStopSequence) ?? defaults.userStopSequence
-        self.botStopSequence = try container.decodeIfPresent(String.self, forKey: .botStopSequence) ?? defaults.botStopSequence
-        self.systemStopSequence = try container.decodeIfPresent(String.self, forKey: .systemStopSequence) ?? defaults.systemStopSequence
-        self.thinkingStartSequence = try container.decodeIfPresent(String.self, forKey: .thinkingStartSequence) ?? defaults.thinkingStartSequence
-        self.thinkingStopSequence = try container.decodeIfPresent(String.self, forKey: .thinkingStopSequence) ?? defaults.thinkingStopSequence
-        self.forceThinkingInstruct = try container.decodeIfPresent(String.self, forKey: .forceThinkingInstruct) ?? defaults.forceThinkingInstruct
-        self.currentTheme = try container.decodeIfPresent(AppTheme.self, forKey: .currentTheme) ?? defaults.currentTheme
+        self.userStopSequence =
+            try container.decodeIfPresent(String.self, forKey: .userStopSequence)
+            ?? defaults.userStopSequence
+        self.botStopSequence =
+            try container.decodeIfPresent(String.self, forKey: .botStopSequence)
+            ?? defaults.botStopSequence
+        self.systemStopSequence =
+            try container.decodeIfPresent(String.self, forKey: .systemStopSequence)
+            ?? defaults.systemStopSequence
+        self.thinkingStartSequence =
+            try container.decodeIfPresent(String.self, forKey: .thinkingStartSequence)
+            ?? defaults.thinkingStartSequence
+        self.thinkingStopSequence =
+            try container.decodeIfPresent(String.self, forKey: .thinkingStopSequence)
+            ?? defaults.thinkingStopSequence
+        self.forceThinkingInstruct =
+            try container.decodeIfPresent(String.self, forKey: .forceThinkingInstruct)
+            ?? defaults.forceThinkingInstruct
+        self.currentTheme =
+            try container.decodeIfPresent(AppTheme.self, forKey: .currentTheme)
+            ?? defaults.currentTheme
         self.ensureNonEmptySequences()
     }
 
@@ -454,7 +491,8 @@ extension ConnectionSettingsModel {
     static let defaultSystemStopSequence = "\nSystem:"
     static let defaultThinkingStartSequence = "<think>"
     static let defaultThinkingStopSequence = "</think>"
-    static let defaultForceThinkingInstruct = "Ok, first we need to consider who we are and not to speak for the user."
+    static let defaultForceThinkingInstruct =
+        "Ok, first we need to consider who we are and not to speak for the user."
 
     static let defaultKoboldCPPSettings = KoboldCPPSettings(
         host: "127.0.0.1",
@@ -509,8 +547,10 @@ extension ConnectionSettingsModel {
     )
 
     static let defaultUserTemplates: OrderedDictionary<String, TemplateModel> = [
-        "Roleplay": TemplateModel(content: TemplatePrompts().defaultRolePlayPrompt, isEnabled: true),
-        "Reasoning": TemplateModel(content: TemplateInstructions().reasoningInstructions, isEnabled: true)
+        "Roleplay": TemplateModel(
+            content: TemplatePrompts().defaultRolePlayPrompt, isEnabled: true),
+        "Reasoning": TemplateModel(
+            content: TemplateInstructions().reasoningInstructions, isEnabled: true),
     ]
 
     mutating func ensureNonEmptySequences() {

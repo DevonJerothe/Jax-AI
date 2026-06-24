@@ -66,13 +66,16 @@ final class ContextManager {
                 )
             )
         case .OpenRouter, .OpenAI:
+            // ChatCompletion APIs surface reasoning via a dedicated field controlled by
+            // `reasoningEffort` on the request builder, not via inline think tags. The
+            // `forceThinking` setting (and its instruct text) is a TextCompletion-only
+            // concept and must not influence ChatCompletion context handling.
             return .chatCompletion(
                 chatCompletionBuilder.render(
                     memoryBlocks: contextBlocks.filter { $0.target == .memory },
                     promptBlocks: contextBlocks.filter { $0.target == .prompt },
                     settings: settings,
                     continued: continued,
-                    forceThinking: forceThinking,
                     tokenizer: tokenizer
                 )
             )

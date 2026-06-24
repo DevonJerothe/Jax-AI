@@ -145,8 +145,7 @@ extension ContextManager {
     }
 
     func buildMessageBlocks(
-        continued: Bool = false,
-        forceThinking: Bool = false
+        continued: Bool = false
     ) async {
         let persona = await ServiceContainer.shared.getPersona
         let personaName = persona?.name

@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		E909E8F42E5113C3009909E7 /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = E909E8F32E5113C3009909E7 /* Collections */; };
-		E9103AEB2FEB159600586DEB /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E9103AEA2FEB159600586DEB /* SwiftLLMSDK */; };
 		E91A5EB32FEB30E700E91B60 /* SwiftStreamingMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = E91A5EB22FEB30E700E91B60 /* SwiftStreamingMarkdown */; };
 		E91A5EB62FEB322600E91B60 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = E91A5EB52FEB322600E91B60 /* GRDB */; };
 		E942E2702FEAEC5D003E1151 /* SwiftStreamingMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = E942E26F2FEAEC5D003E1151 /* SwiftStreamingMarkdown */; };
@@ -16,6 +15,8 @@
 		E96FCF4F2FDB8C1C00A5132F /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E96FCF4E2FDB8C1C00A5132F /* SwiftLLMSDK */; };
 		E97327162DA9B620009CEAE0 /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97327152DA9B620009CEAE0 /* SwiftLLMSDK */; };
 		E97F95802D80C2D1007C292A /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97F957F2D80C2D1007C292A /* SwiftLLMSDK */; };
+		E9F10FB52FEC3086007F7F1C /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E9F10FB42FEC3086007F7F1C /* SwiftLLMSDK */; };
+		E9F1109F2FEC55C4007F7F1C /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E9F1109E2FEC55C4007F7F1C /* SwiftLLMSDK */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,11 +82,12 @@
 				E91A5EB32FEB30E700E91B60 /* SwiftStreamingMarkdown in Frameworks */,
 				E97F95802D80C2D1007C292A /* SwiftLLMSDK in Frameworks */,
 				E96FCF4F2FDB8C1C00A5132F /* SwiftLLMSDK in Frameworks */,
+				E9F10FB52FEC3086007F7F1C /* SwiftLLMSDK in Frameworks */,
+				E9F1109F2FEC55C4007F7F1C /* SwiftLLMSDK in Frameworks */,
 				E909E8F42E5113C3009909E7 /* Collections in Frameworks */,
 				E942E2702FEAEC5D003E1151 /* SwiftStreamingMarkdown in Frameworks */,
 				E97327162DA9B620009CEAE0 /* SwiftLLMSDK in Frameworks */,
 				E965E9E22FB5601100B01142 /* SwiftTiktoken in Frameworks */,
-				E9103AEB2FEB159600586DEB /* SwiftLLMSDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -160,9 +162,10 @@
 				E965E9E12FB5601100B01142 /* SwiftTiktoken */,
 				E96FCF4E2FDB8C1C00A5132F /* SwiftLLMSDK */,
 				E942E26F2FEAEC5D003E1151 /* SwiftStreamingMarkdown */,
-				E9103AEA2FEB159600586DEB /* SwiftLLMSDK */,
 				E91A5EB22FEB30E700E91B60 /* SwiftStreamingMarkdown */,
 				E91A5EB52FEB322600E91B60 /* GRDB */,
+				E9F10FB42FEC3086007F7F1C /* SwiftLLMSDK */,
+				E9F1109E2FEC55C4007F7F1C /* SwiftLLMSDK */,
 			);
 			productName = PocketAI;
 			productReference = E9E949BA2D808E9C0008861E /* PocketAI.app */;
@@ -249,9 +252,9 @@
 			packageReferences = (
 				E909E8F22E5113C3009909E7 /* XCRemoteSwiftPackageReference "swift-collections" */,
 				E965E9E02FB5601100B01142 /* XCRemoteSwiftPackageReference "swift-tiktoken" */,
-				E9103AE92FEB159600586DEB /* XCRemoteSwiftPackageReference "SwiftLLMSDK" */,
 				E91A5EB12FEB30E700E91B60 /* XCRemoteSwiftPackageReference "SwiftStreamingMarkdown" */,
 				E91A5EB42FEB322600E91B60 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				E9F1109D2FEC55C4007F7F1C /* XCRemoteSwiftPackageReference "SwiftLLMSDK" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E9E949BB2D808E9C0008861E /* Products */;
@@ -648,14 +651,6 @@
 				minimumVersion = 1.2.1;
 			};
 		};
-		E9103AE92FEB159600586DEB /* XCRemoteSwiftPackageReference "SwiftLLMSDK" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/DevonJerothe/SwiftLLMSDK";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.0;
-			};
-		};
 		E91A5EB12FEB30E700E91B60 /* XCRemoteSwiftPackageReference "SwiftStreamingMarkdown" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/DevonJerothe/SwiftStreamingMarkdown.git";
@@ -680,6 +675,14 @@
 				minimumVersion = 0.0.1;
 			};
 		};
+		E9F1109D2FEC55C4007F7F1C /* XCRemoteSwiftPackageReference "SwiftLLMSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/DevonJerothe/SwiftLLMSDK";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.3.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -687,11 +690,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E909E8F22E5113C3009909E7 /* XCRemoteSwiftPackageReference "swift-collections" */;
 			productName = Collections;
-		};
-		E9103AEA2FEB159600586DEB /* SwiftLLMSDK */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = E9103AE92FEB159600586DEB /* XCRemoteSwiftPackageReference "SwiftLLMSDK" */;
-			productName = SwiftLLMSDK;
 		};
 		E91A5EB22FEB30E700E91B60 /* SwiftStreamingMarkdown */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -722,6 +720,15 @@
 		};
 		E97F957F2D80C2D1007C292A /* SwiftLLMSDK */ = {
 			isa = XCSwiftPackageProductDependency;
+			productName = SwiftLLMSDK;
+		};
+		E9F10FB42FEC3086007F7F1C /* SwiftLLMSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SwiftLLMSDK;
+		};
+		E9F1109E2FEC55C4007F7F1C /* SwiftLLMSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E9F1109D2FEC55C4007F7F1C /* XCRemoteSwiftPackageReference "SwiftLLMSDK" */;
 			productName = SwiftLLMSDK;
 		};
 /* End XCSwiftPackageProductDependency section */
