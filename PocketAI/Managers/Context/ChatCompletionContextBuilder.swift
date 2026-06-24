@@ -10,7 +10,6 @@ struct ChatCompletionContextBuilder {
         promptBlocks: [ContextBlock],
         settings: ConnectionSettingsModel,
         continued: Bool = false,
-        forceThinking: Bool = false,
         tokenizer: CoreBPE
     ) -> ChatCompletionContent {
         var requestMessages: [RequestBodyMessages] = []
