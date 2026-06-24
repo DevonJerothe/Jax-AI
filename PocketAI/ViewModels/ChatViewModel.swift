@@ -18,7 +18,6 @@ final class ChatViewModel {
     private let chatStore: ChatStore
     private let characterStore: CharacterStore
     private let appTheme: AppTheme = ServiceContainer.shared.currentTheme
-    // private let contextBuilder: ContextManager
 
     private(set) var markdownStreamSource = ChatMarkdownStreamSource()
     private(set) var streamingMessageID: UUID?
@@ -395,6 +394,11 @@ final class ChatViewModel {
                 thinkingStartSequence: connectionManager.connectionSettings.thinkingStartSequence,
                 thinkingStopSequence: connectionManager.connectionSettings.thinkingStopSequence
             )
+            // KoboldAPI (text completion) embeds reasoning inline via think tags, so we
+            // parse them out of the streamed text. OpenRouter/OpenAI-compatible APIs
+            // surface reasoning as a dedicated field with an `isThinking` flag instead.
+            let connectionType = ServiceContainer.shared.selectedConnectionType
+            let useReasoningParser = connectionType == .KoboldAPI
             let stream = await languageModelService.sendStreamedMessage(
                 chatModel: chat,
                 userPersona: userPersona,
@@ -405,10 +409,18 @@ final class ChatViewModel {
                 let responseText = response.text ?? ""
                 let rawResponse = rawAccumulator.ingest(responseText)
                 let isFinal = response.streaming == false
-                let parsedResponse =
-                    excludeThinking
-                    ? reasoningParser.parse(rawResponse, isFinal: isFinal)
-                    : ReasoningParseResult(visibleText: rawResponse, shouldShowThinking: false)
+                let parsedResponse: ReasoningParseResult
+                if useReasoningParser {
+                    parsedResponse =
+                        excludeThinking
+                        ? reasoningParser.parse(rawResponse, isFinal: isFinal)
+                        : ReasoningParseResult(visibleText: rawResponse, shouldShowThinking: false)
+                } else {
+                    parsedResponse = ReasoningParseResult(
+                        visibleText: rawResponse,
+                        shouldShowThinking: response.isThinking
+                    )
+                }
                 let visibleResponse =
                     parsedResponse.visibleText.isEmpty
                     ? ""

@@ -228,7 +228,9 @@ final class LanguageModelService {
                 topK: runtimeConnectionSettings.topK,
                 maxTokens: runtimeConnectionSettings.activeResponseLength ?? 240,
                 repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
-                stream: true
+                stream: true,
+                excludeThinking: false,
+                reasoningEffort: .medium
             )
 
             streamResponse = openRouterManager.streamMessage(builder: promptBuilder)
@@ -264,7 +266,8 @@ final class LanguageModelService {
                 temperature: runtimeConnectionSettings.temperature,
                 topP: runtimeConnectionSettings.topP,
                 maxTokens: runtimeConnectionSettings.activeResponseLength ?? 240,
-                stream: true
+                stream: true,
+                reasoningEffort: .medium
             )
 
             streamResponse = openAICustom.streamMessage(builder: promptBuilder)
