@@ -122,6 +122,7 @@ struct ChatView: View {
                                 .equatable()
                                 .padding(.top, 4)
                                 .padding(.bottom, 4)
+                                .padding(.horizontal, 12)
                                 .id(message.id)
                             }
                         }
@@ -144,7 +145,6 @@ struct ChatView: View {
                         }
                 }
                 .coordinateSpace(name: "chatScroll")
-                .padding(.horizontal)
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
                 .simultaneousGesture(
