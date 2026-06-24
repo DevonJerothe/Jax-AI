@@ -148,7 +148,6 @@ struct ChatBubbleView: View {
                     }
                     messageToolbar
                 }
-                .simultaneousGesture(generationSwipeGesture)
                 Spacer()
             }
 
@@ -203,7 +202,6 @@ struct ChatBubbleView: View {
                     }
                     messageToolbar
                 }
-                .simultaneousGesture(generationSwipeGesture)
             }
         }
     }
@@ -288,20 +286,6 @@ struct ChatBubbleView: View {
         case .nextGeneration:
             navigateGeneration(forward: true)
         }
-    }
-
-    private var generationSwipeGesture: some Gesture {
-        DragGesture(minimumDistance: 40)
-            .onEnded { value in
-                let horizontalDistance = value.translation.width
-                let verticalDistance = value.translation.height
-
-                guard abs(horizontalDistance) > abs(verticalDistance) * 1.5 else {
-                    return
-                }
-
-                navigateGeneration(forward: horizontalDistance < 0)
-            }
     }
 
     private func navigateGeneration(forward: Bool) {

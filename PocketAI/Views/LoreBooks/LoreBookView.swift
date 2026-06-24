@@ -8,6 +8,8 @@ struct LoreBookView: View {
 
     @State private var viewModel = LoreBookViewModel()
 
+    @FocusState private var entrySearchFocused: Bool
+
     private let loreBookID: UUID?
     private let importedLoreBook: LoreBookModel?
     private let onSave: ((LoreBookModel) -> Void)?
@@ -46,50 +48,63 @@ struct LoreBookView: View {
     private var settingsContent: some View {
         @Bindable var viewModel = viewModel
 
-        return ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                loreBookSection
-                scanningSection
-                entriesSection
+        return ScrollViewReader { scrollProxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    loreBookSection
+                    scanningSection
+                    entriesSection
+                }
+                .padding(.vertical, 24)
             }
-            .padding(.vertical, 24)
-        }
-        .navigationTitle(viewModel.loreBook.name.isEmpty ? "New Lorebook" : viewModel.loreBook.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .background(appTheme.backgroundColor.color)
-        .scrollDismissesKeyboard(.immediately)
-        .sheet(item: viewModel.selectedEntryBinding) { entry in
-            if let entryBinding = viewModel.entryBinding(for: entry.id) {
-                LoreBookEntryDetailView(
-                    entry: entryBinding,
-                    onDelete: {
-                        viewModel.deleteEntry(entry.id)
-                        viewModel.selectedEntryID = nil
-                    }
-                )
-                .presentationBackground(appTheme.backgroundColor.color)
+            .navigationTitle(
+                viewModel.loreBook.name.isEmpty ? "New Lorebook" : viewModel.loreBook.name
+            )
+            .navigationBarTitleDisplayMode(.inline)
+            .background(appTheme.backgroundColor.color)
+            .scrollDismissesKeyboard(.immediately)
+            .onChange(of: entrySearchFocused) { _, focused in
+                // When the search field gains focus, scroll it to the top so the
+                // matching entries remain visible above the keyboard instead of
+                // being pushed just out of view.
+                guard focused else { return }
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    scrollProxy.scrollTo("EntrySearchAnchor", anchor: .top)
+                }
             }
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Save") {
-                    if let onSave {
-                        onSave(viewModel.loreBook)
-                        dismiss()
-                    } else {
-                        Task {
-                            await saveLoreBook()
+            .sheet(item: viewModel.selectedEntryBinding) { entry in
+                if let entryBinding = viewModel.entryBinding(for: entry.id) {
+                    LoreBookEntryDetailView(
+                        entry: entryBinding,
+                        onDelete: {
+                            viewModel.deleteEntry(entry.id)
+                            viewModel.selectedEntryID = nil
+                        }
+                    )
+                    .presentationBackground(appTheme.backgroundColor.color)
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        if let onSave {
+                            onSave(viewModel.loreBook)
+                            dismiss()
+                        } else {
+                            Task {
+                                await saveLoreBook()
+                            }
                         }
                     }
                 }
             }
-        }
-        .alert("Lorebook Error", isPresented: errorAlertBinding) {
-            Button("OK", role: .cancel) {
-                viewModel.errorMessage = nil
+            .alert("Lorebook Error", isPresented: errorAlertBinding) {
+                Button("OK", role: .cancel) {
+                    viewModel.errorMessage = nil
+                }
+            } message: {
+                Text(viewModel.errorMessage ?? "Something went wrong.")
             }
-        } message: {
-            Text(viewModel.errorMessage ?? "Something went wrong.")
         }
     }
 
@@ -197,6 +212,7 @@ struct LoreBookView: View {
             .padding(.horizontal, 16)
 
             entrySearchField
+                .id("EntrySearchAnchor")
 
             if viewModel.filteredEntries.isEmpty {
                 ContentUnavailableView(
@@ -244,6 +260,7 @@ struct LoreBookView: View {
                 text: $viewModel.entrySearchText,
                 prompt: Text("Search entries").foregroundStyle(appTheme.secondaryText.color)
             )
+            .focused($entrySearchFocused)
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
             .foregroundStyle(appTheme.primaryText.color)
