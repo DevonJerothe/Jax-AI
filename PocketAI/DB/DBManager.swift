@@ -169,8 +169,12 @@ class DBManager {
         }
 
         migrator.registerMigration("v10_system_char") { db in
-            try db.alter(table: CharacterCardRecord.databaseTableName) { t in
-                t.add(column: "isSystemChar", .boolean).notNull().defaults(to: false)
+            let characterCardColumns = try db.columns(in: CharacterCardRecord.databaseTableName).map(\.name)
+
+            if characterCardColumns.contains("isSystemChar") == false {
+                try db.alter(table: CharacterCardRecord.databaseTableName) { t in
+                    t.add(column: "isSystemChar", .boolean).notNull().defaults(to: false)
+                }
             }
         }
 
