@@ -69,6 +69,7 @@ struct LoreBookListView: View {
                     }
                     .padding()
                 }
+                .scrollIndicators(.hidden)
             }
         }
         .background(appTheme.backgroundColor.color)

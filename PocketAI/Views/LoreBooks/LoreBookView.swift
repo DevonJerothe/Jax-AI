@@ -62,6 +62,7 @@ struct LoreBookView: View {
             )
             .navigationBarTitleDisplayMode(.inline)
             .background(appTheme.backgroundColor.color)
+            .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.immediately)
             .onChange(of: entrySearchFocused) { _, focused in
                 // When the search field gains focus, scroll it to the top so the

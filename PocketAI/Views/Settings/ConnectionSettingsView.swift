@@ -149,6 +149,7 @@ struct ConnectionSettingsView: View {
             .padding(16)
         }
         .background(appTheme.backgroundColor.color)
+        .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.immediately)
         .safeAreaInset(edge: .bottom) {
             HStack {

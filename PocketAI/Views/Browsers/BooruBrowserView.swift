@@ -277,6 +277,7 @@ struct BooruBrowserSettingsView: View {
             .padding(16)
         }
         .background(appTheme.backgroundColor.color)
+        .scrollIndicators(.hidden)
         .navigationTitle("Booru Settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)

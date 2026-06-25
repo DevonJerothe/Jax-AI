@@ -45,6 +45,7 @@ struct ChatListView: View {
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            .scrollIndicators(.hidden)
         }
         .background(appTheme.backgroundColor.color)
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -69,7 +70,7 @@ struct ChatListView: View {
                     Button("Character Chat") {
                         navManager.navigateToCharacterCards(keepCurrentPath: true, startChat: true)
                     }
-                    
+
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -90,7 +91,9 @@ struct CharacterCardsListView: View {
                     CharacterCardView(character: character)
                         .onTapGesture {
                             Task {
-                                if let newChat = await viewModel.createNewChat(fromCharacter: character) {
+                                if let newChat = await viewModel.createNewChat(
+                                    fromCharacter: character)
+                                {
                                     navManager.navigateToChat(chatID: newChat.id)
                                 }
                             }
@@ -182,10 +185,13 @@ struct RecentChatRow: View {
                     LoadingIndicator(color: appTheme.secondaryText.color, size: 15)
                 } else {
                     if let lastMessage = chat.messages.last {
-                        Text(lastMessage.getRolePlayText(cardName: chat.chatTitle, personaName: userPersonaName))
-                            .font(.subheadline)
-                            .foregroundColor(appTheme.secondaryText.color)
-                            .lineLimit(1)
+                        Text(
+                            lastMessage.getRolePlayText(
+                                cardName: chat.chatTitle, personaName: userPersonaName)
+                        )
+                        .font(.subheadline)
+                        .foregroundColor(appTheme.secondaryText.color)
+                        .lineLimit(1)
                     }
                 }
             }

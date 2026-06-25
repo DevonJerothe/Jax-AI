@@ -23,6 +23,7 @@ struct LoreBookEntryDetailView: View {
                 .padding(.vertical, 24)
             }
             .background(appTheme.backgroundColor.color)
+            .scrollIndicators(.hidden)
             .navigationTitle(entry.name.isEmpty ? "Entry" : entry.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

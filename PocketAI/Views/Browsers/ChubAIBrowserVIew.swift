@@ -185,7 +185,8 @@ struct ChubBrowserCard: View {
             title: card.name ?? "",
             subtitle: card.tagline ?? card.description ?? "No description available.",
             leadingMetadata: card.topics?.prefix(3).joined(separator: ", ") ?? "",
-            trailingMetadata: AppDateFormatting.thumbnailTimestamp(fromISO8601: card.createdAt ?? "")
+            trailingMetadata: AppDateFormatting.thumbnailTimestamp(
+                fromISO8601: card.createdAt ?? "")
         )
     }
 }
@@ -383,6 +384,7 @@ struct ChubAISettingsView: View {
             .padding(16)
         }
         .background(appTheme.backgroundColor.color)
+        .scrollIndicators(.hidden)
         .navigationTitle("Chub AI Settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)

@@ -1,35 +1,35 @@
-import SwiftUI 
+import SwiftUI
 
 public struct PaginatedResultsGridView<Item: Identifiable, Card: View>: View {
     let items: [Item]
-    let isLoading: Bool 
-    let canLoadMore: Bool 
-    let loadMore: () async -> Void 
-    let cardBuilder: (Item) -> Card 
+    let isLoading: Bool
+    let canLoadMore: Bool
+    let loadMore: () async -> Void
+    let cardBuilder: (Item) -> Card
 
     @State private var bottomOverscroll: CGFloat = 0
-    @State private var didTriggerLoadMore = false 
+    @State private var didTriggerLoadMore = false
 
     private let columns: [GridItem] = [
         GridItem(.flexible(maximum: 200), spacing: 16),
-        GridItem(.flexible(maximum: 200), spacing: 16)
+        GridItem(.flexible(maximum: 200), spacing: 16),
     ]
 
     private let threshold: CGFloat = 120
 
     public var body: some View {
-        GeometryReader { geo in 
+        GeometryReader { geo in
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(items) { item in 
+                    ForEach(items) { item in
                         cardBuilder(item)
-                    } 
+                    }
 
                     Color.clear
                         .frame(height: 1)
                         .gridCellColumns(2)
                         .background {
-                            GeometryReader { markerGeo in 
+                            GeometryReader { markerGeo in
                                 let markerMaxY = markerGeo.frame(in: .named("pageGridScroll")).maxY
                                 let overscroll = max(0, geo.size.height - markerMaxY)
 
@@ -43,30 +43,31 @@ public struct PaginatedResultsGridView<Item: Identifiable, Card: View>: View {
                 .padding(.top, 8)
             }
             .coordinateSpace(name: "pageGridScroll")
-            .onPreferenceChange(BottomOverscrollPreferenceKey.self) { value in 
-                bottomOverscroll = value 
+            .scrollIndicators(.hidden)
+            .onPreferenceChange(BottomOverscrollPreferenceKey.self) { value in
+                bottomOverscroll = value
 
                 if value < 8 {
-                    didTriggerLoadMore = false 
+                    didTriggerLoadMore = false
                 }
             }
-            .overlay(alignment: .bottom) { 
+            .overlay(alignment: .bottom) {
                 PullUpLoadMoreView(
-                    progress: min(bottomOverscroll / threshold, 1), 
-                    isArmed: bottomOverscroll >= threshold, 
-                    isLoading: isLoading, 
+                    progress: min(bottomOverscroll / threshold, 1),
+                    isArmed: bottomOverscroll >= threshold,
+                    isLoading: isLoading,
                     canLoadMore: canLoadMore
                 )
                 .padding(.bottom, 12)
             }
             .simultaneousGesture(
-                DragGesture().onEnded { _ in 
+                DragGesture().onEnded { _ in
                     guard bottomOverscroll >= threshold else { return }
                     guard !didTriggerLoadMore else { return }
                     guard !isLoading else { return }
                     guard canLoadMore else { return }
 
-                    didTriggerLoadMore = true 
+                    didTriggerLoadMore = true
 
                     Task { await loadMore() }
                 }
@@ -110,12 +111,15 @@ struct PullUpLoadMoreView: View {
                     .font(.title3.weight(.semibold))
                     .rotationEffect(.degrees(effectiveIsArmed ? 180 : 0))
                     .scaleEffect(effectiveIsArmed ? 1.18 : 0.85 + effectiveProgress * 0.15)
-                    .foregroundStyle(effectiveIsArmed ? appTheme.tintColor.color : appTheme.secondaryText.color)
+                    .foregroundStyle(
+                        effectiveIsArmed ? appTheme.tintColor.color : appTheme.secondaryText.color)
             }
 
             Text(label)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(effectiveIsArmed ? appTheme.primaryText.color : appTheme.secondaryText.color)
+                .foregroundStyle(
+                    effectiveIsArmed ? appTheme.primaryText.color : appTheme.secondaryText.color
+                )
                 .contentTransition(.opacity)
         }
         .padding(.horizontal, 16)
