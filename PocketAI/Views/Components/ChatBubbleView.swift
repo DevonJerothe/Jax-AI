@@ -215,10 +215,10 @@ struct ChatBubbleView: View {
 
             if shouldShowInlineErrorBanner {
                 APIStatusInlineBanner(
-                    title: message.errorTitle ?? "Provider Error",
-                    message: message.errorMessage
+                    title: message.activeGenerationError?.errorTitle ?? "Provider Error",
+                    message: message.activeGenerationError?.errorMessage
                         ?? "There was an error processing your request. Please try again later.",
-                    recoverySuggestion: message.errorRecoverySuggestion
+                    recoverySuggestion: message.activeGenerationError?.errorRecoverySuggestion
                 )
                 .padding(.bottom)
             }
@@ -226,7 +226,7 @@ struct ChatBubbleView: View {
     }
 
     private var shouldShowInlineErrorBanner: Bool {
-        message.actor == .bot && message.error != .none
+        message.actor == .bot && message.activeGenerationError != nil
     }
 
     @ViewBuilder

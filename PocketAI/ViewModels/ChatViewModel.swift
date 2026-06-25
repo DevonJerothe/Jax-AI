@@ -142,9 +142,6 @@ final class ChatViewModel {
         var updatedMessage = message
         updatedMessage.addNewGeneration()
         updatedMessage.error = .none
-        updatedMessage.errorTitle = nil
-        updatedMessage.errorMessage = nil
-        updatedMessage.errorRecoverySuggestion = nil
         updatedMessage.status = .loading
 
         if continueResponse == false {
@@ -292,6 +289,12 @@ final class ChatViewModel {
         // for KoboldAPI we need to update token count after any edit
         let tokenCount = await languageModelService.getTokenCount(string: newText)
         updatedMessage.updateCurrentGeneration(text: newText, tokenCount: tokenCount)
+        updatedMessage.updateCurrentGenerationError(
+            .none,
+            title: nil,
+            message: nil,
+            recoverySuggestion: nil
+        )
 
         do {
             print("updating message")
@@ -472,10 +475,6 @@ final class ChatViewModel {
 
         var updatedMessage = message
         let displayError = error.map(AppLLMErrorDisplay.from)
-        updatedMessage.error = disconnect ? .apiError : .none
-        updatedMessage.errorTitle = displayError?.title
-        updatedMessage.errorMessage = displayError?.message
-        updatedMessage.errorRecoverySuggestion = displayError?.recoverySuggestion
         updatedMessage.status = targetMessageStatus
 
         if isFinal || disconnect {
@@ -490,6 +489,13 @@ final class ChatViewModel {
                     : responseText
             }
         }
+
+        updatedMessage.updateCurrentGenerationError(
+            disconnect ? .apiError : .none,
+            title: displayError?.title,
+            message: displayError?.message,
+            recoverySuggestion: displayError?.recoverySuggestion
+        )
 
         // for KoboldAPI we need to fetch token count after full message is received
         let currentModel = ServiceContainer.shared.selectedModelName
@@ -549,11 +555,12 @@ final class ChatViewModel {
         }
 
         var updatedMessage = chat.messages[messageIndex]
-        updatedMessage.error = .disconnect
-        updatedMessage.errorTitle = "API Disconnected"
-        updatedMessage.errorMessage =
-            "Looks like you're not connected to a model. Please check your connection settings."
-        updatedMessage.errorRecoverySuggestion = "Tap the connection banner to open Settings."
+        updatedMessage.updateCurrentGenerationError(
+            .disconnect,
+            title: "API Disconnected",
+            message: "Looks like you're not connected to a model. Please check your connection settings.",
+            recoverySuggestion: "Tap the connection banner to open Settings."
+        )
         updatedMessage.status = .done
 
         do {

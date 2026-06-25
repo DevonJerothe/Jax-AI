@@ -29,6 +29,39 @@ public enum MessageError: Int, Codable {
 struct TextGenerationHistory: Codable, Sendable, Hashable {
     let text: String
     let tokenCount: Int
+    var error: MessageError = .none
+    var errorTitle: String?
+    var errorMessage: String?
+    var errorRecoverySuggestion: String?
+
+    init(
+        text: String,
+        tokenCount: Int,
+        error: MessageError = .none,
+        errorTitle: String? = nil,
+        errorMessage: String? = nil,
+        errorRecoverySuggestion: String? = nil
+    ) {
+        self.text = text
+        self.tokenCount = tokenCount
+        self.error = error
+        self.errorTitle = errorTitle
+        self.errorMessage = errorMessage
+        self.errorRecoverySuggestion = errorRecoverySuggestion
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        text = try container.decode(String.self, forKey: .text)
+        tokenCount = try container.decode(Int.self, forKey: .tokenCount)
+        error = try container.decodeIfPresent(MessageError.self, forKey: .error) ?? .none
+        errorTitle = try container.decodeIfPresent(String.self, forKey: .errorTitle)
+        errorMessage = try container.decodeIfPresent(String.self, forKey: .errorMessage)
+        errorRecoverySuggestion = try container.decodeIfPresent(
+            String.self,
+            forKey: .errorRecoverySuggestion
+        )
+    }
 }
 
 struct MessageModel: Identifiable, Hashable {
@@ -39,9 +72,6 @@ struct MessageModel: Identifiable, Hashable {
     var createdAt: Date = Date()
     var exclude: Bool = false
     var error: MessageError = .none
-    var errorTitle: String?
-    var errorMessage: String?
-    var errorRecoverySuggestion: String?
     var tokenCount: Int = 0
 
     // Text generations and their token counts 
@@ -65,7 +95,7 @@ extension MessageModel {
             return nil
         }
 
-        if let currentIndex = textGenerationHistory.lastIndex(where: { $0.text == text }) {
+        if let currentIndex = currentGenerationHistoryIndex {
             return currentIndex + 1
         }
 
@@ -77,7 +107,7 @@ extension MessageModel {
             return 1
         }
 
-        if textGenerationHistory.contains(where: { $0.text == text }) {
+        if currentGenerationHistoryIndex != nil {
             return textGenerationHistory.count
         }
 
@@ -91,7 +121,7 @@ extension MessageModel {
         }
         
         if before {
-            let currentIndex = textGenerationHistory.lastIndex(where: { $0.text == text })
+            let currentIndex = currentGenerationHistoryIndex
             // If we dont get a match but we have history, we can assume this generation is the most current
             if currentIndex == nil {
                 return true
@@ -103,7 +133,7 @@ extension MessageModel {
             }
             return true
         } else {
-            guard let currentIndex = textGenerationHistory.lastIndex(where: { $0.text == text }) else {
+            guard let currentIndex = currentGenerationHistoryIndex else {
                 return false
             }
             
@@ -113,18 +143,18 @@ extension MessageModel {
     }
 
     mutating func addNewGeneration() {
-        guard text.isEmpty == false else {
+        guard shouldStoreCurrentGeneration else {
             return
         }
 
-        let generation = TextGenerationHistory(text: text, tokenCount: tokenCount)
+        let generation = currentGenerationHistory
         if textGenerationHistory.contains(generation) == false {
             textGenerationHistory.append(generation)
         }
     }
 
     mutating func updateCurrentGeneration(text newText: String, tokenCount newTokenCount: Int) {
-        if let currentIndex = textGenerationHistory.lastIndex(where: { $0.text == text }) {
+        if let currentIndex = currentGenerationHistoryIndex {
             textGenerationHistory[currentIndex] = TextGenerationHistory(
                 text: newText,
                 tokenCount: newTokenCount
@@ -133,11 +163,43 @@ extension MessageModel {
 
         text = newText
         tokenCount = newTokenCount
+        error = .none
+    }
+
+    mutating func updateCurrentGenerationError(
+        _ newError: MessageError,
+        title: String?,
+        message: String?,
+        recoverySuggestion: String?
+    ) {
+        error = newError
+
+        if newError == .none {
+            if let currentIndex = currentGenerationHistoryIndex {
+                textGenerationHistory[currentIndex].error = .none
+                textGenerationHistory[currentIndex].errorTitle = nil
+                textGenerationHistory[currentIndex].errorMessage = nil
+                textGenerationHistory[currentIndex].errorRecoverySuggestion = nil
+            }
+            return
+        }
+
+        var generation = currentGenerationHistory
+        generation.error = newError
+        generation.errorTitle = title
+        generation.errorMessage = message
+        generation.errorRecoverySuggestion = recoverySuggestion
+
+        if let currentIndex = currentGenerationHistoryIndex {
+            textGenerationHistory[currentIndex] = generation
+        } else {
+            textGenerationHistory.append(generation)
+        }
     }
     
     mutating func nextGeneration() {
         // get current index 
-        guard let currentIndex = textGenerationHistory.lastIndex(where: { $0.text == text }) else {
+        guard let currentIndex = currentGenerationHistoryIndex else {
             return
         }
 
@@ -149,11 +211,12 @@ extension MessageModel {
         // remove current text and token count, and move to next generation
         text = textGenerationHistory[currentIndex + 1].text
         tokenCount = textGenerationHistory[currentIndex + 1].tokenCount
+        error = textGenerationHistory[currentIndex + 1].error
     }
 
     mutating func previousGeneration() {
         // get current index if no index is found we are on the last generation, so append then move
-        var currentIndex = textGenerationHistory.lastIndex(where: { $0.text == text })
+        var currentIndex = currentGenerationHistoryIndex
         if currentIndex == nil {
             addNewGeneration()
             currentIndex = textGenerationHistory.indices.last
@@ -167,6 +230,32 @@ extension MessageModel {
         // remove current text and token count, and move to previous generation
         text = textGenerationHistory[currentIndex - 1].text
         tokenCount = textGenerationHistory[currentIndex - 1].tokenCount
+        error = textGenerationHistory[currentIndex - 1].error
+    }
+
+    var activeGenerationError: TextGenerationHistory? {
+        if let currentIndex = currentGenerationHistoryIndex {
+            let generation = textGenerationHistory[currentIndex]
+            return generation.error == .none ? nil : generation
+        }
+
+        return nil
+    }
+
+    private var currentGenerationHistoryIndex: Int? {
+        textGenerationHistory.lastIndex {
+            $0.text == text
+                && $0.tokenCount == tokenCount
+                && $0.error == error
+        }
+    }
+
+    private var currentGenerationHistory: TextGenerationHistory {
+        TextGenerationHistory(text: text, tokenCount: tokenCount, error: error)
+    }
+
+    private var shouldStoreCurrentGeneration: Bool {
+        text.isEmpty == false || error != .none
     }
 }
 
@@ -178,9 +267,6 @@ extension MessageModel {
         self.text = record.text
         self.exclude = record.exclude
         self.error = MessageError(rawValue: record.error) ?? .none
-        self.errorTitle = record.errorTitle
-        self.errorMessage = record.errorMessage
-        self.errorRecoverySuggestion = record.errorRecoverySuggestion
         self.createdAt = record.createdAt
         self.tokenCount = record.tokenCount
         self.tokenCountModel = record.tokenCountModel
@@ -202,9 +288,6 @@ extension MessageModel {
             text: text,
             exclude: exclude,
             error: error.rawValue,
-            errorTitle: errorTitle,
-            errorMessage: errorMessage,
-            errorRecoverySuggestion: errorRecoverySuggestion,
             createdAt: createdAt,
             tokenCount: tokenCount,
             tokenCountModel: tokenCountModel,
@@ -224,9 +307,6 @@ struct MessageRecord: Codable, FetchableRecord, MutablePersistableRecord, Sendab
     var text: String 
     var exclude: Bool
     var error: Int 
-    var errorTitle: String?
-    var errorMessage: String?
-    var errorRecoverySuggestion: String?
     var createdAt: Date 
     var tokenCount: Int 
     var tokenCountModel: String?
@@ -241,9 +321,6 @@ struct MessageRecord: Codable, FetchableRecord, MutablePersistableRecord, Sendab
             t.column("exclude", .boolean).notNull().defaults(to: false)
             t.column("createdAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
             t.column("error", .integer).notNull().defaults(to: 0)
-            t.column("errorTitle", .text)
-            t.column("errorMessage", .text)
-            t.column("errorRecoverySuggestion", .text)
             t.column("tokenCount", .integer).notNull().defaults(to: 0)
             t.column("tokenCountModel", .text)
             t.column("textGenerationHistoryJSON", .text)

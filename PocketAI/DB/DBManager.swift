@@ -163,23 +163,11 @@ class DBManager {
             
         }
 
-        migrator.registerMigration("v9_message_error_details") { db in
-            let messageColumns = try db.columns(in: MessageRecord.databaseTableName).map(\.name)
-            let missingErrorColumns = [
-                "errorTitle",
-                "errorMessage",
-                "errorRecoverySuggestion",
-            ]
-            .filter { messageColumns.contains($0) == false }
-
-            if missingErrorColumns.isEmpty == false {
-                try db.alter(table: MessageRecord.databaseTableName) { t in
-                    for column in missingErrorColumns {
-                        t.add(column: column, .text)
-                    }
-                }
-            }
+        migrator.registerMigration("v9_message_error_details") { _ in
+            // Error display details are stored per generation in textGenerationHistoryJSON.
+            // Keep this identifier registered for databases that saw the earlier migration.
         }
+
         try migrator.migrate(dbQueue)
     }
 
