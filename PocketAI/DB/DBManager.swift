@@ -162,6 +162,12 @@ class DBManager {
             )
             
         }
+
+        migrator.registerMigration("v9_message_error_details") { _ in
+            // Error display details are stored per generation in textGenerationHistoryJSON.
+            // Keep this identifier registered for databases that saw the earlier migration.
+        }
+
         try migrator.migrate(dbQueue)
     }
 

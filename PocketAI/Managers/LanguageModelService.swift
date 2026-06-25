@@ -296,11 +296,16 @@ final class LanguageModelService {
                 switch response {
                 case .success(let modelResponse):
                     continuation.yield(modelResponse)
-                case .failure(_):
+                case .failure(let error):
+                    let displayError = AppLLMErrorDisplay.from(
+                        error,
+                        provider: currentLLMProvider
+                    )
+                    logAPIError(error)
                     let errorResponse = ModelResponse(
                         role: "assistant",
-                        text: "There was an error processing your request. Please try again later.",
-                        disconnect: true
+                        disconnect: true,
+                        error: displayError.asLLMError(provider: currentLLMProvider)
                     )
                     continuation.yield(errorResponse)
                     return
@@ -422,11 +427,16 @@ final class LanguageModelService {
         switch serviceResponse {
         case .success(let model):
             return model
-        case .failure(_):
+        case .failure(let error):
+            let displayError = AppLLMErrorDisplay.from(
+                error,
+                provider: currentLLMProvider
+            )
+            logAPIError(error)
             let errorResponse = ModelResponse(
                 role: "assistant",
-                text: "There was an error processing your request. Please try again later.",
-                disconnect: true
+                disconnect: true,
+                error: displayError.asLLMError(provider: currentLLMProvider)
             )
             return errorResponse
         default:
@@ -475,6 +485,32 @@ final class LanguageModelService {
             runtimeConnectionSettings.systemStopSequence,
         ]
         .filter { $0.isEmpty == false }
+    }
+
+    private var currentLLMProvider: LLMProvider {
+        switch runtimeConnectionSettings.connectionType {
+        case .KoboldAPI:
+            return .kobold
+        case .OpenRouter:
+            return .openRouter
+        case .OpenAI:
+            return .openAICompatible
+        }
+    }
+
+    private func logAPIError(_ error: APIError) {
+        let displayError = AppLLMErrorDisplay.from(error, provider: currentLLMProvider)
+        print("LLM error \(displayError.debugSummary) message=\(displayError.message)")
+
+        if case .llmError(let llmError) = error {
+            if let rawBody = llmError.rawBody {
+                print("LLM raw body: \(rawBody)")
+            }
+
+            if let rawEvent = llmError.rawEvent {
+                print("LLM raw event: \(rawEvent)")
+            }
+        }
     }
 
     private var defaultRolePlayPrompt: String {

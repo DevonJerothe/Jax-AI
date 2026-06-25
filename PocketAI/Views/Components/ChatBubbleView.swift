@@ -99,52 +99,10 @@ struct ChatBubbleView: View {
                         .cornerRadius(15)
                         .frame(alignment: .leading)
                         .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                    } else if isEditing {
+                        editingTextView(maxWidth: UIApplication.currentScreenWidth)
                     } else {
-                        if isEditing {
-                            editingTextView(maxWidth: UIApplication.currentScreenWidth)
-                        } else {
-                            if isStreaming, let markdownStreamSource {
-                                StreamingChatMarkdownView(
-                                    source: markdownStreamSource,
-                                    config: markdownConfig,
-                                    messageID: message.id,
-                                    actor: message.actor,
-                                    maxWidth: UIApplication.currentScreenWidth,
-                                    isEditing: isEditing,
-                                    onScrollViewUpdate: onScrollViewUpdate
-                                )
-                            } else {
-                                let rpText = message.getRolePlayText(cardName: cardName, personaName: personaName)
-
-                                #if DEBUG
-                                let _ = ChatPerformanceInstrumentation.markdownRender(
-                                    messageID: message.id,
-                                    actor: message.actor,
-                                    source: .completedString,
-                                    textLength: rpText.count,
-                                    textHash: rpText.hashValue
-                                )
-                                #endif
-
-                                CachedMarkdownView(
-                                    text: rpText,
-                                    config: markdownConfig.withShouldAnimateText(value: false)
-                                )
-                                    .padding()
-                                    .cornerRadius(15)
-                                    .frame(
-                                        maxWidth: UIApplication.currentScreenWidth,
-                                        alignment: .leading
-                                    )
-                                    .onGeometryChange(for: CGFloat.self) { geo in
-                                        geo.size.height
-                                    } action: { newHeight in
-                                        guard newHeight > 0 && isEditing == false else { return }
-
-                                        bubbleHeight = newHeight
-                                    }
-                            }   
-                        }
+                        botResponseContent
                     }
                     messageToolbar
                 }
@@ -208,6 +166,67 @@ struct ChatBubbleView: View {
 
     private var shouldShowLoadingBubble: Bool {
         isStreaming == false && message.status != .done && message.text.isEmpty
+    }
+
+    @ViewBuilder
+    private var botResponseContent: some View {
+        if isStreaming, let markdownStreamSource {
+            StreamingChatMarkdownView(
+                source: markdownStreamSource,
+                config: markdownConfig,
+                messageID: message.id,
+                actor: message.actor,
+                maxWidth: UIApplication.currentScreenWidth,
+                isEditing: isEditing,
+                onScrollViewUpdate: onScrollViewUpdate
+            )
+        } else {
+            let rpText = message.getRolePlayText(cardName: cardName, personaName: personaName)
+
+            if rpText.isEmpty == false {
+                #if DEBUG
+                let _ = ChatPerformanceInstrumentation.markdownRender(
+                    messageID: message.id,
+                    actor: message.actor,
+                    source: .completedString,
+                    textLength: rpText.count,
+                    textHash: rpText.hashValue
+                )
+                #endif
+
+                CachedMarkdownView(
+                    text: rpText,
+                    config: markdownConfig.withShouldAnimateText(value: false)
+                )
+                .padding()
+                .cornerRadius(15)
+                .frame(
+                    maxWidth: UIApplication.currentScreenWidth,
+                    alignment: .leading
+                )
+                .onGeometryChange(for: CGFloat.self) { geo in
+                    geo.size.height
+                } action: { newHeight in
+                    guard newHeight > 0 && isEditing == false else { return }
+
+                    bubbleHeight = newHeight
+                }
+            }
+
+            if shouldShowInlineErrorBanner {
+                APIStatusInlineBanner(
+                    title: message.activeGenerationError?.errorTitle ?? "Provider Error",
+                    message: message.activeGenerationError?.errorMessage
+                        ?? "There was an error processing your request. Please try again later.",
+                    recoverySuggestion: message.activeGenerationError?.errorRecoverySuggestion
+                )
+                .padding(.bottom)
+            }
+        }
+    }
+
+    private var shouldShowInlineErrorBanner: Bool {
+        message.actor == .bot && message.activeGenerationError != nil
     }
 
     @ViewBuilder

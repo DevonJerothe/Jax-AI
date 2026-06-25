@@ -85,8 +85,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/DevonJerothe/SwiftLLMSDK",
       "state" : {
-        "revision" : "953a2731acc82b18d5b9993e908837a90cc86caa",
-        "version" : "1.3.0"
+        "revision" : "a4030b50ddcfd4fa5360203b46cd729182215988",
+        "version" : "1.4.0"
       }
     },
     {
