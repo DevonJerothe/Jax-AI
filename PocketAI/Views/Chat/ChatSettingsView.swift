@@ -200,33 +200,35 @@ struct ChatSettingsView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
 
-                HStack {
-                    AvatarImage(image: characterCard.getAvatarImg(), size: 50)
-                        .padding(.trailing, 12)
-
-                    VStack(alignment: .leading) {
-                        Text(characterCard.name ?? "")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(appTheme.primaryText.color)
-
-                        Text(characterCard.cardTagline ?? "")
-                            .font(.subheadline)
+                if characterCard.isSystemChar == false {
+                    HStack {
+                        AvatarImage(image: characterCard.getAvatarImg(), size: 50)
+                            .padding(.trailing, 12)
+    
+                        VStack(alignment: .leading) {
+                            Text(characterCard.name ?? "")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(appTheme.primaryText.color)
+    
+                            Text(characterCard.cardTagline ?? "")
+                                .font(.subheadline)
+                                .foregroundColor(appTheme.secondaryText.color)
+                        }
+    
+                        Spacer()
+    
+                        Image(systemName: "chevron.right")
                             .foregroundColor(appTheme.secondaryText.color)
                     }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(appTheme.secondaryText.color)
-                }
-                .padding()
-                .background(appTheme.secondaryBackgroundColor.color)
-                .cornerRadius(12)
-                .padding(.horizontal, 16)
-                .onTapGesture {
-                    navManager.navigateToCharacter(
-                        characterID: characterCard.id, keepCurrentPath: true)
+                    .padding()
+                    .background(appTheme.secondaryBackgroundColor.color)
+                    .cornerRadius(12)
+                    .padding(.horizontal, 16)
+                    .onTapGesture {
+                        navManager.navigateToCharacter(
+                            characterID: characterCard.id, keepCurrentPath: true)
+                    }
                 }
 
                 VStack(alignment: .leading) {

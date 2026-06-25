@@ -38,10 +38,29 @@ final class ChatListViewModel {
 
     var characterCards: [CharacterCardModel] {
         guard connectionManager.connectionSettings.locked else {
-            return characterStore.characters
+            return characterStore.characters.filter { $0.isSystemChar == false }
         }
 
-        return characterStore.characters.filter { $0.isPrivate == false }
+        return characterStore.characters.filter { $0.isPrivate == false && $0.isSystemChar == false }
+    }
+
+    func quickChat() async -> ChatModel? {
+        do {
+
+            if let systemCard = characterStore.characters.filter({ $0.isSystemChar == true }).first {
+                let newChat = ChatModel(fromCard: systemCard)
+                try await chatStore.addChat(newChat)
+                return newChat
+            }
+            
+            let systemCard = CharacterCardModel.systemCard()
+            let newChat = ChatModel(fromCard: systemCard)
+            try await chatStore.addChat(newChat)
+            return newChat 
+        } catch {
+            print("Failed to create quick chat: \(error)")
+            return nil
+        }
     }
 
     func createNewChat(fromCharacter: CharacterCardModel) async -> ChatModel? {

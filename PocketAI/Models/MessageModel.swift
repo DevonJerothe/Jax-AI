@@ -20,7 +20,7 @@ public enum MessageActor: Int, Codable{
     case bot = 1
 }
 
-public enum MessageError: Int, Codable {
+public enum MessageError: Int, Codable, Sendable {
     case none = 0
     case apiError = 1
     case disconnect = 2

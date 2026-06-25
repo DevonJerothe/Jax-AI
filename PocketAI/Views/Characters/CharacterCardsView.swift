@@ -4,6 +4,11 @@ struct CharacterCardsView: View {
     @Environment(NavigationManager.self) var navManager
     @Environment(\.appTheme) private var appTheme
     @State var viewModel: CharacterCardsViewModel = CharacterCardsViewModel()
+    var startChat: Bool
+    
+    init(startChat: Bool = false) {
+        self.startChat = startChat
+    }
     
     private let columns: [GridItem] = [
         GridItem(.flexible(maximum: 200), spacing: 16),
@@ -17,7 +22,15 @@ struct CharacterCardsView: View {
                     ForEach(viewModel.characterCards, id: \.self) { card in
                         CharacterCardPreview(card: card)
                             .onTapGesture {
-                                navManager.navigateToCharacter(characterID: card.id, keepCurrentPath: true)
+                                if startChat {
+                                    Task {
+                                        if let newChat = await viewModel.newChat(card: card) {
+                                            navManager.navigateToChat(chatID: newChat.id)
+                                        }
+                                    }
+                                } else {
+                                    navManager.navigateToCharacter(characterID: card.id, keepCurrentPath: true)
+                                }
                             }
                             .withBottomContextMenu {
                                 Button(role: .destructive) {

@@ -168,6 +168,12 @@ class DBManager {
             // Keep this identifier registered for databases that saw the earlier migration.
         }
 
+        migrator.registerMigration("v10_system_char") { db in
+            try db.alter(table: CharacterCardRecord.databaseTableName) { t in
+                t.add(column: "isSystemChar", .boolean).notNull().defaults(to: false)
+            }
+        }
+
         try migrator.migrate(dbQueue)
     }
 

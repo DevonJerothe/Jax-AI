@@ -58,8 +58,18 @@ struct ChatListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    navManager.navigateToCharacterCards()
+                Menu {
+                    Button("Quick Chat") {
+                        Task {
+                            if let chat = await viewModel.quickChat() {
+                                navManager.navigateToChat(chatID: chat.id)
+                            }
+                        }
+                    }
+                    Button("Character Chat") {
+                        navManager.navigateToCharacterCards(keepCurrentPath: true, startChat: true)
+                    }
+                    
                 } label: {
                     Image(systemName: "plus")
                 }
