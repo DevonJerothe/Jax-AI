@@ -162,6 +162,24 @@ class DBManager {
             )
             
         }
+
+        migrator.registerMigration("v9_message_error_details") { db in
+            let messageColumns = try db.columns(in: MessageRecord.databaseTableName).map(\.name)
+            let missingErrorColumns = [
+                "errorTitle",
+                "errorMessage",
+                "errorRecoverySuggestion",
+            ]
+            .filter { messageColumns.contains($0) == false }
+
+            if missingErrorColumns.isEmpty == false {
+                try db.alter(table: MessageRecord.databaseTableName) { t in
+                    for column in missingErrorColumns {
+                        t.add(column: column, .text)
+                    }
+                }
+            }
+        }
         try migrator.migrate(dbQueue)
     }
 

@@ -39,6 +39,9 @@ struct MessageModel: Identifiable, Hashable {
     var createdAt: Date = Date()
     var exclude: Bool = false
     var error: MessageError = .none
+    var errorTitle: String?
+    var errorMessage: String?
+    var errorRecoverySuggestion: String?
     var tokenCount: Int = 0
 
     // Text generations and their token counts 
@@ -175,6 +178,9 @@ extension MessageModel {
         self.text = record.text
         self.exclude = record.exclude
         self.error = MessageError(rawValue: record.error) ?? .none
+        self.errorTitle = record.errorTitle
+        self.errorMessage = record.errorMessage
+        self.errorRecoverySuggestion = record.errorRecoverySuggestion
         self.createdAt = record.createdAt
         self.tokenCount = record.tokenCount
         self.tokenCountModel = record.tokenCountModel
@@ -196,6 +202,9 @@ extension MessageModel {
             text: text,
             exclude: exclude,
             error: error.rawValue,
+            errorTitle: errorTitle,
+            errorMessage: errorMessage,
+            errorRecoverySuggestion: errorRecoverySuggestion,
             createdAt: createdAt,
             tokenCount: tokenCount,
             tokenCountModel: tokenCountModel,
@@ -215,6 +224,9 @@ struct MessageRecord: Codable, FetchableRecord, MutablePersistableRecord, Sendab
     var text: String 
     var exclude: Bool
     var error: Int 
+    var errorTitle: String?
+    var errorMessage: String?
+    var errorRecoverySuggestion: String?
     var createdAt: Date 
     var tokenCount: Int 
     var tokenCountModel: String?
@@ -229,6 +241,9 @@ struct MessageRecord: Codable, FetchableRecord, MutablePersistableRecord, Sendab
             t.column("exclude", .boolean).notNull().defaults(to: false)
             t.column("createdAt", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
             t.column("error", .integer).notNull().defaults(to: 0)
+            t.column("errorTitle", .text)
+            t.column("errorMessage", .text)
+            t.column("errorRecoverySuggestion", .text)
             t.column("tokenCount", .integer).notNull().defaults(to: 0)
             t.column("tokenCountModel", .text)
             t.column("textGenerationHistoryJSON", .text)

@@ -142,6 +142,9 @@ final class ChatViewModel {
         var updatedMessage = message
         updatedMessage.addNewGeneration()
         updatedMessage.error = .none
+        updatedMessage.errorTitle = nil
+        updatedMessage.errorMessage = nil
+        updatedMessage.errorRecoverySuggestion = nil
         updatedMessage.status = .loading
 
         if continueResponse == false {
@@ -342,7 +345,7 @@ final class ChatViewModel {
         let response = await languageModelService.sendMessage(
             chatModel: chat, continued: isContinued)
         let responseText =
-            response?.text ?? "There was an error processing your request. Please try again later."
+            response?.text ?? ""
         let settings = connectionManager.connectionSettings
         let sanitizedResponse = ReasoningStreamParser.visibleText(
             from: responseText,
@@ -361,7 +364,8 @@ final class ChatViewModel {
             delta: "",
             disconnect: response?.disconnect ?? true,
             isFinal: true,
-            shouldShowThinking: false
+            shouldShowThinking: false,
+            error: response?.error
         )
     }
 
@@ -408,7 +412,7 @@ final class ChatViewModel {
             for await response in stream {
                 let responseText = response.text ?? ""
                 let rawResponse = rawAccumulator.ingest(responseText)
-                let isFinal = response.streaming == false
+                let isFinal = response.streaming == false || response.error != nil
                 let parsedResponse: ReasoningParseResult
                 if useReasoningParser {
                     parsedResponse =
@@ -430,9 +434,10 @@ final class ChatViewModel {
                     for: messageID,
                     responseText: visibleResponse,
                     delta: response.deltaText ?? "",
-                    disconnect: response.disconnect,
+                    disconnect: response.disconnect || response.error != nil,
                     isFinal: isFinal,
-                    shouldShowThinking: parsedResponse.shouldShowThinking
+                    shouldShowThinking: parsedResponse.shouldShowThinking,
+                    error: response.error
                 )
             }
         }
@@ -444,7 +449,8 @@ final class ChatViewModel {
         delta: String,
         disconnect: Bool,
         isFinal: Bool,
-        shouldShowThinking: Bool
+        shouldShowThinking: Bool,
+        error: LLMError? = nil
     ) async {
         guard let chat = model,
             let message = chat.messages.first(where: { $0.id == messageID })
@@ -465,7 +471,11 @@ final class ChatViewModel {
         let shouldCommitChatStatus = chat.status != targetChatStatus
 
         var updatedMessage = message
+        let displayError = error.map(AppLLMErrorDisplay.from)
         updatedMessage.error = disconnect ? .apiError : .none
+        updatedMessage.errorTitle = displayError?.title
+        updatedMessage.errorMessage = displayError?.message
+        updatedMessage.errorRecoverySuggestion = displayError?.recoverySuggestion
         updatedMessage.status = targetMessageStatus
 
         if isFinal || disconnect {
@@ -476,7 +486,7 @@ final class ChatViewModel {
             if disconnect {
                 updatedMessage.text =
                     responseText.isEmpty
-                    ? "There was an error processing your request. Please try again later."
+                    ? updatedMessage.text
                     : responseText
             }
         }
@@ -540,9 +550,11 @@ final class ChatViewModel {
 
         var updatedMessage = chat.messages[messageIndex]
         updatedMessage.error = .disconnect
-        updatedMessage.status = .done
-        updatedMessage.text =
+        updatedMessage.errorTitle = "API Disconnected"
+        updatedMessage.errorMessage =
             "Looks like you're not connected to a model. Please check your connection settings."
+        updatedMessage.errorRecoverySuggestion = "Tap the connection banner to open Settings."
+        updatedMessage.status = .done
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id)
