@@ -5,8 +5,8 @@
 //  Created by devon jerothe on 3/13/25.
 //
 
-import SwiftUI
 import SwiftLLMSDK
+import SwiftUI
 
 struct ConnectionSettingsView: View {
     @Environment(ServiceContainer.self) private var serviceContainer
@@ -27,10 +27,23 @@ struct ConnectionSettingsView: View {
         )
     }
 
-    private var portBinding: Binding<Int> {
+    private var portBinding: Binding<String> {
         Binding(
-            get: { connectionManager.connectionSettings.activePort ?? 5000 },
-            set: { connectionManager.updateActivePort($0) }
+            get: {
+                if let port = connectionManager.connectionSettings.activePort {
+                    return "\(port)"
+                }
+                return ""
+            },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty {
+                    connectionManager.updateActivePort(nil)
+                } else if let parsed = Int(trimmed) {
+                    connectionManager.updateActivePort(parsed)
+                }
+                // Ignore non-numeric input; the field stays as the user typed until valid.
+            }
         )
     }
 
@@ -80,12 +93,14 @@ struct ConnectionSettingsView: View {
 
     private var selectedModelLabel: String {
         let selectedModelID = selectedModelBinding.wrappedValue
-        return serviceContainer.availableModels.first { $0.id == selectedModelID }?.name ?? selectedModelID
+        return serviceContainer.availableModels.first { $0.id == selectedModelID }?.name
+            ?? selectedModelID
     }
 
     private var openAISelectedModelLabel: String {
         let selectedModelID = selectedModelBinding.wrappedValue
-        return serviceContainer.availableOpenAIModels.first { $0.id == selectedModelID }?.displayName ?? selectedModelID
+        return serviceContainer.availableOpenAIModels.first { $0.id == selectedModelID }?
+            .displayName ?? selectedModelID
     }
 
     var body: some View {
@@ -141,17 +156,24 @@ struct ConnectionSettingsView: View {
                     .foregroundColor(appTheme.primaryText.color.opacity(0.8))
                 if serviceContainer.isLoading {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: appTheme.primaryText.color))
+                        .progressViewStyle(
+                            CircularProgressViewStyle(tint: appTheme.primaryText.color)
+                        )
                         .scaleEffect(0.7)
                     Text("Connecting...")
                         .foregroundColor(appTheme.primaryText.color.opacity(0.8))
                         .font(.subheadline)
                 } else {
                     Circle()
-                        .fill(serviceContainer.isConnected ? appTheme.successColor.color : appTheme.destructiveAction.color)
+                        .fill(
+                            serviceContainer.isConnected
+                                ? appTheme.successColor.color : appTheme.destructiveAction.color
+                        )
                         .frame(width: 10, height: 10)
                     Text(serviceContainer.isConnected ? "Connected" : "Disconnected")
-                        .foregroundColor(serviceContainer.isConnected ? appTheme.successColor.color : appTheme.destructiveAction.color)
+                        .foregroundColor(
+                            serviceContainer.isConnected
+                                ? appTheme.successColor.color : appTheme.destructiveAction.color)
                 }
                 Spacer()
                 Button {
@@ -167,7 +189,7 @@ struct ConnectionSettingsView: View {
                         .clipShape(Capsule())
                         .contentShape(Capsule())
                         .glassEffect(
-                            .regular.interactive(), 
+                            .regular.interactive(),
                             in: Capsule()
                         )
                         .animation(.easeInOut, value: serviceContainer.isLoading)
@@ -214,8 +236,8 @@ struct ConnectionSettingsView: View {
     }
 
     private var usesRemoteModelPicker: Bool {
-        connectionManager.connectionSettings.connectionType == .OpenRouter ||
-        connectionManager.connectionSettings.connectionType == .OpenAI
+        connectionManager.connectionSettings.connectionType == .OpenRouter
+            || connectionManager.connectionSettings.connectionType == .OpenAI
     }
 
     private func updateOpenAISettings<Value>(
@@ -233,7 +255,7 @@ struct ConnectionSettingsView: View {
         baseURLRefreshTask?.cancel()
 
         guard connectionManager.connectionSettings.connectionType == .OpenAI,
-              connectionManager.connectionSettings.openAISettings?.baseURL?.isEmpty == false
+            connectionManager.connectionSettings.openAISettings?.baseURL?.isEmpty == false
         else {
             return
         }
@@ -283,7 +305,7 @@ struct ConnectionSettingsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Port")
                     .foregroundColor(appTheme.primaryText.color)
-                TextField("", value: portBinding, format: .number.grouping(.never))
+                TextField("", text: portBinding)
                     .keyboardType(.numberPad)
                     .styledFormField()
             }
@@ -291,7 +313,10 @@ struct ConnectionSettingsView: View {
             ThemedSliderRow(
                 title: "Context Limit",
                 value: contextLengthBinding,
-                range: 1024...Double(connectionManager.connectionSettings.activeMaxContextLength ?? connectionManager.maxContextLength),
+                range:
+                    1024...Double(
+                        connectionManager.connectionSettings.activeMaxContextLength
+                            ?? connectionManager.maxContextLength),
                 step: 1024,
                 displayValue: "\(Int(contextLengthBinding.wrappedValue))"
             )
@@ -361,7 +386,9 @@ struct ConnectionSettingsView: View {
             ThemedSliderRow(
                 title: "Context Limit",
                 value: contextLengthBinding,
-                range: 1024...Double(connectionManager.connectionSettings.activeMaxContextLength ?? 256000),
+                range:
+                    1024...Double(
+                        connectionManager.connectionSettings.activeMaxContextLength ?? 256000),
                 step: 1024,
                 displayValue: "\(Int(contextLengthBinding.wrappedValue))"
             )
@@ -381,10 +408,13 @@ struct ConnectionSettingsView: View {
                         }
                     } label: {
                         HStack {
-                            Text(openAISelectedModelLabel.isEmpty ? "Select a model" : openAISelectedModelLabel)
-                                .foregroundColor(appTheme.primaryText.color)
-                                .lineLimit(2)
-                                .multilineTextAlignment(.leading)
+                            Text(
+                                openAISelectedModelLabel.isEmpty
+                                    ? "Select a model" : openAISelectedModelLabel
+                            )
+                            .foregroundColor(appTheme.primaryText.color)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
 
                             Spacer()
 
@@ -410,8 +440,7 @@ struct OpenRouterModelSearchView<Model: ModelPickerItem>: View {
 
     private var filteredModels: [Model] {
         models.filter { model in
-            search.isEmpty ||
-                model.searchableText.localizedCaseInsensitiveContains(search)
+            search.isEmpty || model.searchableText.localizedCaseInsensitiveContains(search)
         }
     }
 
