@@ -321,6 +321,16 @@ final class ChatViewModel {
         }
     }
 
+    func shouldDisableSendMessage(textPrompt: String) -> Bool {
+        let lastMessageActor = model?.messages.last?.actor
+
+        return isConnected == false
+            || isStreaming == true
+            || disableWhileEditing == true 
+            || (textPrompt.isEmpty && lastMessageActor != .user)
+        
+    }
+
     private func generateResponse(
         for messageID: UUID, isContinued: Bool = false, streamed: Bool = true
     ) async {
