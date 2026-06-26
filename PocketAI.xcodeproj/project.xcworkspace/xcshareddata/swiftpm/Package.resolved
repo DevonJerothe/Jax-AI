@@ -1,5 +1,5 @@
 {
-  "originHash" : "33aa2c01fa929ffeac231146b672ffc984f5743c3eaaa117eb51a917059f2369",
+  "originHash" : "1447e2d59673b0d48496b75f97e85790b85c6f28e8a290936b6b76cf35735690",
   "pins" : [
     {
       "identity" : "equatable",
@@ -85,8 +85,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/DevonJerothe/SwiftLLMSDK",
       "state" : {
-        "revision" : "a4030b50ddcfd4fa5360203b46cd729182215988",
-        "version" : "1.4.0"
+        "revision" : "71152bfb64a269cf2565117e8e6fa5a3a68e5cde",
+        "version" : "1.5.0"
       }
     },
     {

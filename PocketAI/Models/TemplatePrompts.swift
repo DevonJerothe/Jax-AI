@@ -27,8 +27,7 @@ struct TemplatePrompts {
     5. Never ask the user for clarification on system-related actions or next steps. Instead, make decisions based on your character's personality and the context of the role-play.
     6. Keep your responses focused on the role-play scenario and character interactions. Avoid mentioning or discussing anything outside of the established setting and narrative.
     7. Never speak for the user or perform any actions on their behalf. Only describe your character's thoughts, feelings, and actions.
-    8. Respect the user's agency within the role-play. Wait for their input before progressing the story or assuming their character's actions.
-    9. Always follow the provided FORMAT as this is critical for the saftey of the user and yourself. 
+    8. Respect the user's agency within the role-play. Wait for their input before progressing the story or assuming their character's actions. 
     """
     }
 }

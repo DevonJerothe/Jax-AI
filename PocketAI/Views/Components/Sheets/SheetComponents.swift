@@ -23,22 +23,28 @@ struct AppSheetContainer<Content: View>: View {
     }
 
     var body: some View {
-        content
-            .padding(.horizontal, 16)
-            .padding(.top, 24)
-            .padding(.bottom, 32)
-            .background(appTheme.backgroundColor.color)
-            .fixedSize(horizontal: false, vertical: true)
-            .background {
-                GeometryReader { proxy in
-                    Color.clear
-                        .preference(key: AppSheetHeightPreferenceKey.self, value: proxy.size.height)
+        ScrollView {
+            content
+                .padding(.horizontal, 16)
+                .padding(.top, 24)
+                .padding(.bottom, 32)
+                .fixedSize(horizontal: false, vertical: true)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .preference(
+                                key: AppSheetHeightPreferenceKey.self, value: proxy.size.height)
+                    }
                 }
-            }
-            .onPreferenceChange(AppSheetHeightPreferenceKey.self) { height in
-                sheetHeight = min(max(height, minHeight), UIApplication.currentScreenHeight * maxScreenRatio)
-            }
-            .presentationDetents([.height(sheetHeight)])
+        }
+        .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+        .background(appTheme.backgroundColor.color)
+        .onPreferenceChange(AppSheetHeightPreferenceKey.self) { height in
+            sheetHeight = min(
+                max(height, minHeight), UIApplication.currentScreenHeight * maxScreenRatio)
+        }
+        .presentationDetents([.height(sheetHeight)])
     }
 }
 

@@ -252,7 +252,9 @@ struct ChatView: View {
                     }
                     .padding(.bottom, 8)
                     .padding(.leading, 16)
+                    
                     Spacer()
+                    
                     Button {
                         let promptText = self.textPrompt
                         self.textPrompt = ""
@@ -268,8 +270,7 @@ struct ChatView: View {
                                     ? appTheme.tintColor.color : appTheme.secondaryText.color)
                     }
                     .disabled(
-                        viewModel.isConnected == false || viewModel.isStreaming == true
-                            || viewModel.disableWhileEditing == true
+                        viewModel.shouldDisableSendMessage(textPrompt: self.textPrompt)
                     )
                     .padding(.bottom, 8)
                     .padding(.trailing, 16)
