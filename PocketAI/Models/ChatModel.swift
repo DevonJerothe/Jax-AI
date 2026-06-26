@@ -39,6 +39,10 @@ struct ChatModel: Hashable {
         return "\(id.uuidString)-\(messages.count)-\(messages.last?.id.uuidString ?? "")"
     }
 
+    var isQuickChat: Bool {
+        return characterCards.first?.isSystemChar == true
+    }
+
     init(fromCard: CharacterCardModel) {
         self.characterCards = [fromCard]
         self.memory = fromCard.description ?? ""

@@ -229,50 +229,50 @@ struct ChatSettingsView: View {
                         navManager.navigateToCharacter(
                             characterID: characterCard.id, keepCurrentPath: true)
                     }
-                }
 
-                VStack(alignment: .leading) {
-                    HStack {
-                        Text("Template Settings")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(appTheme.primaryText.color)
-                        Spacer()
-
-                        Button(action: {
-                            navManager.showNewTemplateView()
-                        }) {
-                            Image(systemName: "plus.circle")
-                                .foregroundColor(appTheme.tintColor.color)
+                    VStack(alignment: .leading) {
+                        HStack {
+                            Text("Template Settings")
                                 .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(appTheme.primaryText.color)
+                            Spacer()
+    
+                            Button(action: {
+                                navManager.showNewTemplateView()
+                            }) {
+                                Image(systemName: "plus.circle")
+                                    .foregroundColor(appTheme.tintColor.color)
+                                    .font(.title2)
+                            }
                         }
+    
+                        Text(
+                            "Templates can be used to set instructions on how the model should responed and in what format / style. This will be added to the memory and used for every message."
+                        )
+                        .font(.subheadline)
+                        .foregroundColor(appTheme.secondaryText.color)
+    
                     }
-
-                    Text(
-                        "Templates can be used to set instructions on how the model should responed and in what format / style. This will be added to the memory and used for every message."
-                    )
-                    .font(.subheadline)
-                    .foregroundColor(appTheme.secondaryText.color)
-
-                }
-                .padding(.top, 24)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-
-                if userTemplatesBinding.wrappedValue.count > 0 {
-                    TemplateEditor(
-                        isDragging: $isDragging,
-                        userTemplates: userTemplatesBinding
-                    )
-                } else {
-                    HStack {
-                        Spacer()
-                        Text("No templates added.")
-                            .font(.subheadline)
-                            .foregroundColor(appTheme.secondaryText.color)
-                        Spacer()
+                    .padding(.top, 24)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+    
+                    if userTemplatesBinding.wrappedValue.count > 0 {
+                        TemplateEditor(
+                            isDragging: $isDragging,
+                            userTemplates: userTemplatesBinding
+                        )
+                    } else {
+                        HStack {
+                            Spacer()
+                            Text("No templates added.")
+                                .font(.subheadline)
+                                .foregroundColor(appTheme.secondaryText.color)
+                            Spacer()
+                        }
+                        .padding(.vertical, 24)
                     }
-                    .padding(.vertical, 24)
                 }
 
                 // Mark: - Clear Chat Button
