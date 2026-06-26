@@ -8,10 +8,10 @@ struct GeneralSettingsView: View {
     @State private var passcodeError: String?
     @State private var showSetPasscodeAlert = false
     @State private var showUnlockAlert = false
-    
+
     #if !APPSTORE
-    @State private var booruViewModel: BotBooruViewModel = .init()
-    @State private var chubViewModel: ChubAIViewModel = .init()
+        @State private var booruViewModel: BotBooruViewModel = .init()
+        @State private var chubViewModel: ChubAIViewModel = .init()
     #endif
 
     private var connectionManager: ConnectionStatusManager {
@@ -41,21 +41,21 @@ struct GeneralSettingsView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Divider() 
+                    Divider()
 
                     NavigationLink {
                         SamplerSettingsView()
                     } label: {
-                        SettingsNavigationRow( 
-                            title: "Sampler", 
+                        SettingsNavigationRow(
+                            title: "Sampler",
                             subtitle: "Control how responses are sent and received",
                             systemImage: "sparkles"
                         )
                     }
                     .buttonStyle(.plain)
 
-                    Divider() 
-                    
+                    Divider()
+
                     NavigationLink {
                         UserPersonaView(personaStore: serviceContainer.getPersonaStore())
                     } label: {
@@ -68,44 +68,63 @@ struct GeneralSettingsView: View {
                 }
 
                 #if !APPSTORE
-                SettingsCard("Browsers") {
-                    NavigationLink {
-                        BooruBrowserSettingsView(viewModel: booruViewModel)
-                    } label: {
-                        SettingsNavigationRow(
-                            title: "BotBooru",
-                            subtitle: "Account login and browsing filters",
-                            systemImage: "photo.on.rectangle"
-                        )
-                    }
-                    .buttonStyle(.plain)
+                    SettingsCard("Browsers") {
+                        NavigationLink {
+                            BooruBrowserSettingsView(viewModel: booruViewModel)
+                        } label: {
+                            SettingsNavigationRow(
+                                title: "BotBooru",
+                                subtitle: "Account login and browsing filters",
+                                systemImage: "photo.on.rectangle"
+                            )
+                        }
+                        .buttonStyle(.plain)
 
-                    Divider()
+                        Divider()
 
-                    NavigationLink {
-                        ChubAISettingsView(viewModel: chubViewModel)
-                    } label: {
-                        SettingsNavigationRow(
-                            title: "Chub AI",
-                            subtitle: "Content filters and excluded topics",
-                            systemImage: "person.2.crop.square.stack"
-                        )
+                        NavigationLink {
+                            ChubAISettingsView(viewModel: chubViewModel)
+                        } label: {
+                            SettingsNavigationRow(
+                                title: "Chub AI",
+                                subtitle: "Content filters and excluded topics",
+                                systemImage: "person.2.crop.square.stack"
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                }
                 #endif
 
                 SettingsCard("App Settings") {
                     appLockSection
 
-                    // auto connect toggle 
-                    Toggle(isOn: Binding(
-                        get: { connectionManager.connectionSettings.autoConnect },
-                        set: { connectionManager.update(\.autoConnect, to: $0) }
-                    )) {
+                    // auto connect toggle
+                    Toggle(
+                        isOn: Binding(
+                            get: { connectionManager.connectionSettings.autoConnect },
+                            set: { connectionManager.update(\.autoConnect, to: $0) }
+                        )
+                    ) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Auto-Connect on Reopen")
                             Text("Connect to the last used service when the app is opened again.")
+                                .font(.caption)
+                                .foregroundStyle(appTheme.secondaryText.color)
+                        }
+                    }
+                    .tint(appTheme.tintColor.color)
+
+                    Divider()
+
+                    Toggle(
+                        isOn: Binding(
+                            get: { connectionManager.connectionSettings.autoScrollChat },
+                            set: { connectionManager.update(\.autoScrollChat, to: $0) }
+                        )
+                    ) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Scroll With Response")
+                            Text("Auto scroll the chat view as content is streamed.")
                                 .font(.caption)
                                 .foregroundStyle(appTheme.secondaryText.color)
                         }
@@ -118,7 +137,7 @@ struct GeneralSettingsView: View {
                         ThemeSettingsView()
                     } label: {
                         SettingsNavigationRow(
-                            title: "App Theme", 
+                            title: "App Theme",
                             subtitle: "Currently \(currentThemeName)",
                             systemImage: "paintpalette.fill"
                         )
@@ -128,6 +147,7 @@ struct GeneralSettingsView: View {
             .padding(16)
         }
         .background(appTheme.backgroundColor.color)
+        .scrollIndicators(.hidden)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -170,16 +190,21 @@ struct GeneralSettingsView: View {
     private var appLockSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                Image(systemName: connectionManager.connectionSettings.locked ? "lock.fill" : "lock.open")
-                    .font(.headline)
-                    .foregroundStyle(appTheme.primaryText.color)
-                    .frame(width: 30, height: 30)
-                    .background(appTheme.secondaryAction.color)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                Image(
+                    systemName: connectionManager.connectionSettings.locked
+                        ? "lock.fill" : "lock.open"
+                )
+                .font(.headline)
+                .foregroundStyle(appTheme.primaryText.color)
+                .frame(width: 30, height: 30)
+                .background(appTheme.secondaryAction.color)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(connectionManager.connectionSettings.locked ? "App Locked" : "App Unlocked")
-                        .foregroundStyle(appTheme.primaryText.color)
+                    Text(
+                        connectionManager.connectionSettings.locked ? "App Locked" : "App Unlocked"
+                    )
+                    .foregroundStyle(appTheme.primaryText.color)
 
                     Text("Private chats and characters are hidden while locked.")
                         .font(.caption)
@@ -208,16 +233,19 @@ struct GeneralSettingsView: View {
                 } label: {
                     Label(
                         connectionManager.connectionSettings.locked ? "Unlock App" : "Lock App",
-                        systemImage: connectionManager.connectionSettings.locked ? "lock.open" : "lock"
+                        systemImage: connectionManager.connectionSettings.locked
+                            ? "lock.open" : "lock"
                     )
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(appTheme.primaryAction.color)
 
-                Toggle(isOn: Binding(
-                    get: { connectionManager.connectionSettings.autoLock },
-                    set: { connectionManager.update(\.autoLock, to: $0) }
-                )) {
+                Toggle(
+                    isOn: Binding(
+                        get: { connectionManager.connectionSettings.autoLock },
+                        set: { connectionManager.update(\.autoLock, to: $0) }
+                    )
+                ) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Auto-Lock on Reopen")
                         Text("Lock the app whenever it is opened again.")
@@ -327,37 +355,65 @@ struct ThemeSettingsView: View {
                             Spacer()
 
                             HStack(spacing: 8) {
-                                ForEach(themePreviewColors(for: connectionManager.connectionSettings.currentTheme).indices, id: \.self) { index in
+                                ForEach(
+                                    themePreviewColors(
+                                        for: connectionManager.connectionSettings.currentTheme
+                                    ).indices, id: \.self
+                                ) { index in
                                     Circle()
-                                        .fill(themePreviewColors(for: connectionManager.connectionSettings.currentTheme)[index])
+                                        .fill(
+                                            themePreviewColors(
+                                                for: connectionManager.connectionSettings
+                                                    .currentTheme)[index]
+                                        )
                                         .frame(width: 16, height: 16)
                                         .overlay {
                                             Circle()
-                                                .stroke(appTheme.borderColor.color.opacity(0.45), lineWidth: 1)
+                                                .stroke(
+                                                    appTheme.borderColor.color.opacity(0.45),
+                                                    lineWidth: 1)
                                         }
                                 }
                             }
                         }
 
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(connectionManager.connectionSettings.currentTheme.secondaryBackgroundColor.color(for: colorScheme))
+                            .fill(
+                                connectionManager.connectionSettings.currentTheme
+                                    .secondaryBackgroundColor.color(for: colorScheme)
+                            )
                             .frame(height: 84)
                             .overlay(alignment: .topLeading) {
                                 VStack(alignment: .leading, spacing: 10) {
                                     Capsule()
-                                        .fill(connectionManager.connectionSettings.currentTheme.primaryAction.color(for: colorScheme))
+                                        .fill(
+                                            connectionManager.connectionSettings.currentTheme
+                                                .primaryAction.color(for: colorScheme)
+                                        )
                                         .frame(width: 96, height: 10)
 
                                     HStack(spacing: 10) {
                                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .fill(connectionManager.connectionSettings.currentTheme.tintColor.color(for: colorScheme))
+                                            .fill(
+                                                connectionManager.connectionSettings.currentTheme
+                                                    .tintColor.color(for: colorScheme)
+                                            )
                                             .frame(width: 72, height: 32)
 
                                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .stroke(connectionManager.connectionSettings.currentTheme.borderColor.color(for: colorScheme), lineWidth: 1)
+                                            .stroke(
+                                                connectionManager.connectionSettings.currentTheme
+                                                    .borderColor.color(for: colorScheme),
+                                                lineWidth: 1
+                                            )
                                             .background(
-                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                    .fill(connectionManager.connectionSettings.currentTheme.backgroundColor.color(for: colorScheme))
+                                                RoundedRectangle(
+                                                    cornerRadius: 10, style: .continuous
+                                                )
+                                                .fill(
+                                                    connectionManager.connectionSettings
+                                                        .currentTheme.backgroundColor.color(
+                                                            for: colorScheme))
                                             )
                                             .frame(width: 92, height: 32)
                                     }
@@ -372,9 +428,11 @@ struct ThemeSettingsView: View {
                 }
 
                 SettingsCard("Available Themes") {
-                    Text("Pick the palette that feels right. Changes apply immediately throughout the app.")
-                        .font(.caption)
-                        .foregroundStyle(appTheme.secondaryText.color)
+                    Text(
+                        "Pick the palette that feels right. Changes apply immediately throughout the app."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(appTheme.secondaryText.color)
 
                     ForEach(AvailableThemes.allCases) { themeOption in
                         if themeOption != AvailableThemes.allCases.first {
@@ -393,22 +451,36 @@ struct ThemeSettingsView: View {
                                         if themeOption == selectedTheme {
                                             Text("Selected")
                                                 .font(.caption.weight(.semibold))
-                                                .foregroundStyle(themeOption.theme.primaryAction.color(for: colorScheme))
+                                                .foregroundStyle(
+                                                    themeOption.theme.primaryAction.color(
+                                                        for: colorScheme)
+                                                )
                                                 .padding(.horizontal, 8)
                                                 .padding(.vertical, 4)
-                                                .background(themeOption.theme.secondaryAction.color(for: colorScheme))
+                                                .background(
+                                                    themeOption.theme.secondaryAction.color(
+                                                        for: colorScheme)
+                                                )
                                                 .clipShape(Capsule())
                                         }
                                     }
 
                                     HStack(spacing: 8) {
-                                        ForEach(themePreviewColors(for: themeOption.theme).indices, id: \.self) { index in
+                                        ForEach(
+                                            themePreviewColors(for: themeOption.theme).indices,
+                                            id: \.self
+                                        ) { index in
                                             Circle()
-                                                .fill(themePreviewColors(for: themeOption.theme)[index])
+                                                .fill(
+                                                    themePreviewColors(for: themeOption.theme)[
+                                                        index]
+                                                )
                                                 .frame(width: 18, height: 18)
                                                 .overlay {
                                                     Circle()
-                                                        .stroke(appTheme.borderColor.color.opacity(0.45), lineWidth: 1)
+                                                        .stroke(
+                                                            appTheme.borderColor.color.opacity(
+                                                                0.45), lineWidth: 1)
                                                 }
                                         }
                                     }
@@ -416,23 +488,30 @@ struct ThemeSettingsView: View {
 
                                 Spacer()
 
-                                Image(systemName: themeOption == selectedTheme ? "checkmark.circle.fill" : "circle")
-                                    .font(.title3)
-                                    .foregroundStyle(
-                                        themeOption == selectedTheme
+                                Image(
+                                    systemName: themeOption == selectedTheme
+                                        ? "checkmark.circle.fill" : "circle"
+                                )
+                                .font(.title3)
+                                .foregroundStyle(
+                                    themeOption == selectedTheme
                                         ? themeOption.theme.primaryAction.color(for: colorScheme)
                                         : appTheme.borderColor.color
-                                    )
+                                )
                             }
                             .padding(14)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(themeOption.theme.secondaryBackgroundColor.color(for: colorScheme).opacity(0.9))
+                            .background(
+                                themeOption.theme.secondaryBackgroundColor.color(for: colorScheme)
+                                    .opacity(0.9)
+                            )
                             .overlay {
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .stroke(
                                         themeOption == selectedTheme
-                                        ? themeOption.theme.primaryAction.color(for: colorScheme)
-                                        : appTheme.borderColor.color.opacity(0.65),
+                                            ? themeOption.theme.primaryAction.color(
+                                                for: colorScheme)
+                                            : appTheme.borderColor.color.opacity(0.65),
                                         lineWidth: themeOption == selectedTheme ? 1.5 : 1
                                     )
                             }
@@ -445,6 +524,7 @@ struct ThemeSettingsView: View {
             .padding(16)
         }
         .background(appTheme.backgroundColor.color)
+        .scrollIndicators(.hidden)
         .navigationTitle("Theme")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -455,7 +535,7 @@ struct ThemeSettingsView: View {
             theme.primaryAction.color(for: colorScheme),
             theme.tintColor.color(for: colorScheme),
             theme.secondaryAction.color(for: colorScheme),
-            theme.backgroundColor.color(for: colorScheme)
+            theme.backgroundColor.color(for: colorScheme),
         ]
     }
 }

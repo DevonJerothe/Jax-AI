@@ -24,6 +24,17 @@ struct SamplerSettingsView: View {
         )
     }
 
+    private var disableReasoningBinding: Binding<Bool> {
+        Binding(
+            get: { connectionManager.connectionSettings.disableReasoning },
+            set: { connectionManager.update(\.disableReasoning, to: $0) }
+        )
+    }
+
+    private var isKoboldAPI: Bool {
+        connectionManager.connectionSettings.connectionType == .KoboldAPI
+    }
+
     private var temperatureBinding: Binding<Double> {
         Binding(
             get: { connectionManager.connectionSettings.temperature },
@@ -98,9 +109,11 @@ struct SamplerSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 SettingsCard("Sampling") {
-                    Text("Temperature is the main control most people should adjust. Advanced controls can stay at their defaults unless you are tuning a specific model.")
-                        .font(.caption)
-                        .foregroundStyle(appTheme.secondaryText.color)
+                    Text(
+                        "Temperature is the main control most people should adjust. Advanced controls can stay at their defaults unless you are tuning a specific model."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(appTheme.secondaryText.color)
 
                     SamplerSlider(
                         title: "Temperature",
@@ -167,13 +180,17 @@ struct SamplerSettingsView: View {
                                 value: repetitionPenaltyBinding,
                                 range: 1...2,
                                 step: 0.01,
-                                displayValue: formattedDecimal(repetitionPenaltyBinding.wrappedValue)
+                                displayValue: formattedDecimal(
+                                    repetitionPenaltyBinding.wrappedValue)
                             )
 
                             SamplerSlider(
                                 title: "Repetition Range",
                                 value: repetitionRangeBinding,
-                                range: 0...Double(connectionManager.connectionSettings.contextLength ?? 4096),
+                                range:
+                                    0...Double(
+                                        connectionManager.connectionSettings.activeContextLength
+                                            ?? 4096),
                                 step: 64,
                                 displayValue: "\(Int(repetitionRangeBinding.wrappedValue))"
                             )
@@ -214,21 +231,46 @@ struct SamplerSettingsView: View {
                     .padding(.horizontal, 16)
 
                 SettingsCard("Reasoning") {
-                    sequenceField(title: "Thinking Start Sequence", text: $thinkingStartSequenceText)
-                    sequenceField(title: "Thinking Stop Sequence", text: $thinkingStopSequenceText)
-                    ThemedToggleRow(isOn: forceThinkingBinding) {
-                        Text("Force Thinking")
-                            .foregroundColor(appTheme.primaryText.color)
-                    }
+                    if isKoboldAPI {
+                        // Text Completion (KoboldAPI): reasoning is inlined via think tags
+                        // and may need to be forced open with an instruct prompt.
+                        sequenceField(
+                            title: "Thinking Start Sequence", text: $thinkingStartSequenceText)
+                        sequenceField(
+                            title: "Thinking Stop Sequence", text: $thinkingStopSequenceText)
+                        ThemedToggleRow(isOn: forceThinkingBinding) {
+                            Text("Force Thinking")
+                                .foregroundColor(appTheme.primaryText.color)
+                        }
 
-                    if forceThinkingBinding.wrappedValue {
-                        sequenceField(title: "Force Thinking Instruct", text: $forceThinkingInstructText)
+                        if forceThinkingBinding.wrappedValue {
+                            sequenceField(
+                                title: "Force Thinking Instruct", text: $forceThinkingInstructText)
+                        }
+                    } else {
+                        // ChatCompletion (OpenRouter/OpenAI): reasoning is a dedicated
+                        // stream field toggled via `reasoningEffort` on the request.
+                        ThemedToggleRow(isOn: disableReasoningBinding) {
+                            Text("Disable Reasoning")
+                                .foregroundColor(appTheme.primaryText.color)
+                        }
                     }
                 }
-                Text("You may find if the model does not close the \(connectionManager.connectionSettings.thinkingStopSequence.encodeEscapedSequence()) tag, the response does not stream. It should still load when complete.")
+                if isKoboldAPI {
+                    Text(
+                        "You may find if the model does not close the \(connectionManager.connectionSettings.thinkingStopSequence.encodeEscapedSequence()) tag, the response does not stream. It should still load when complete."
+                    )
                     .font(.caption)
                     .foregroundStyle(appTheme.secondaryText.color)
                     .padding(.horizontal, 16)
+                } else {
+                    Text(
+                        "Disable for models that do not support reasoning. Or to speed up responses."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(appTheme.secondaryText.color)
+                    .padding(.horizontal, 16)
+                }
             }
         }
         .padding(.horizontal, 16)
@@ -333,7 +375,8 @@ struct SamplerSettingsView: View {
     }
 
     private func updateSamplerOrder(from text: String) {
-        let samplerOrder = text
+        let samplerOrder =
+            text
             .split(separator: ",")
             .compactMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
 
@@ -365,6 +408,7 @@ struct SamplerSettingsView: View {
         settings.thinkingStopSequence = defaults.thinkingStopSequence
         settings.forceThinking = defaults.forceThinking
         settings.forceThinkingInstruct = defaults.forceThinkingInstruct
+        settings.disableReasoning = defaults.disableReasoning
 
         connectionManager.updateSettings(settings)
         syncSequenceFieldsFromSettings()

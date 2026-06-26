@@ -5,7 +5,6 @@
 //  Created by devon jerothe on 3/11/25.
 //
 
-import MarkdownStreamer
 import SwiftLLMSDK
 import SwiftUI
 import UIKit
@@ -58,6 +57,20 @@ struct ChatView: View {
                         let lastMessageID = chat.messages.last?.id
                         let messageCount = chat.messages.count
                         let isOnlyMessage = messageCount == 1
+                        let botMarkdownConfig = ChatMarkdownRenderConfig.renderConfig(
+                            appTheme: appTheme,
+                            actor: .bot
+                        )
+                        let userMarkdownConfig = ChatMarkdownRenderConfig.renderConfig(
+                            appTheme: appTheme,
+                            actor: .user
+                        )
+                        let _ = ChatPerformanceInstrumentation.chatViewBody(
+                            chatID: chat.id,
+                            messageCount: messageCount,
+                            streamingMessageID: viewModel.streamingMessageID,
+                            chatStatus: chat.status
+                        )
 
                         VStack {
                             ForEach(chat.messages, id: \.id) { message in
@@ -68,7 +81,10 @@ struct ChatView: View {
                                 ChatBubbleView(
                                     message: message,
                                     isStreaming: isStreaming,
-                                    mdReader: isStreaming ? viewModel.mdReader : nil,
+                                    markdownStreamSource: isStreaming
+                                        ? viewModel.markdownStreamSource : nil,
+                                    markdownConfig: message.actor == .bot
+                                        ? botMarkdownConfig : userMarkdownConfig,
                                     cardName: cardName,
                                     personaName: personaName,
                                     showToolbar: showToolbar,
@@ -98,11 +114,15 @@ struct ChatView: View {
                                     onSetEditing: { enabled in
                                         viewModel.disableWhileEditing = enabled
                                     },
-                                    onScrollViewUpdate: { viewModel.updateScrollView.toggle() }
+                                    onScrollViewUpdate: {
+                                        scrollToBottom(
+                                            proxy: proxy, anchor: "bottomAnchor", delay: 0)
+                                    }
                                 )
                                 .equatable()
                                 .padding(.top, 4)
                                 .padding(.bottom, 4)
+                                .padding(.horizontal, 12)
                                 .id(message.id)
                             }
                         }
@@ -125,7 +145,6 @@ struct ChatView: View {
                         }
                 }
                 .coordinateSpace(name: "chatScroll")
-                .padding(.horizontal)
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
                 .simultaneousGesture(
@@ -155,7 +174,9 @@ struct ChatView: View {
 
                 if viewModel.isAutoScrollEnabled == false && isScrollViewAtBottom == false {
                     Button {
-                        setAutoScrollEnabled(true)
+                        if viewModel.autoScrollSetting {
+                            setAutoScrollEnabled(true)
+                        }
                         scrollViewHelper?.stopScrolling()
                         scrollToBottom(
                             proxy: proxy, anchor: "bottomAnchor", delay: 0.0,
@@ -173,6 +194,9 @@ struct ChatView: View {
             }
             .onAppear {
                 scrollToBottom(proxy: proxy, anchor: "bottomAnchor", delay: 0.0, animated: false)
+            }
+            .onChange(of: viewModel.autoScrollSetting) { _, newValue in
+                setAutoScrollEnabled(newValue)
             }
             .onGeometryChange(for: CGFloat.self) { geo in
                 geo.size.height
@@ -228,7 +252,9 @@ struct ChatView: View {
                     }
                     .padding(.bottom, 8)
                     .padding(.leading, 16)
+                    
                     Spacer()
+                    
                     Button {
                         let promptText = self.textPrompt
                         self.textPrompt = ""
@@ -244,8 +270,7 @@ struct ChatView: View {
                                     ? appTheme.tintColor.color : appTheme.secondaryText.color)
                     }
                     .disabled(
-                        viewModel.isConnected == false || viewModel.isStreaming == true
-                            || viewModel.disableWhileEditing == true
+                        viewModel.shouldDisableSendMessage(textPrompt: self.textPrompt)
                     )
                     .padding(.bottom, 8)
                     .padding(.trailing, 16)
@@ -351,7 +376,7 @@ struct ChatView: View {
         var transaction = Transaction()
         transaction.disablesAnimations = true
         withTransaction(transaction) {
-            viewModel.isAutoScrollEnabled = enabled
+            viewModel.isAutoScrollEnabled = enabled && viewModel.autoScrollSetting
         }
     }
 }

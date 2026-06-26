@@ -6,10 +6,31 @@
 //
 
 import Collections
+import SwiftLLMSDK
 
 enum APITypeSelection: String, Codable {
     case KoboldAPI
     case OpenRouter
+    case OpenAI
+}
+
+protocol ModelPickerItem {
+    var id: String { get }
+}
+
+extension ModelPickerItem {
+    var displayName: String { id }
+    var searchableText: String { id }
+}
+
+extension OpenRouterModel: ModelPickerItem {
+    var displayName: String { name }
+    var searchableText: String { "\(name) \(id) \(description)" }
+}
+
+extension OpenAIModel: ModelPickerItem {
+    var displayName: String { id }
+    var searchableText: String { id }
 }
 
 public struct TemplateModel: Codable, Equatable {
@@ -17,17 +38,85 @@ public struct TemplateModel: Codable, Equatable {
     var isEnabled: Bool
 }
 
-public struct ConnectionSettingsModel: Codable {
+public struct KoboldCPPSettings: Codable {
     var host: String?
     var port: Int?
-    var connectionType: APITypeSelection = .KoboldAPI
+    var maxContextLength: Int?
     var contextLength: Int?
-    var maxContextLength: Int? // KoboldAPI only
+    var responseLength: Int?
+    var selectedModel: String?
+
+    init(
+        host: String? = nil,
+        port: Int? = nil,
+        maxContextLength: Int? = nil,
+        contextLength: Int? = nil,
+        responseLength: Int? = nil,
+        selectedModel: String? = nil
+    ) {
+        self.host = host
+        self.port = port
+        self.maxContextLength = maxContextLength
+        self.contextLength = contextLength
+        self.responseLength = responseLength
+        self.selectedModel = selectedModel
+    }
+}
+
+public struct OpenRouterSettings: Codable {
+    var maxContextLength: Int?
+    var contextLength: Int?
     var responseLength: Int?
     var apiKey: String?
     var selectedModel: String?
 
-    // Sampler Settings 
+    init(
+        maxContextLength: Int? = nil,
+        contextLength: Int? = nil,
+        responseLength: Int? = nil,
+        apiKey: String? = nil,
+        selectedModel: String? = nil
+    ) {
+        self.maxContextLength = maxContextLength
+        self.contextLength = contextLength
+        self.responseLength = responseLength
+        self.apiKey = apiKey
+        self.selectedModel = selectedModel
+    }
+}
+
+public struct OpenAISettings: Codable {
+    var baseURL: String?
+    var selectedModel: String?
+    var apiKey: String?
+    var maxContextLength: Int?
+    var contextLength: Int?
+    var responseLength: Int?
+
+    init(
+        baseURL: String? = nil,
+        selectedModel: String? = nil,
+        apiKey: String? = nil,
+        maxContextLength: Int? = nil,
+        contextLength: Int? = nil,
+        responseLength: Int? = nil
+    ) {
+        self.baseURL = baseURL
+        self.selectedModel = selectedModel
+        self.apiKey = apiKey
+        self.maxContextLength = maxContextLength
+        self.contextLength = contextLength
+        self.responseLength = responseLength
+    }
+}
+
+public struct ConnectionSettingsModel: Codable {
+    var connectionType: APITypeSelection = .KoboldAPI
+    var koboldCPPSettings: KoboldCPPSettings?
+    var openRouterSettings: OpenRouterSettings?
+    var openAISettings: OpenAISettings?
+
+    // Sampler Settings
     var temperature: Double
     var topP: Double
     var topK: Double
@@ -39,33 +128,33 @@ public struct ConnectionSettingsModel: Codable {
     var repetitionRange: Int
     var repetitionSlope: Double
     var samplerOrder: [Int]
-    var userStopSequence: String 
-    var botStopSequence: String 
-    var systemStopSequence: String 
+    var userStopSequence: String
+    var botStopSequence: String
+    var systemStopSequence: String
     var thinkingStartSequence: String
     var thinkingStopSequence: String
     var forceThinkingInstruct: String
 
     // Chat Settings
-    var forceThinking: Bool = false // KoboldAPI only
+    var autoScrollChat: Bool = true
+    // KoboldAPI (Text Completion) only: forces the think tag open with an instruct prompt.
+    var forceThinking: Bool = false
+    // OpenRouter/OpenAI (Chat Completion) only: disables reasoning by sending `.none` for
+    // `reasoningEffort`. When false, `.medium` is sent to request reasoning deltas.
     var disableReasoning: Bool = false
     var userTemplates: OrderedDictionary<String, TemplateModel> = [:]
 
     // App Settings
-    var locked: Bool = false 
+    var locked: Bool = false
     var autoLock: Bool = false
-    var autoConnect: Bool = false 
+    var autoConnect: Bool = false
     var currentTheme: AppTheme = AppTheme.defaultTheme
 
     init(
-        host: String? = nil,
-        port: Int? = nil,
         connectionType: APITypeSelection = .KoboldAPI,
-        contextLength: Int? = nil,
-        maxContextLength: Int? = nil,
-        responseLength: Int? = nil,
-        apiKey: String? = nil,
-        selectedModel: String? = nil,
+        koboldCPPSettings: KoboldCPPSettings? = nil,
+        openRouterSettings: OpenRouterSettings? = nil,
+        openAISettings: OpenAISettings? = nil,
         temperature: Double = 0.9,
         topP: Double = 0.95,
         topK: Double = 40,
@@ -77,6 +166,7 @@ public struct ConnectionSettingsModel: Codable {
         repetitionRange: Int = 360,
         repetitionSlope: Double = 0.5,
         samplerOrder: [Int] = [6, 0, 1, 3, 4, 2, 5],
+        autoScrollChat: Bool = true,
         forceThinking: Bool = false,
         disableReasoning: Bool = false,
         resetDeleteMe: Bool = false,
@@ -92,14 +182,10 @@ public struct ConnectionSettingsModel: Codable {
         forceThinkingInstruct: String = ConnectionSettingsModel.defaultForceThinkingInstruct,
         currentTheme: AppTheme = AppTheme.defaultTheme
     ) {
-        self.host = host
-        self.port = port
         self.connectionType = connectionType
-        self.contextLength = contextLength
-        self.maxContextLength = maxContextLength
-        self.responseLength = responseLength
-        self.apiKey = apiKey
-        self.selectedModel = selectedModel
+        self.koboldCPPSettings = koboldCPPSettings
+        self.openRouterSettings = openRouterSettings
+        self.openAISettings = openAISettings
         self.temperature = temperature
         self.topP = topP
         self.topK = topK
@@ -111,6 +197,7 @@ public struct ConnectionSettingsModel: Codable {
         self.repetitionRange = repetitionRange
         self.repetitionSlope = repetitionSlope
         self.samplerOrder = samplerOrder
+        self.autoScrollChat = autoScrollChat
         self.forceThinking = forceThinking
         self.disableReasoning = disableReasoning
         self.userTemplates = userTemplates
@@ -128,14 +215,10 @@ public struct ConnectionSettingsModel: Codable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case host
-        case port
         case connectionType
-        case contextLength
-        case maxContextLength
-        case responseLength
-        case apiKey
-        case selectedModel
+        case koboldCPPSettings
+        case openRouterSettings
+        case openAISettings
         case temperature
         case topP
         case topK
@@ -147,6 +230,7 @@ public struct ConnectionSettingsModel: Codable {
         case repetitionRange
         case repetitionSlope
         case samplerOrder
+        case autoScrollChat
         case forceThinking
         case disableReasoning
         case userTemplates
@@ -166,39 +250,238 @@ public struct ConnectionSettingsModel: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = ConnectionSettingsModel.defaults
 
-        self.host = try container.decodeIfPresent(String.self, forKey: .host)
-        self.port = try container.decodeIfPresent(Int.self, forKey: .port)
-        self.connectionType = try container.decodeIfPresent(APITypeSelection.self, forKey: .connectionType) ?? .KoboldAPI
-        self.contextLength = try container.decodeIfPresent(Int.self, forKey: .contextLength)
-        self.maxContextLength = try container.decodeIfPresent(Int.self, forKey: .maxContextLength)
-        self.responseLength = try container.decodeIfPresent(Int.self, forKey: .responseLength)
-        self.apiKey = try container.decodeIfPresent(String.self, forKey: .apiKey)
-        self.selectedModel = try container.decodeIfPresent(String.self, forKey: .selectedModel)
-        self.temperature = try container.decodeIfPresent(Double.self, forKey: .temperature) ?? defaults.temperature
+        self.connectionType =
+            try container.decodeIfPresent(APITypeSelection.self, forKey: .connectionType)
+            ?? .KoboldAPI
+        self.koboldCPPSettings = try container.decodeIfPresent(
+            KoboldCPPSettings.self, forKey: .koboldCPPSettings)
+        self.openRouterSettings = try container.decodeIfPresent(
+            OpenRouterSettings.self, forKey: .openRouterSettings)
+        self.openAISettings = try container.decodeIfPresent(
+            OpenAISettings.self, forKey: .openAISettings)
+        self.temperature =
+            try container.decodeIfPresent(Double.self, forKey: .temperature) ?? defaults.temperature
         self.topP = try container.decodeIfPresent(Double.self, forKey: .topP) ?? defaults.topP
         self.topK = try container.decodeIfPresent(Double.self, forKey: .topK) ?? defaults.topK
-        self.typicalP = try container.decodeIfPresent(Double.self, forKey: .typicalP) ?? defaults.typicalP
+        self.typicalP =
+            try container.decodeIfPresent(Double.self, forKey: .typicalP) ?? defaults.typicalP
         self.tfs = try container.decodeIfPresent(Int.self, forKey: .tfs) ?? defaults.tfs
         self.topA = try container.decodeIfPresent(Double.self, forKey: .topA) ?? defaults.topA
         self.minP = try container.decodeIfPresent(Double.self, forKey: .minP) ?? defaults.minP
-        self.repetitionPenalty = try container.decodeIfPresent(Double.self, forKey: .repetitionPenalty) ?? defaults.repetitionPenalty
-        self.repetitionRange = try container.decodeIfPresent(Int.self, forKey: .repetitionRange) ?? defaults.repetitionRange
-        self.repetitionSlope = try container.decodeIfPresent(Double.self, forKey: .repetitionSlope) ?? defaults.repetitionSlope
-        self.samplerOrder = try container.decodeIfPresent([Int].self, forKey: .samplerOrder) ?? defaults.samplerOrder
-        self.forceThinking = try container.decodeIfPresent(Bool.self, forKey: .forceThinking) ?? false
-        self.disableReasoning = try container.decodeIfPresent(Bool.self, forKey: .disableReasoning) ?? false
-        self.userTemplates = try container.decodeIfPresent(OrderedDictionary<String, TemplateModel>.self, forKey: .userTemplates) ?? [:]
+        self.repetitionPenalty =
+            try container.decodeIfPresent(Double.self, forKey: .repetitionPenalty)
+            ?? defaults.repetitionPenalty
+        self.repetitionRange =
+            try container.decodeIfPresent(Int.self, forKey: .repetitionRange)
+            ?? defaults.repetitionRange
+        self.repetitionSlope =
+            try container.decodeIfPresent(Double.self, forKey: .repetitionSlope)
+            ?? defaults.repetitionSlope
+        self.samplerOrder =
+            try container.decodeIfPresent([Int].self, forKey: .samplerOrder)
+            ?? defaults.samplerOrder
+        self.autoScrollChat =
+            try container.decodeIfPresent(Bool.self, forKey: .autoScrollChat) ?? true
+        self.forceThinking =
+            try container.decodeIfPresent(Bool.self, forKey: .forceThinking) ?? false
+        self.disableReasoning =
+            try container.decodeIfPresent(Bool.self, forKey: .disableReasoning) ?? false
+        self.userTemplates =
+            try container.decodeIfPresent(
+                OrderedDictionary<String, TemplateModel>.self, forKey: .userTemplates) ?? [:]
         self.locked = try container.decodeIfPresent(Bool.self, forKey: .locked) ?? false
         self.autoLock = try container.decodeIfPresent(Bool.self, forKey: .autoLock) ?? false
         self.autoConnect = try container.decodeIfPresent(Bool.self, forKey: .autoConnect) ?? false
-        self.userStopSequence = try container.decodeIfPresent(String.self, forKey: .userStopSequence) ?? defaults.userStopSequence
-        self.botStopSequence = try container.decodeIfPresent(String.self, forKey: .botStopSequence) ?? defaults.botStopSequence
-        self.systemStopSequence = try container.decodeIfPresent(String.self, forKey: .systemStopSequence) ?? defaults.systemStopSequence
-        self.thinkingStartSequence = try container.decodeIfPresent(String.self, forKey: .thinkingStartSequence) ?? defaults.thinkingStartSequence
-        self.thinkingStopSequence = try container.decodeIfPresent(String.self, forKey: .thinkingStopSequence) ?? defaults.thinkingStopSequence
-        self.forceThinkingInstruct = try container.decodeIfPresent(String.self, forKey: .forceThinkingInstruct) ?? defaults.forceThinkingInstruct
-        self.currentTheme = try container.decodeIfPresent(AppTheme.self, forKey: .currentTheme) ?? defaults.currentTheme
+        self.userStopSequence =
+            try container.decodeIfPresent(String.self, forKey: .userStopSequence)
+            ?? defaults.userStopSequence
+        self.botStopSequence =
+            try container.decodeIfPresent(String.self, forKey: .botStopSequence)
+            ?? defaults.botStopSequence
+        self.systemStopSequence =
+            try container.decodeIfPresent(String.self, forKey: .systemStopSequence)
+            ?? defaults.systemStopSequence
+        self.thinkingStartSequence =
+            try container.decodeIfPresent(String.self, forKey: .thinkingStartSequence)
+            ?? defaults.thinkingStartSequence
+        self.thinkingStopSequence =
+            try container.decodeIfPresent(String.self, forKey: .thinkingStopSequence)
+            ?? defaults.thinkingStopSequence
+        self.forceThinkingInstruct =
+            try container.decodeIfPresent(String.self, forKey: .forceThinkingInstruct)
+            ?? defaults.forceThinkingInstruct
+        self.currentTheme =
+            try container.decodeIfPresent(AppTheme.self, forKey: .currentTheme)
+            ?? defaults.currentTheme
         self.ensureNonEmptySequences()
+    }
+
+    var activeHost: String? {
+        switch connectionType {
+        case .KoboldAPI:
+            koboldCPPSettings?.host
+        case .OpenRouter, .OpenAI:
+            nil
+        }
+    }
+
+    var activePort: Int? {
+        switch connectionType {
+        case .KoboldAPI:
+            koboldCPPSettings?.port
+        case .OpenRouter, .OpenAI:
+            nil
+        }
+    }
+
+    var activeMaxContextLength: Int? {
+        switch connectionType {
+        case .KoboldAPI:
+            koboldCPPSettings?.maxContextLength
+        case .OpenRouter:
+            openRouterSettings?.maxContextLength
+        case .OpenAI:
+            openAISettings?.maxContextLength
+        }
+    }
+
+    var activeContextLength: Int? {
+        switch connectionType {
+        case .KoboldAPI:
+            koboldCPPSettings?.contextLength
+        case .OpenRouter:
+            openRouterSettings?.contextLength
+        case .OpenAI:
+            openAISettings?.contextLength
+        }
+    }
+
+    var activeResponseLength: Int? {
+        switch connectionType {
+        case .KoboldAPI:
+            koboldCPPSettings?.responseLength
+        case .OpenRouter:
+            openRouterSettings?.responseLength
+        case .OpenAI:
+            openAISettings?.responseLength
+        }
+    }
+
+    var activeAPIKey: String? {
+        switch connectionType {
+        case .KoboldAPI:
+            nil
+        case .OpenRouter:
+            openRouterSettings?.apiKey
+        case .OpenAI:
+            openAISettings?.apiKey
+        }
+    }
+
+    var activeSelectedModel: String? {
+        switch connectionType {
+        case .KoboldAPI:
+            koboldCPPSettings?.selectedModel
+        case .OpenRouter:
+            openRouterSettings?.selectedModel
+        case .OpenAI:
+            openAISettings?.selectedModel
+        }
+    }
+
+    mutating func updateActiveHost(_ value: String?) {
+        var settings = koboldCPPSettings ?? Self.defaultKoboldCPPSettings
+        settings.host = value
+        koboldCPPSettings = settings
+    }
+
+    mutating func updateActivePort(_ value: Int?) {
+        var settings = koboldCPPSettings ?? Self.defaultKoboldCPPSettings
+        settings.port = value
+        koboldCPPSettings = settings
+    }
+
+    mutating func updateActiveMaxContextLength(_ value: Int?) {
+        switch connectionType {
+        case .KoboldAPI:
+            var settings = koboldCPPSettings ?? Self.defaultKoboldCPPSettings
+            settings.maxContextLength = value
+            koboldCPPSettings = settings
+        case .OpenRouter:
+            var settings = openRouterSettings ?? Self.defaultOpenRouterSettings
+            settings.maxContextLength = value
+            openRouterSettings = settings
+        case .OpenAI:
+            var settings = openAISettings ?? Self.defaultOpenAISettings
+            settings.maxContextLength = value
+            openAISettings = settings
+        }
+    }
+
+    mutating func updateActiveContextLength(_ value: Int?) {
+        switch connectionType {
+        case .KoboldAPI:
+            var settings = koboldCPPSettings ?? Self.defaultKoboldCPPSettings
+            settings.contextLength = value
+            koboldCPPSettings = settings
+        case .OpenRouter:
+            var settings = openRouterSettings ?? Self.defaultOpenRouterSettings
+            settings.contextLength = value
+            openRouterSettings = settings
+        case .OpenAI:
+            var settings = openAISettings ?? Self.defaultOpenAISettings
+            settings.contextLength = value
+            openAISettings = settings
+        }
+    }
+
+    mutating func updateActiveResponseLength(_ value: Int?) {
+        switch connectionType {
+        case .KoboldAPI:
+            var settings = koboldCPPSettings ?? Self.defaultKoboldCPPSettings
+            settings.responseLength = value
+            koboldCPPSettings = settings
+        case .OpenRouter:
+            var settings = openRouterSettings ?? Self.defaultOpenRouterSettings
+            settings.responseLength = value
+            openRouterSettings = settings
+        case .OpenAI:
+            var settings = openAISettings ?? Self.defaultOpenAISettings
+            settings.responseLength = value
+            openAISettings = settings
+        }
+    }
+
+    mutating func updateActiveAPIKey(_ value: String?) {
+        switch connectionType {
+        case .KoboldAPI:
+            return
+        case .OpenRouter:
+            var settings = openRouterSettings ?? Self.defaultOpenRouterSettings
+            settings.apiKey = value
+            openRouterSettings = settings
+        case .OpenAI:
+            var settings = openAISettings ?? Self.defaultOpenAISettings
+            settings.apiKey = value
+            openAISettings = settings
+        }
+    }
+
+    mutating func updateActiveSelectedModel(_ value: String?) {
+        switch connectionType {
+        case .KoboldAPI:
+            var settings = koboldCPPSettings ?? Self.defaultKoboldCPPSettings
+            settings.selectedModel = value
+            koboldCPPSettings = settings
+        case .OpenRouter:
+            var settings = openRouterSettings ?? Self.defaultOpenRouterSettings
+            settings.selectedModel = value
+            openRouterSettings = settings
+        case .OpenAI:
+            var settings = openAISettings ?? Self.defaultOpenAISettings
+            settings.selectedModel = value
+            openAISettings = settings
+        }
     }
 }
 
@@ -208,16 +491,40 @@ extension ConnectionSettingsModel {
     static let defaultSystemStopSequence = "\nSystem:"
     static let defaultThinkingStartSequence = "<think>"
     static let defaultThinkingStopSequence = "</think>"
-    static let defaultForceThinkingInstruct = "Ok, first we need to consider who we are and not to speak for the user."
+    static let defaultForceThinkingInstruct =
+        "Ok, first we need to consider who we are and not to speak for the user."
 
-    static let defaults = ConnectionSettingsModel(
+    static let defaultKoboldCPPSettings = KoboldCPPSettings(
         host: "127.0.0.1",
         port: 5001,
-        connectionType: .KoboldAPI,
-        contextLength: 6144,
         maxContextLength: 25600,
+        contextLength: 6144,
         responseLength: 300,
-        selectedModel: "deepseek/deepseek-chat-v3-0324:free",
+        selectedModel: nil
+    )
+
+    static let defaultOpenRouterSettings = OpenRouterSettings(
+        maxContextLength: 256000,
+        contextLength: 6144,
+        responseLength: 300,
+        apiKey: nil,
+        selectedModel: "deepseek/deepseek-chat-v3-0324:free"
+    )
+
+    static let defaultOpenAISettings = OpenAISettings(
+        baseURL: "",
+        selectedModel: "",
+        apiKey: nil,
+        maxContextLength: 256000,
+        contextLength: 6144,
+        responseLength: 300
+    )
+
+    static let defaults = ConnectionSettingsModel(
+        connectionType: .KoboldAPI,
+        koboldCPPSettings: defaultKoboldCPPSettings,
+        openRouterSettings: defaultOpenRouterSettings,
+        openAISettings: defaultOpenAISettings,
         temperature: 0.9,
         topP: 0.95,
         topK: 40,
@@ -240,8 +547,10 @@ extension ConnectionSettingsModel {
     )
 
     static let defaultUserTemplates: OrderedDictionary<String, TemplateModel> = [
-        "Roleplay": TemplateModel(content: TemplatePrompts().defaultRolePlayPrompt, isEnabled: true),
-        "Reasoning": TemplateModel(content: TemplateInstructions().reasoningInstructions, isEnabled: true)
+        "Roleplay": TemplateModel(
+            content: TemplatePrompts().defaultRolePlayPrompt, isEnabled: true),
+        "Reasoning": TemplateModel(
+            content: TemplateInstructions().reasoningInstructions, isEnabled: true),
     ]
 
     mutating func ensureNonEmptySequences() {

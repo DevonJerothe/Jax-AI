@@ -27,6 +27,9 @@ struct CharacterCardModel: Hashable {
     var createdAt: Date = Date()
     var isPrivate: Bool = false
 
+    // This can be used to hide the character from UI. This should be used for quick chat instances, and "no character" based chats
+    var isSystemChar: Bool = false 
+
     var chats: [ChatModel] = []
     var characterBook: LoreBookModel?
     var imageURL: URL?
@@ -45,7 +48,8 @@ struct CharacterCardModel: Hashable {
         tags: [String] = [],
         imageData: Data? = nil,
         chats: [ChatModel] = [],
-        characterBook: LoreBookModel? = nil
+        characterBook: LoreBookModel? = nil,
+        isSystemChar: Bool = false
     ) {
         self.name = name
         self.description = description
@@ -60,6 +64,7 @@ struct CharacterCardModel: Hashable {
         self.imageData = imageData
         self.chats = chats
         self.characterBook = characterBook
+        self.isSystemChar = isSystemChar
     }
 
     init(fromChub: CharacterCard) {
@@ -142,6 +147,7 @@ extension CharacterCardModel {
         self.createdAt = record.createdAt
         self.imageData = record.imageData
         self.isPrivate = record.isPrivate
+        self.isSystemChar = record.isSystemChar
 
         self.altGreetings = try? record.altGreetings?.decodeStringArray() ?? []
         self.tags = try? record.tags?.decodeStringArray() ?? []
@@ -167,7 +173,17 @@ extension CharacterCardModel {
             tags: tags?.encodeStringArray() ?? "",
             createdAt: createdAt,
             imageData: imageData,
-            isPrivate: isPrivate
+            isPrivate: isPrivate,
+            isSystemChar: isSystemChar
+        )
+    }
+
+    static func systemCard() -> CharacterCardModel {
+        return CharacterCardModel(
+            name: "Jax AI", 
+            description: CardTemplates().quickChat,
+            personality: CardTemplates().quickChatPersonality, 
+            isSystemChar: true
         )
     }
 }
@@ -200,6 +216,7 @@ struct CharacterCardRecord: Codable, FetchableRecord, MutablePersistableRecord, 
     var createdAt: Date 
     var imageData: Data? 
     var isPrivate: Bool = false
+    var isSystemChar: Bool = false
     
     public static func migrateTable(_ db: Database) throws {
         try db.create(table: "char_cards", ifNotExists: true) { t in
@@ -218,6 +235,7 @@ struct CharacterCardRecord: Codable, FetchableRecord, MutablePersistableRecord, 
             t.column("createdAt", .datetime).notNull().defaults(to: "CURRENT_TIMESTAMP")
             t.column("imageData", .blob)
             t.column("isPrivate", .boolean).notNull().defaults(to: false)
+            t.column("isSystemChar", .boolean).notNull().defaults(to: false)
         }
     }
 }

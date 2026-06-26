@@ -55,6 +55,7 @@ struct AttachLoreBookSheetView: View {
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
+                    .scrollIndicators(.hidden)
                 }
             }
             .background(appTheme.backgroundColor.color)

@@ -5,8 +5,8 @@
 //  Created by devon jerothe on 3/11/25.
 //
 
-import SwiftUI
 import GRDB
+import SwiftUI
 
 @main
 struct PocketAIApp: App {
@@ -28,7 +28,8 @@ struct PocketAIApp: App {
                 // Chat List Tab
                 NavigationStack(path: $navManager.chatListPath) {
                     ChatListView()
-                        .navigationDestination(for: NavigationManager.Destination.self) { destination in
+                        .navigationDestination(for: NavigationManager.Destination.self) {
+                            destination in
                             destinationView(for: destination)
                         }
                 }
@@ -41,7 +42,8 @@ struct PocketAIApp: App {
                 // Character List Tab
                 NavigationStack(path: $navManager.characterListPath) {
                     CharacterCardsView()
-                        .navigationDestination(for: NavigationManager.Destination.self) { destination in
+                        .navigationDestination(for: NavigationManager.Destination.self) {
+                            destination in
                             destinationView(for: destination)
                         }
                 }
@@ -54,7 +56,8 @@ struct PocketAIApp: App {
                 // Settings Tab
                 NavigationStack(path: $navManager.settingsPath) {
                     GeneralSettingsView()
-                        .navigationDestination(for: NavigationManager.Destination.self) { destination in
+                        .navigationDestination(for: NavigationManager.Destination.self) {
+                            destination in
                             destinationView(for: destination)
                         }
                 }
@@ -67,6 +70,7 @@ struct PocketAIApp: App {
             .sheet(item: $navManager.presentedSheet) { sheet in
                 sheetView(for: sheet)
                     .presentationBackground(serviceContainer.currentTheme.backgroundColor.color)
+                    .presentationContentInteraction(.scrolls)
             }
             .tint(serviceContainer.currentTheme.tintColor.color)
             .environment(\.appTheme, serviceContainer.currentTheme)
@@ -96,8 +100,8 @@ struct PocketAIApp: App {
                 .toolbar(.hidden, for: .tabBar)
         case .characterView(let characterID):
             CharacterCardSettingsView(characterID: characterID)
-        case .characterCardsView:
-            CharacterCardsView()
+        case .characterCardsView(let startChat):
+            CharacterCardsView(startChat: startChat)
         case .loreBookListView(let chatID):
             LoreBookListView(chatID: chatID)
         case .loreBookView(let loreBookID):
@@ -118,12 +122,12 @@ struct PocketAIApp: App {
             ChatNotesView(chatID: chatID)
 
         #if !APPSTORE
-        case .booruBrowserView:
-            BooruBrowserView()
-        case .chubAIBrowserView:
-            ChubAIBrowserView()
+            case .booruBrowserView:
+                BooruBrowserView()
+            case .chubAIBrowserView:
+                ChubAIBrowserView()
         #endif
-        
+
         case .charImportView(let importType):
             CharImportView(importType: importType)
         }

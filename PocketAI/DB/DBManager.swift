@@ -162,6 +162,22 @@ class DBManager {
             )
             
         }
+
+        migrator.registerMigration("v9_message_error_details") { _ in
+            // Error display details are stored per generation in textGenerationHistoryJSON.
+            // Keep this identifier registered for databases that saw the earlier migration.
+        }
+
+        migrator.registerMigration("v10_system_char") { db in
+            let characterCardColumns = try db.columns(in: CharacterCardRecord.databaseTableName).map(\.name)
+
+            if characterCardColumns.contains("isSystemChar") == false {
+                try db.alter(table: CharacterCardRecord.databaseTableName) { t in
+                    t.add(column: "isSystemChar", .boolean).notNull().defaults(to: false)
+                }
+            }
+        }
+
         try migrator.migrate(dbQueue)
     }
 

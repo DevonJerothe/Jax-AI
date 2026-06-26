@@ -19,6 +19,7 @@ struct CharacterCardSettingsView: View {
     @State private var firstMessageExpanded = false
     @State private var altGreetingsExpanded = false
     @State private var configuredInitialExpansion = false
+    @State private var advancedEntriesExpanded = false 
     @FocusState private var focusedField: FocusedField?
 
     private let characterID: UUID?
@@ -34,6 +35,8 @@ struct CharacterCardSettingsView: View {
         case scenario
         case firstMessage
         case altGreeting(Int)
+        case messageExample
+        case systemPrompt
     }
 
     private var shouldHidePrivateContent: Bool {
@@ -196,6 +199,7 @@ struct CharacterCardSettingsView: View {
                     )
 
                     altGreetingsSection
+                    advancedEntriesView
                 }
                 .padding(.bottom, 24)
             }
@@ -300,6 +304,51 @@ struct CharacterCardSettingsView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .id(field)
+    }
+
+    private var advancedEntriesView: some View {
+        DisclosureGroup(isExpanded: $advancedEntriesExpanded) {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Message Examples")
+                        .font(.subheadline)
+                        .foregroundStyle(appTheme.secondaryText.color)
+
+                    settingsTextEditor(
+                        text: Binding( 
+                            get: { characterCard.messageExample ?? "" },
+                            set: { characterCard.messageExample = $0 }
+                        ),
+                        placeholder: "Message example...",
+                        field: .messageExample,
+                        height: 220
+                    )
+                }
+                .id(FocusedField.messageExample)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("System Prompt")
+                        .font(.subheadline)
+                        .foregroundStyle(appTheme.secondaryText.color)
+
+                    settingsTextEditor(
+                        text: Binding( 
+                            get: { characterCard.systemPrompt ?? "" },
+                            set: { characterCard.systemPrompt = $0 }
+                        ),
+                        placeholder: "System prompt...",
+                        field: .systemPrompt,
+                        height: 220
+                    )
+                }
+                .id(FocusedField.systemPrompt)
+            }
+            .padding(.top, 8)
+        } label: {
+            Text("Advanced Entreis")
+                .foregroundColor(appTheme.primaryText.color)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     private var altGreetingsSection: some View {
@@ -419,6 +468,7 @@ struct CharacterCardSettingsView: View {
         personalityExpanded = hasContent(characterCard.personality)
         scenarioExpanded = hasContent(characterCard.scenario)
         firstMessageExpanded = hasContent(characterCard.firstMessage)
+        advancedEntriesExpanded = (hasContent(characterCard.messageExample) || hasContent(characterCard.systemPrompt))
         altGreetingsExpanded = characterCard.altGreetings?.contains { hasContent($0) } ?? false
         configuredInitialExpansion = true
     }

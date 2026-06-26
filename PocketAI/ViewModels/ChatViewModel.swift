@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import MarkdownStreamer
 import SwiftLLMSDK
 import SwiftUI
 import UIKit
@@ -19,10 +18,8 @@ final class ChatViewModel {
     private let chatStore: ChatStore
     private let characterStore: CharacterStore
     private let appTheme: AppTheme = ServiceContainer.shared.currentTheme
-    // private let contextBuilder: ContextManager
 
-    // Markdown streaming
-    private(set) var mdReader: MarkdownReader = MarkdownReader()
+    private(set) var markdownStreamSource = ChatMarkdownStreamSource()
     private(set) var streamingMessageID: UUID?
 
     let chatID: UUID
@@ -59,7 +56,10 @@ final class ChatViewModel {
     var editingMessageID: UUID?
     var newInstance: Bool = true
     var isViewActive: Bool = false
-    var isAutoScrollEnabled: Bool = true
+    var isAutoScrollEnabled: Bool
+    var autoScrollSetting: Bool {
+        connectionManager.connectionSettings.autoScrollChat
+    }
 
     var disableWhileEditing: Bool = false
 
@@ -79,15 +79,16 @@ final class ChatViewModel {
             connectionManager ?? ServiceContainer.shared.getConnectionStatusManager()
         self.chatStore = chatStore ?? ServiceContainer.shared.getChatStore()
         self.characterStore = characterStore ?? ServiceContainer.shared.getCharacterStore()
+        self.isAutoScrollEnabled = self.connectionManager.connectionSettings.autoScrollChat
 
         Task {
-            guard let model = model else { 
+            guard let model = model else {
                 print("Model not found yet!")
                 return
             }
 
-            // Warm up generation. We ensure the contextManager is initialized on each message 
-            // send. This will allow the manager to start building the inital context early if 
+            // Warm up generation. We ensure the contextManager is initialized on each message
+            // send. This will allow the manager to start building the inital context early if
             // a chat is opened long enough before a first send.
             await self.languageModelService.initContextManager(chatModel: model)
         }
@@ -149,7 +150,7 @@ final class ChatViewModel {
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id, save: false)
-            isAutoScrollEnabled = true
+            isAutoScrollEnabled = autoScrollSetting
             scrollAfterLayout.toggle()
             scrollReloadToggle += 1
             await generateResponse(for: updatedMessage.id, isContinued: continueResponse)
@@ -173,7 +174,7 @@ final class ChatViewModel {
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id)
-            isAutoScrollEnabled = true
+            isAutoScrollEnabled = autoScrollSetting
             scrollAfterLayout.toggle()
         } catch {
             print("Failed to navigate message generation: \(error)")
@@ -203,12 +204,12 @@ final class ChatViewModel {
 
         do {
             if chat.messages.count == 1 {
-                // If we only have 1 message (first mes) we can simply clear chat to apply any 
+                // If we only have 1 message (first mes) we can simply clear chat to apply any
                 // new changes
                 try await chatStore.resetChat(chat)
-            } 
+            }
             try await chatStore.saveChat(chat)
-            
+
         } catch {
             print("Failed to update chat settings: \(error)")
         }
@@ -240,7 +241,7 @@ final class ChatViewModel {
 
     func updateNote(noteID: UUID, text: String, depth: Int, injectInMemory: Bool) async {
         guard var chat = model,
-              let noteIndex = chat.chatNotes.firstIndex(where: { $0.id == noteID })
+            let noteIndex = chat.chatNotes.firstIndex(where: { $0.id == noteID })
         else {
             return
         }
@@ -288,6 +289,12 @@ final class ChatViewModel {
         // for KoboldAPI we need to update token count after any edit
         let tokenCount = await languageModelService.getTokenCount(string: newText)
         updatedMessage.updateCurrentGeneration(text: newText, tokenCount: tokenCount)
+        updatedMessage.updateCurrentGenerationError(
+            .none,
+            title: nil,
+            message: nil,
+            recoverySuggestion: nil
+        )
 
         do {
             print("updating message")
@@ -306,12 +313,22 @@ final class ChatViewModel {
 
         do {
             try await chatStore.deleteMessage(message, from: chat.id)
-            isAutoScrollEnabled = true
+            isAutoScrollEnabled = autoScrollSetting
             scrollAfterLayout.toggle()
             scrollReloadToggle += 1
         } catch {
             print("Failed to delete message: \(error)")
         }
+    }
+
+    func shouldDisableSendMessage(textPrompt: String) -> Bool {
+        let lastMessageActor = model?.messages.last?.actor
+
+        return isConnected == false
+            || isStreaming == true
+            || disableWhileEditing == true 
+            || (textPrompt.isEmpty && lastMessageActor != .user)
+        
     }
 
     private func generateResponse(
@@ -341,7 +358,7 @@ final class ChatViewModel {
         let response = await languageModelService.sendMessage(
             chatModel: chat, continued: isContinued)
         let responseText =
-            response?.text ?? "There was an error processing your request. Please try again later."
+            response?.text ?? ""
         let settings = connectionManager.connectionSettings
         let sanitizedResponse = ReasoningStreamParser.visibleText(
             from: responseText,
@@ -360,7 +377,8 @@ final class ChatViewModel {
             delta: "",
             disconnect: response?.disconnect ?? true,
             isFinal: true,
-            shouldShowThinking: false
+            shouldShowThinking: false,
+            error: response?.error
         )
     }
 
@@ -393,6 +411,11 @@ final class ChatViewModel {
                 thinkingStartSequence: connectionManager.connectionSettings.thinkingStartSequence,
                 thinkingStopSequence: connectionManager.connectionSettings.thinkingStopSequence
             )
+            // KoboldAPI (text completion) embeds reasoning inline via think tags, so we
+            // parse them out of the streamed text. OpenRouter/OpenAI-compatible APIs
+            // surface reasoning as a dedicated field with an `isThinking` flag instead.
+            let connectionType = ServiceContainer.shared.selectedConnectionType
+            let useReasoningParser = connectionType == .KoboldAPI
             let stream = await languageModelService.sendStreamedMessage(
                 chatModel: chat,
                 userPersona: userPersona,
@@ -402,11 +425,19 @@ final class ChatViewModel {
             for await response in stream {
                 let responseText = response.text ?? ""
                 let rawResponse = rawAccumulator.ingest(responseText)
-                let isFinal = response.streaming == false
-                let parsedResponse =
-                    excludeThinking
-                    ? reasoningParser.parse(rawResponse, isFinal: isFinal)
-                    : ReasoningParseResult(visibleText: rawResponse, shouldShowThinking: false)
+                let isFinal = response.streaming == false || response.error != nil
+                let parsedResponse: ReasoningParseResult
+                if useReasoningParser {
+                    parsedResponse =
+                        excludeThinking
+                        ? reasoningParser.parse(rawResponse, isFinal: isFinal)
+                        : ReasoningParseResult(visibleText: rawResponse, shouldShowThinking: false)
+                } else {
+                    parsedResponse = ReasoningParseResult(
+                        visibleText: rawResponse,
+                        shouldShowThinking: response.isThinking
+                    )
+                }
                 let visibleResponse =
                     parsedResponse.visibleText.isEmpty
                     ? ""
@@ -416,9 +447,10 @@ final class ChatViewModel {
                     for: messageID,
                     responseText: visibleResponse,
                     delta: response.deltaText ?? "",
-                    disconnect: response.disconnect,
+                    disconnect: response.disconnect || response.error != nil,
                     isFinal: isFinal,
-                    shouldShowThinking: parsedResponse.shouldShowThinking
+                    shouldShowThinking: parsedResponse.shouldShowThinking,
+                    error: response.error
                 )
             }
         }
@@ -430,7 +462,8 @@ final class ChatViewModel {
         delta: String,
         disconnect: Bool,
         isFinal: Bool,
-        shouldShowThinking: Bool
+        shouldShowThinking: Bool,
+        error: LLMError? = nil
     ) async {
         guard let chat = model,
             let message = chat.messages.first(where: { $0.id == messageID })
@@ -438,58 +471,86 @@ final class ChatViewModel {
             return
         }
 
-        var updatedMessage = message
-        updatedMessage.error = disconnect ? .apiError : .none
-
-        if responseText.isEmpty == false {
-            updatedMessage.text = responseText
-        }
-
-        if disconnect {
-            updatedMessage.text =
-                responseText.isEmpty
-                ? "There was an error processing your request. Please try again later."
-                : responseText
-        }
-
-        updatedMessage.status =
+        let targetMessageStatus: MessageStatus =
             isFinal
             ? .done
             : (shouldShowThinking ? .thinking : .streaming)
+        let targetChatStatus: ChatStatus =
+            isFinal ? .idle : (shouldShowThinking ? .thinking : .streaming)
+        let shouldCommitMessage =
+            isFinal
+            || disconnect
+            || message.status != targetMessageStatus
+        let shouldCommitChatStatus = chat.status != targetChatStatus
+
+        var updatedMessage = message
+        let displayError = error.map(AppLLMErrorDisplay.from)
+        updatedMessage.status = targetMessageStatus
+
+        if isFinal || disconnect {
+            if responseText.isEmpty == false {
+                updatedMessage.text = responseText
+            }
+
+            if disconnect {
+                updatedMessage.text =
+                    responseText.isEmpty
+                    ? updatedMessage.text
+                    : responseText
+            }
+        }
+
+        updatedMessage.updateCurrentGenerationError(
+            disconnect ? .apiError : .none,
+            title: displayError?.title,
+            message: displayError?.message,
+            recoverySuggestion: displayError?.recoverySuggestion
+        )
 
         // for KoboldAPI we need to fetch token count after full message is received
         let currentModel = ServiceContainer.shared.selectedModelName
         let currentConnectionType = ServiceContainer.shared.selectedConnectionType
         if isFinal && currentConnectionType == .KoboldAPI {
-//            let tokenCount = await languageModelService.getTokenCount(string: updatedMessage.text)
-//            updatedMessage.tokenCount = tokenCount
+            //            let tokenCount = await languageModelService.getTokenCount(string: updatedMessage.text)
+            //            updatedMessage.tokenCount = tokenCount
             updatedMessage.tokenCountModel = currentModel
         }
 
-        // Messages that are streaming should be read from our mdReader.
-        let mdTheme = MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .bot)
         if isFinal {
-            await mdReader.finish(theme: mdTheme)
+            markdownStreamSource.finish()
             streamingMessageID = nil
         } else if responseText.isEmpty == false && shouldShowThinking == false {
             if streamingMessageID != messageID {
-                mdReader = MarkdownReader()
+                markdownStreamSource = ChatMarkdownStreamSource()
                 streamingMessageID = messageID
             }
-            await mdReader.appendAccumulated(responseText, theme: mdTheme)
+            markdownStreamSource.yieldSnapshot(responseText)
         }
 
-        do {
-            try await chatStore.updateMessage(updatedMessage, in: chat.id, save: isFinal)
-            try chatStore.setChatStatus(
-                for: chatID,
-                to: isFinal ? .idle : (shouldShowThinking ? .thinking : .streaming)
-            )
-        } catch {
-            print("Failed to update streamed response: \(error)")
+        ChatPerformanceInstrumentation.streamingUpdate(
+            messageID: messageID,
+            responseLength: responseText.count,
+            deltaLength: delta.count,
+            isFinal: isFinal,
+            shouldShowThinking: shouldShowThinking,
+            willUpdateStore: shouldCommitMessage || shouldCommitChatStatus
+        )
+
+        if shouldCommitMessage || shouldCommitChatStatus {
+            do {
+                if shouldCommitMessage {
+                    try await chatStore.updateMessage(updatedMessage, in: chat.id, save: isFinal)
+                }
+
+                if shouldCommitChatStatus {
+                    try chatStore.setChatStatus(for: chatID, to: targetChatStatus)
+                }
+            } catch {
+                print("Failed to update streamed response: \(error)")
+            }
         }
 
-        if (responseText.isEmpty == false && isAutoScrollEnabled) || isFinal {
+        if isFinal {
             updateScrollView.toggle()
         }
 
@@ -504,10 +565,13 @@ final class ChatViewModel {
         }
 
         var updatedMessage = chat.messages[messageIndex]
-        updatedMessage.error = .disconnect
+        updatedMessage.updateCurrentGenerationError(
+            .disconnect,
+            title: "API Disconnected",
+            message: "Looks like you're not connected to a model. Please check your connection settings.",
+            recoverySuggestion: "Tap the connection banner to open Settings."
+        )
         updatedMessage.status = .done
-        updatedMessage.text =
-            "Looks like you're not connected to a model. Please check your connection settings."
 
         do {
             try await chatStore.updateMessage(updatedMessage, in: chat.id)

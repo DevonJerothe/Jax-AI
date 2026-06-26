@@ -10,7 +10,6 @@ struct ChatCompletionContextBuilder {
         promptBlocks: [ContextBlock],
         settings: ConnectionSettingsModel,
         continued: Bool = false,
-        forceThinking: Bool = false,
         tokenizer: CoreBPE
     ) -> ChatCompletionContent {
         var requestMessages: [RequestBodyMessages] = []
@@ -46,14 +45,19 @@ struct ChatCompletionContextBuilder {
             requestMessages.removeAll(where: { $0.id == lastMessage.id })
         }
 
+        let maxContextTokens = settings.activeContextLength ?? 4096
+        let reservedResponseTokens = settings.activeResponseLength ?? 240
+        let selectedMemoryTokens = sortedMemoryBlocks.reduce(0) { $0 + $1.tokenCount }
+        let selectedPromptTokens = sortedMessages.reduce(0) { $0 + $1.tokenCount }
+
         return ChatCompletionContent(
             messages: requestMessages,
             tokenCount: .init(
-                maxContextTokens: 100000,  // replace with the model context limit via some API
-                reservedResponseTokens: settings.responseLength ?? 240,
-                availableContextTokens: 100000,
-                selectedMemoryTokens: sortedMemoryBlocks.reduce(0) { $0 + $1.tokenCount },
-                selectedPromptTokens: sortedMessages.reduce(0) { $0 + $1.tokenCount }
+                maxContextTokens: maxContextTokens,
+                reservedResponseTokens: reservedResponseTokens,
+                availableContextTokens: max(0, maxContextTokens - reservedResponseTokens),
+                selectedMemoryTokens: selectedMemoryTokens,
+                selectedPromptTokens: selectedPromptTokens
             )
         )
     }

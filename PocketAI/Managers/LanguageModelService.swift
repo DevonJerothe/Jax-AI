@@ -13,10 +13,12 @@ final class LanguageModelService {
     private var runtimeConnectionSettings: ConnectionSettingsModel
     var koboldManager: APIManager<KoboldAPI>?
     var openRouterManager: APIManager<OpenRouterAPI>?
+    var openAICustom: APIManager<OpenAPI>?
     var contextBuilder: ContextManager?
 
     var selectedModel: String?
     var availableModels: [OpenRouterModel] = []
+    var availableOpenAIModels: [OpenAIModel] = []
     var maxContextLength: Int = 26000
 
     init(initialConnectionSettings: ConnectionSettingsModel) {
@@ -28,31 +30,42 @@ final class LanguageModelService {
     }
 
     private func setupManagers() {
-        guard let host = runtimeConnectionSettings.host, let port = runtimeConnectionSettings.port
-        else {
-            print("No Connection Settings")
-            return
+        if let host = runtimeConnectionSettings.activeHost,
+            let port = runtimeConnectionSettings.activePort
+        {
+            self.koboldManager = .init(
+                forService: KoboldAPI(
+                    urlSession: URLSession.shared,
+                    host: host,
+                    port: port
+                )
+            )
+        } else {
+            self.koboldManager = nil
         }
 
-        self.koboldManager = .init(
-            forService: KoboldAPI(
+        let openAISettings = runtimeConnectionSettings.openAISettings
+        self.openAICustom = .init(
+            forService: OpenAPI(
                 urlSession: URLSession.shared,
-                host: host,
-                port: port
+                baseURL: openAISettings?.baseURL ?? "",
+                selectedModel: openAISettings?.selectedModel ?? "",
+                apiKey: openAISettings?.apiKey
             )
         )
 
-        let openRouterModel = runtimeConnectionSettings.selectedModel
         self.openRouterManager = .init(
             forService: OpenRouterAPI(
                 urlSession: URLSession.shared,
-                selectedModel: openRouterModel,
-                apiKey: runtimeConnectionSettings.apiKey
+                selectedModel: runtimeConnectionSettings.openRouterSettings?.selectedModel,
+                apiKey: runtimeConnectionSettings.openRouterSettings?.apiKey
             )
         )
 
-        if runtimeConnectionSettings.connectionType == .OpenRouter {
-            self.selectedModel = openRouterModel
+        if runtimeConnectionSettings.connectionType == .OpenRouter
+            || runtimeConnectionSettings.connectionType == .OpenAI
+        {
+            self.selectedModel = runtimeConnectionSettings.activeSelectedModel
         }
     }
 
@@ -71,10 +84,10 @@ final class LanguageModelService {
         self.contextBuilder = manager
         return manager
     }
-    
+
     func connect() async -> Bool {
         print("Connecting to \(runtimeConnectionSettings.connectionType)")
-        print("Current Context Length: \(runtimeConnectionSettings.contextLength ?? 0)")
+        print("Current Context Length: \(runtimeConnectionSettings.activeContextLength ?? 0)")
         switch runtimeConnectionSettings.connectionType {
         case .KoboldAPI:
             let result = await koboldManager?.connect()
@@ -102,6 +115,17 @@ final class LanguageModelService {
             case .none:
                 print("ERROR: Unexpected Error")
             }
+        case .OpenAI:
+            let result = await openAICustom?.connect()
+            switch result {
+            case .success(let model):
+                self.selectedModel = model
+                return true
+            case .failure(let error):
+                print("ERROR: \(error)")
+            case .none:
+                print("ERROR: Unexpected Error")
+            }
         }
         return false
     }
@@ -124,10 +148,24 @@ final class LanguageModelService {
     ) async -> AsyncStream<ModelResponse> {
         let contextBuilder = await contextManager(for: chatModel)
 
+        let connectionType = runtimeConnectionSettings.connectionType
+        // `forceThinking` only applies to Text Completion (KoboldAPI). ChatCompletion
+        // APIs toggle reasoning via `reasoningEffort` on the request builder instead.
+        let forceThinking =
+            connectionType == .KoboldAPI
+            ? runtimeConnectionSettings.forceThinking
+            : false
+        // For ChatCompletion, reasoning is enabled by passing `.medium` and disabled by
+        // passing `.none`. `disableReasoning` is the user-facing toggle for these APIs.
+        let reasoningEffort: OpenRouterReasoningEffort =
+            connectionType == .KoboldAPI
+            ? .medium
+            : (runtimeConnectionSettings.disableReasoning ? .none : .medium)
+
         let contextResult = await contextBuilder.buildContext(
             chat: chatModel,
             continued: continued,
-            forceThinking: runtimeConnectionSettings.forceThinking
+            forceThinking: forceThinking
         )
 
         let (stream, continuation) = AsyncStream<ModelResponse>.makeStream()
@@ -136,7 +174,7 @@ final class LanguageModelService {
         switch runtimeConnectionSettings.connectionType {
         case .KoboldAPI:
             guard let koboldManager = koboldManager else {
-                streamResponse = AsyncStream { continuation in 
+                streamResponse = AsyncStream { continuation in
                     continuation.yield(.failure(.invalidService))
                     continuation.finish()
                 }
@@ -144,7 +182,7 @@ final class LanguageModelService {
             }
 
             guard let contextPrompt = contextResult?.textCompletion else {
-                streamResponse = AsyncStream { continuation in 
+                streamResponse = AsyncStream { continuation in
                     continuation.yield(.failure(.invalidService))
                     continuation.finish()
                 }
@@ -154,8 +192,8 @@ final class LanguageModelService {
             let promptBuilder = KoboldRequestBuilder(
                 prompt: contextPrompt.prompt,
                 memory: contextPrompt.memory,
-                maxContextLength: runtimeConnectionSettings.contextLength ?? 4096,
-                maxLength: runtimeConnectionSettings.responseLength ?? 240,
+                maxContextLength: runtimeConnectionSettings.activeContextLength ?? 4096,
+                maxLength: runtimeConnectionSettings.activeResponseLength ?? 240,
                 temperature: runtimeConnectionSettings.temperature,
                 tfs: runtimeConnectionSettings.tfs,
                 topA: runtimeConnectionSettings.topA,
@@ -173,7 +211,7 @@ final class LanguageModelService {
             streamResponse = koboldManager.streamMessage(builder: promptBuilder)
         case .OpenRouter:
             guard let openRouterManager = openRouterManager else {
-                streamResponse = AsyncStream { continuation in 
+                streamResponse = AsyncStream { continuation in
                     continuation.yield(.failure(.invalidService))
                     continuation.finish()
                 }
@@ -181,7 +219,7 @@ final class LanguageModelService {
             }
 
             guard let contextMessages = contextResult?.chatCompletion else {
-                streamResponse = AsyncStream { continuation in 
+                streamResponse = AsyncStream { continuation in
                     continuation.yield(.failure(.invalidService))
                     continuation.finish()
                 }
@@ -189,7 +227,7 @@ final class LanguageModelService {
             }
 
             guard let selectedModel = self.selectedModel else {
-                streamResponse = AsyncStream { continuation in 
+                streamResponse = AsyncStream { continuation in
                     continuation.yield(.failure(.invalidService))
                     continuation.finish()
                 }
@@ -205,12 +243,51 @@ final class LanguageModelService {
                 minP: runtimeConnectionSettings.minP,
                 topA: runtimeConnectionSettings.topA,
                 topK: runtimeConnectionSettings.topK,
-                maxTokens: runtimeConnectionSettings.responseLength ?? 240,
+                maxTokens: runtimeConnectionSettings.activeResponseLength ?? 240,
                 repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
-                stream: true
+                stream: true,
+                excludeThinking: false,
+                reasoningEffort: reasoningEffort
             )
 
             streamResponse = openRouterManager.streamMessage(builder: promptBuilder)
+        case .OpenAI:
+            guard let openAICustom = openAICustom else {
+                streamResponse = AsyncStream { continuation in
+                    continuation.yield(.failure(.invalidService))
+                    continuation.finish()
+                }
+                break
+            }
+
+            guard let contextMessages = contextResult?.chatCompletion else {
+                streamResponse = AsyncStream { continuation in
+                    continuation.yield(.failure(.invalidService))
+                    continuation.finish()
+                }
+                break
+            }
+
+            guard let selectedModel = runtimeConnectionSettings.activeSelectedModel else {
+                streamResponse = AsyncStream { continuation in
+                    continuation.yield(.failure(.invalidService))
+                    continuation.finish()
+                }
+                break
+            }
+
+            let promptBuilder = ChatCompletionRequestBuilder(
+                model: selectedModel,
+                messages: contextMessages.messages,
+                stop: stopSequences,
+                temperature: runtimeConnectionSettings.temperature,
+                topP: runtimeConnectionSettings.topP,
+                maxTokens: runtimeConnectionSettings.activeResponseLength ?? 240,
+                stream: true,
+                reasoningEffort: reasoningEffort
+            )
+
+            streamResponse = openAICustom.streamMessage(builder: promptBuilder)
         }
         Task(priority: .medium) {
             defer { continuation.finish() }
@@ -219,11 +296,16 @@ final class LanguageModelService {
                 switch response {
                 case .success(let modelResponse):
                     continuation.yield(modelResponse)
-                case .failure(_):
+                case .failure(let error):
+                    let displayError = AppLLMErrorDisplay.from(
+                        error,
+                        provider: currentLLMProvider
+                    )
+                    logAPIError(error)
                     let errorResponse = ModelResponse(
                         role: "assistant",
-                        text: "There was an error processing your request. Please try again later.",
-                        disconnect: true
+                        disconnect: true,
+                        error: displayError.asLLMError(provider: currentLLMProvider)
                     )
                     continuation.yield(errorResponse)
                     return
@@ -237,10 +319,24 @@ final class LanguageModelService {
     func sendMessage(chatModel: ChatModel, continued: Bool = false) async -> ModelResponse? {
         let contextBuilder = await contextManager(for: chatModel)
 
+        let connectionType = runtimeConnectionSettings.connectionType
+        // `forceThinking` only applies to Text Completion (KoboldAPI). ChatCompletion
+        // APIs toggle reasoning via `reasoningEffort` on the request builder instead.
+        let forceThinking =
+            connectionType == .KoboldAPI
+            ? runtimeConnectionSettings.forceThinking
+            : false
+        // For ChatCompletion, reasoning is enabled by passing `.medium` and disabled by
+        // passing `.none`. `disableReasoning` is the user-facing toggle for these APIs.
+        let reasoningEffort: OpenRouterReasoningEffort =
+            connectionType == .KoboldAPI
+            ? .medium
+            : (runtimeConnectionSettings.disableReasoning ? .none : .medium)
+
         let contextResult = await contextBuilder.buildContext(
             chat: chatModel,
             continued: continued,
-            forceThinking: runtimeConnectionSettings.forceThinking
+            forceThinking: forceThinking
         )
 
         var serviceResponse: Result<ModelResponse, APIError>?
@@ -255,8 +351,8 @@ final class LanguageModelService {
             let promptBuilder = KoboldRequestBuilder(
                 prompt: contextPrompt.prompt,
                 memory: contextPrompt.memory,
-                maxContextLength: runtimeConnectionSettings.contextLength ?? 4096,
-                maxLength: runtimeConnectionSettings.responseLength ?? 240,
+                maxContextLength: runtimeConnectionSettings.activeContextLength ?? 4096,
+                maxLength: runtimeConnectionSettings.activeResponseLength ?? 240,
                 temperature: runtimeConnectionSettings.temperature,
                 tfs: runtimeConnectionSettings.tfs,
                 topA: runtimeConnectionSettings.topA,
@@ -279,12 +375,12 @@ final class LanguageModelService {
 
             guard let selectedModel = self.selectedModel else {
                 return ModelResponse(
-                    role: "assistant", 
-                    text: "Model not selected or available", 
+                    role: "assistant",
+                    text: "Model not selected or available",
                     disconnect: true
                 )
             }
-        
+
             let promptBuilder = OpenRouterRequestBuilder(
                 model: selectedModel,
                 messages: contextMessages.messages,
@@ -294,22 +390,53 @@ final class LanguageModelService {
                 minP: runtimeConnectionSettings.minP,
                 topA: runtimeConnectionSettings.topA,
                 topK: runtimeConnectionSettings.topK,
-                maxTokens: runtimeConnectionSettings.responseLength ?? 240,
+                maxTokens: runtimeConnectionSettings.activeResponseLength ?? 240,
                 repetitionPenalty: runtimeConnectionSettings.repetitionPenalty,
-                stream: false
+                stream: false,
+                reasoningEffort: reasoningEffort
             )
 
             serviceResponse = await openRouterManager?.sendMessage(builder: promptBuilder)
+        case .OpenAI:
+            guard let contextMessages = contextResult?.chatCompletion else {
+                fatalError("No Context")
+            }
+
+            guard let selectedModel = runtimeConnectionSettings.activeSelectedModel else {
+                return ModelResponse(
+                    role: "assistant",
+                    text: "Model not selected or available",
+                    disconnect: true
+                )
+            }
+
+            let promptBuilder = ChatCompletionRequestBuilder(
+                model: selectedModel,
+                messages: contextMessages.messages,
+                stop: stopSequences,
+                temperature: runtimeConnectionSettings.temperature,
+                topP: runtimeConnectionSettings.topP,
+                maxTokens: runtimeConnectionSettings.activeResponseLength ?? 240,
+                stream: false,
+                reasoningEffort: reasoningEffort
+            )
+
+            serviceResponse = await openAICustom?.sendMessage(builder: promptBuilder)
         }
 
         switch serviceResponse {
         case .success(let model):
             return model
-        case .failure(_):
+        case .failure(let error):
+            let displayError = AppLLMErrorDisplay.from(
+                error,
+                provider: currentLLMProvider
+            )
+            logAPIError(error)
             let errorResponse = ModelResponse(
                 role: "assistant",
-                text: "There was an error processing your request. Please try again later.",
-                disconnect: true
+                disconnect: true,
+                error: displayError.asLLMError(provider: currentLLMProvider)
             )
             return errorResponse
         default:
@@ -328,17 +455,26 @@ final class LanguageModelService {
         var normalizedSettings = newConnectionSettings
         normalizedSettings.ensureNonEmptySequences()
 
-        let shouldRebuildManagers =  normalizedSettings.host != runtimeConnectionSettings.host
-            || normalizedSettings.port != runtimeConnectionSettings.port
-            || normalizedSettings.apiKey != runtimeConnectionSettings.apiKey
-            || normalizedSettings.selectedModel != runtimeConnectionSettings.selectedModel
+        let shouldRebuildManagers =
+            normalizedSettings.activeHost != runtimeConnectionSettings.activeHost
+            || normalizedSettings.activePort != runtimeConnectionSettings.activePort
+            || normalizedSettings.openRouterSettings?.apiKey
+                != runtimeConnectionSettings.openRouterSettings?.apiKey
+            || normalizedSettings.openRouterSettings?.selectedModel
+                != runtimeConnectionSettings.openRouterSettings?.selectedModel
+            || normalizedSettings.openAISettings?.baseURL
+                != runtimeConnectionSettings.openAISettings?.baseURL
+            || normalizedSettings.openAISettings?.apiKey
+                != runtimeConnectionSettings.openAISettings?.apiKey
+            || normalizedSettings.openAISettings?.selectedModel
+                != runtimeConnectionSettings.openAISettings?.selectedModel
             || normalizedSettings.connectionType != runtimeConnectionSettings.connectionType
-        
+
         self.runtimeConnectionSettings = normalizedSettings
         contextBuilder?.syncSettigns(normalizedSettings)
 
         if shouldRebuildManagers {
-            setupManagers()         
+            setupManagers()
         }
     }
 
@@ -349,6 +485,32 @@ final class LanguageModelService {
             runtimeConnectionSettings.systemStopSequence,
         ]
         .filter { $0.isEmpty == false }
+    }
+
+    private var currentLLMProvider: LLMProvider {
+        switch runtimeConnectionSettings.connectionType {
+        case .KoboldAPI:
+            return .kobold
+        case .OpenRouter:
+            return .openRouter
+        case .OpenAI:
+            return .openAICompatible
+        }
+    }
+
+    private func logAPIError(_ error: APIError) {
+        let displayError = AppLLMErrorDisplay.from(error, provider: currentLLMProvider)
+        print("LLM error \(displayError.debugSummary) message=\(displayError.message)")
+
+        if case .llmError(let llmError) = error {
+            if let rawBody = llmError.rawBody {
+                print("LLM raw body: \(rawBody)")
+            }
+
+            if let rawEvent = llmError.rawEvent {
+                print("LLM raw event: \(rawEvent)")
+            }
+        }
     }
 
     private var defaultRolePlayPrompt: String {
@@ -391,20 +553,35 @@ final class LanguageModelService {
         }
     }
 
-    // MARK: - OpenRouter Functions
+    // MARK: - Chat Completion Functions
     func getAvailableModels() async {
-        guard let manager = openRouterManager,
-            runtimeConnectionSettings.connectionType == .OpenRouter
-        else {
-            print("No OpenRouter Manager")
+        switch runtimeConnectionSettings.connectionType {
+        case .OpenRouter:
+            guard let manager = openRouterManager else {
+                print("No OpenRouter Manager")
+                return
+            }
+            let result = await manager.getAvailableModels()
+            switch result {
+            case .success(let models):
+                self.availableModels = models
+            case .failure(let error):
+                print("Error: \(error)")
+            }
+        case .OpenAI:
+            guard let manager = openAICustom else {
+                print("No OpenAI Manager")
+                return
+            }
+            let result = await manager.getAvailableModels()
+            switch result {
+            case .success(let models):
+                self.availableOpenAIModels = models
+            case .failure(let error):
+                print("Error: \(error)")
+            }
+        case .KoboldAPI:
             return
-        }
-        let result = await manager.getAvailableModels()
-        switch result {
-        case .success(let models):
-            self.availableModels = models
-        case .failure(let error):
-            print("Error: \(error)")
         }
     }
 }

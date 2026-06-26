@@ -5,8 +5,8 @@
 //  Created by devon jerothe on 3/12/25.
 //
 
-import SwiftUI
 import Collections
+import SwiftUI
 
 struct ChatSettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -17,7 +17,7 @@ struct ChatSettingsView: View {
     @State private var viewModel: ChatViewModel
     @State private var characterCard: CharacterCardModel
     @State private var chatIsPrivate: Bool
-    @State private var isDragging: Bool = false 
+    @State private var isDragging: Bool = false
 
     private var connectionManager: ConnectionStatusManager {
         serviceContainer.getConnectionStatusManager()
@@ -27,16 +27,17 @@ struct ChatSettingsView: View {
         let viewModel = ChatViewModel(chatID: chatID)
         _viewModel = State(initialValue: viewModel)
 
-        /// TODO: we need to make sure that if we cant load the character card, we hide the section that uses it. 
-        /// We should never be on this screen with no active character card. 
-        _characterCard = State(initialValue: viewModel.model?.getCharacterCard() ?? CharacterCardModel())
+        /// TODO: we need to make sure that if we cant load the character card, we hide the section that uses it.
+        /// We should never be on this screen with no active character card.
+        _characterCard = State(
+            initialValue: viewModel.model?.getCharacterCard() ?? CharacterCardModel())
         _chatIsPrivate = State(initialValue: viewModel.model?.isPrivate ?? false)
     }
 
     private var responseLengthBinding: Binding<Double> {
         Binding<Double>(
-            get: { Double(connectionManager.connectionSettings.responseLength ?? 300) },
-            set: { connectionManager.update(\.responseLength, to: Int($0)) }
+            get: { Double(connectionManager.connectionSettings.activeResponseLength ?? 300) },
+            set: { connectionManager.updateActiveResponseLength(Int($0)) }
         )
     }
 
@@ -78,11 +79,13 @@ struct ChatSettingsView: View {
                     .buttonStyle(.plain)
 
                     Button {
-                        navManager.navigateToLoreBooks(chatID: viewModel.chatID, keepCurrentPath: true)
+                        navManager.navigateToLoreBooks(
+                            chatID: viewModel.chatID, keepCurrentPath: true)
                     } label: {
                         SettingsNavigationRow(
                             title: "Lore Books",
-                            subtitle: "\(loreBooksCount) lore book\(loreBooksCount == 1 ? "" : "s")",
+                            subtitle:
+                                "\(loreBooksCount) lore book\(loreBooksCount == 1 ? "" : "s")",
                             systemImage: "book.closed"
                         )
                     }
@@ -94,18 +97,18 @@ struct ChatSettingsView: View {
                 // potentially we could have a per chat connection settings option
                 SettingsCard("Model Settings") {
                     SamplerSlider(
-                        title: "Response Length", 
-                        value: responseLengthBinding, 
-                        range: 120...3000, 
-                        step: 60, 
+                        title: "Response Length",
+                        value: responseLengthBinding,
+                        range: 120...3000,
+                        step: 60,
                         displayValue: "\(Int(responseLengthBinding.wrappedValue))"
                     )
 
                     SamplerSlider(
-                        title: "Temperature", 
-                        value: temperatureBinding, 
-                        range: 0.1...2, 
-                        step: 0.05, 
+                        title: "Temperature",
+                        value: temperatureBinding,
+                        range: 0.1...2,
+                        step: 0.05,
                         displayValue: "\(temperatureBinding.wrappedValue)"
                     )
 
@@ -113,8 +116,8 @@ struct ChatSettingsView: View {
                         SamplerSettingsView()
                     } label: {
                         SettingsNavigationRow(
-                            title: "Sampler Settings", 
-                            subtitle: "Advanced sampler settings", 
+                            title: "Sampler Settings",
+                            subtitle: "Advanced sampler settings",
                             systemImage: "sparkles"
                         )
                     }
@@ -122,23 +125,50 @@ struct ChatSettingsView: View {
                 }
                 .padding(.horizontal, 16)
 
-                VStack{
-                    // Force Thinking Toggle
-                    Toggle(isOn: Binding(
-                        get: { connectionManager.connectionSettings.forceThinking },
-                        set: { connectionManager.update(\.forceThinking, to: $0) }
-                    )) {
-                        Text("Force Thinking")
-                            .foregroundColor(appTheme.primaryText.color)
-                    }
-                    .padding()
-                    .background(appTheme.secondaryBackgroundColor.color)
-                    .cornerRadius(12)
-                    .tint(appTheme.tintColor.color)
+                VStack {
+                    if connectionManager.connectionSettings.connectionType == .KoboldAPI {
+                        // Text Completion (KoboldAPI): force the think tag open.
+                        Toggle(
+                            isOn: Binding(
+                                get: { connectionManager.connectionSettings.forceThinking },
+                                set: { connectionManager.update(\.forceThinking, to: $0) }
+                            )
+                        ) {
+                            Text("Force Thinking")
+                                .foregroundColor(appTheme.primaryText.color)
+                        }
+                        .padding()
+                        .background(appTheme.secondaryBackgroundColor.color)
+                        .cornerRadius(12)
+                        .tint(appTheme.tintColor.color)
 
-                    Text("You may find if the model does not close the \(connectionManager.connectionSettings.thinkingStopSequence.encodeEscapedSequence()) tag, the response does not stream. It should still load when complete.")
+                        Text(
+                            "You may find if the model does not close the \(connectionManager.connectionSettings.thinkingStopSequence.encodeEscapedSequence()) tag, the response does not stream. It should still load when complete."
+                        )
                         .font(.subheadline)
                         .foregroundColor(appTheme.secondaryText.color)
+                    } else {
+                        // ChatCompletion (OpenRouter/OpenAI): toggle reasoning via reasoningEffort.
+                        Toggle(
+                            isOn: Binding(
+                                get: { connectionManager.connectionSettings.disableReasoning },
+                                set: { connectionManager.update(\.disableReasoning, to: $0) }
+                            )
+                        ) {
+                            Text("Disable Reasoning")
+                                .foregroundColor(appTheme.primaryText.color)
+                        }
+                        .padding()
+                        .background(appTheme.secondaryBackgroundColor.color)
+                        .cornerRadius(12)
+                        .tint(appTheme.tintColor.color)
+
+                        Text(
+                            "Disable for models that do not support reasoning. Or to speed up responses."
+                        )
+                        .font(.subheadline)
+                        .foregroundColor(appTheme.secondaryText.color)
+                    }
                 }
                 .padding(.horizontal, 16)
 
@@ -170,77 +200,82 @@ struct ChatSettingsView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
 
-                HStack {
-                    AvatarImage(image: characterCard.getAvatarImg(), size: 50)
-                        .padding(.trailing, 12)
+                if characterCard.isSystemChar == false {
+                    HStack {
+                        AvatarImage(image: characterCard.getAvatarImg(), size: 50)
+                            .padding(.trailing, 12)
+    
+                        VStack(alignment: .leading) {
+                            Text(characterCard.name ?? "")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(appTheme.primaryText.color)
+    
+                            Text(characterCard.cardTagline ?? "")
+                                .font(.subheadline)
+                                .foregroundColor(appTheme.secondaryText.color)
+                        }
+    
+                        Spacer()
+    
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(appTheme.secondaryText.color)
+                    }
+                    .padding()
+                    .background(appTheme.secondaryBackgroundColor.color)
+                    .cornerRadius(12)
+                    .padding(.horizontal, 16)
+                    .onTapGesture {
+                        navManager.navigateToCharacter(
+                            characterID: characterCard.id, keepCurrentPath: true)
+                    }
 
                     VStack(alignment: .leading) {
-                        Text(characterCard.name ?? "")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(appTheme.primaryText.color)
-
-                        Text(characterCard.cardTagline ?? "")
-                            .font(.subheadline)
-                            .foregroundColor(appTheme.secondaryText.color)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(appTheme.secondaryText.color)
-                }
-                .padding()
-                .background(appTheme.secondaryBackgroundColor.color)
-                .cornerRadius(12)
-                .padding(.horizontal, 16)
-                .onTapGesture {
-                    navManager.navigateToCharacter(characterID: characterCard.id, keepCurrentPath: true)
-                }
-
-                VStack(alignment: .leading) {
-                    HStack {
-                        Text("Template Settings")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(appTheme.primaryText.color)
-                        Spacer()
-
-                        Button(action: {
-                            navManager.showNewTemplateView()
-                        }) {
-                            Image(systemName: "plus.circle")
-                                .foregroundColor(appTheme.tintColor.color)
+                        HStack {
+                            Text("Template Settings")
                                 .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(appTheme.primaryText.color)
+                            Spacer()
+    
+                            Button(action: {
+                                navManager.showNewTemplateView()
+                            }) {
+                                Image(systemName: "plus.circle")
+                                    .foregroundColor(appTheme.tintColor.color)
+                                    .font(.title2)
+                            }
                         }
-                    }
-
-                    Text("Templates can be used to set instructions on how the model should responed and in what format / style. This will be added to the memory and used for every message.")
+    
+                        Text(
+                            "Templates can be used to set instructions on how the model should responed and in what format / style. This will be added to the memory and used for every message."
+                        )
                         .font(.subheadline)
                         .foregroundColor(appTheme.secondaryText.color)
-                    
-                }
-                .padding(.top, 24)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-
-                if userTemplatesBinding.wrappedValue.count > 0 {
-                    TemplateEditor(
-                        isDragging: $isDragging,
-                        userTemplates: userTemplatesBinding
-                    )
-                } else {
-                    HStack {
-                        Spacer() 
-                        Text("No templates added.")
-                            .font(.subheadline)
-                            .foregroundColor(appTheme.secondaryText.color)
-                        Spacer() 
+    
                     }
-                    .padding(.vertical, 24)
+                    .padding(.top, 24)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+    
+                    if userTemplatesBinding.wrappedValue.count > 0 {
+                        TemplateEditor(
+                            isDragging: $isDragging,
+                            userTemplates: userTemplatesBinding
+                        )
+                    } else {
+                        HStack {
+                            Spacer()
+                            Text("No templates added.")
+                                .font(.subheadline)
+                                .foregroundColor(appTheme.secondaryText.color)
+                            Spacer()
+                        }
+                        .padding(.vertical, 24)
+                    }
                 }
 
-                // Mark: - Clear Chat Button 
+                // Mark: - Clear Chat Button
                 HStack {
                     Button(action: {
                         Task {
@@ -262,7 +297,7 @@ struct ChatSettingsView: View {
             .navigationTitle("Chat Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Save Button 
+                // Save Button
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         Task {

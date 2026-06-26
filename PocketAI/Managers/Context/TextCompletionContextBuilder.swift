@@ -46,8 +46,8 @@ struct TextCompletionContextBuilder {
         tokenizer: CoreBPE
     ) -> TextCompletionContent {
 
-        let maxContextTokens = settings.contextLength ?? 4096
-        let reservedResponseTokens = settings.responseLength ?? 240
+        let maxContextTokens = settings.activeContextLength ?? 4096
+        let reservedResponseTokens = settings.activeResponseLength ?? 240
         let availableContextTokens = max(0, maxContextTokens - reservedResponseTokens)
 
         let renderedMemBlocks = renderMemoryBlock(memoryBlocks, tokenizer: tokenizer)

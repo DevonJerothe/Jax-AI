@@ -6,4 +6,4 @@
 //
 
 SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) OPENSOURCE
-PRODUCT_BUNDLE_IDENTIFIER = com.devonjerothe.PocketAI.OpenSource
+PRODUCT_BUNDLE_IDENTIFIER = devonjerothe.PocketAI

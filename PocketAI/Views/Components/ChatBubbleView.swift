@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import MarkdownStreamer
+import SwiftStreamingMarkdown
 
 struct ChatBubbleView: View {
 
@@ -15,7 +15,8 @@ struct ChatBubbleView: View {
 
     let message: MessageModel
     let isStreaming: Bool
-    let mdReader: MarkdownReader?
+    let markdownStreamSource: ChatMarkdownStreamSource?
+    let markdownConfig: MarkdownRenderConfig
     let cardName: String
     let personaName: String
     let showToolbar: Bool
@@ -78,6 +79,13 @@ struct ChatBubbleView: View {
     }
 
     var body: some View {
+        let _ = ChatPerformanceInstrumentation.chatBubbleBody(
+            message: message,
+            isStreaming: isStreaming,
+            showToolbar: showToolbar,
+            isEditing: isEditing
+        )
+
         switch message.actor {
         case .bot:
             HStack {
@@ -91,49 +99,13 @@ struct ChatBubbleView: View {
                         .cornerRadius(15)
                         .frame(alignment: .leading)
                         .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                    } else if isEditing {
+                        editingTextView(maxWidth: UIApplication.currentScreenWidth)
                     } else {
-                        if isEditing {
-                            editingTextView(maxWidth: UIApplication.currentScreenWidth)
-                        } else {
-                            if isStreaming, let mdReader = mdReader {
-                                StreamingMarkdownView(
-                                    blocks: mdReader.blocks
-                                )
-                                    .markdownTokenAnimation(.fade)
-                                    .padding()
-                                    .cornerRadius(15)
-                                    .frame(
-                                        maxWidth: UIApplication.currentScreenWidth,
-                                        alignment: .leading
-                                    )
-                                    .accessibilityElement(children: .ignore)
-                                    .accessibilityLabel("Streaming message")
-                            } else {
-                                let rpText = message.getRolePlayText(cardName: cardName, personaName: personaName)                               
-                                StreamingMarkdownView(
-                                    markdown: rpText,
-                                    theme: MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .bot)
-                                )
-                                    .id(message.text.hashValue)
-                                    .padding()
-                                    .cornerRadius(15)
-                                    .frame(
-                                        maxWidth: UIApplication.currentScreenWidth,
-                                        alignment: .leading
-                                    )
-                                    .onGeometryChange(for: CGFloat.self) { geo in
-                                        geo.size.height
-                                    } action: { newHeight in
-                                        guard newHeight > 0 && isEditing == false else { return }
-
-                                        bubbleHeight = newHeight
-                                    }
-                            }   
-                        }
+                        botResponseContent
                     }
                     messageToolbar
                 }
-                .simultaneousGesture(generationSwipeGesture)
                 Spacer()
             }
 
@@ -145,12 +117,24 @@ struct ChatBubbleView: View {
                         editingTextView(maxWidth: UIApplication.currentScreenWidth * 0.80)
                     } else {
                         VStack(alignment: .trailing) {
-                            StreamingMarkdownView(
-                                markdown: message.getRolePlayText(
-                                    cardName: cardName,
-                                    personaName: personaName
-                                ),
-                                theme: MarkdownStreamerSettings.defaultTheme(appTheme: appTheme, actor: .user)
+                            let rpText = message.getRolePlayText(
+                                cardName: cardName,
+                                personaName: personaName
+                            )
+
+                            #if DEBUG
+                            let _ = ChatPerformanceInstrumentation.markdownRender(
+                                messageID: message.id,
+                                actor: message.actor,
+                                source: .userString,
+                                textLength: rpText.count,
+                                textHash: rpText.hashValue
+                            )
+                            #endif
+
+                            CachedMarkdownView(
+                                text: rpText,
+                                config: markdownConfig.withShouldAnimateText(value: false)
                             )
                             .foregroundStyle(appTheme.primaryText.color)
                             .padding()
@@ -176,13 +160,73 @@ struct ChatBubbleView: View {
                     }
                     messageToolbar
                 }
-                .simultaneousGesture(generationSwipeGesture)
             }
         }
     }
 
     private var shouldShowLoadingBubble: Bool {
-        message.status != .done && message.text.isEmpty
+        isStreaming == false && message.status != .done && message.text.isEmpty
+    }
+
+    @ViewBuilder
+    private var botResponseContent: some View {
+        if isStreaming, let markdownStreamSource {
+            StreamingChatMarkdownView(
+                source: markdownStreamSource,
+                config: markdownConfig,
+                messageID: message.id,
+                actor: message.actor,
+                maxWidth: UIApplication.currentScreenWidth,
+                isEditing: isEditing,
+                onScrollViewUpdate: onScrollViewUpdate
+            )
+        } else {
+            let rpText = message.getRolePlayText(cardName: cardName, personaName: personaName)
+
+            if rpText.isEmpty == false {
+                #if DEBUG
+                let _ = ChatPerformanceInstrumentation.markdownRender(
+                    messageID: message.id,
+                    actor: message.actor,
+                    source: .completedString,
+                    textLength: rpText.count,
+                    textHash: rpText.hashValue
+                )
+                #endif
+
+                CachedMarkdownView(
+                    text: rpText,
+                    config: markdownConfig.withShouldAnimateText(value: false)
+                )
+                .padding()
+                .cornerRadius(15)
+                .frame(
+                    maxWidth: UIApplication.currentScreenWidth,
+                    alignment: .leading
+                )
+                .onGeometryChange(for: CGFloat.self) { geo in
+                    geo.size.height
+                } action: { newHeight in
+                    guard newHeight > 0 && isEditing == false else { return }
+
+                    bubbleHeight = newHeight
+                }
+            }
+
+            if shouldShowInlineErrorBanner {
+                APIStatusInlineBanner(
+                    title: message.activeGenerationError?.errorTitle ?? "Provider Error",
+                    message: message.activeGenerationError?.errorMessage
+                        ?? "There was an error processing your request. Please try again later.",
+                    recoverySuggestion: message.activeGenerationError?.errorRecoverySuggestion
+                )
+                .padding(.bottom)
+            }
+        }
+    }
+
+    private var shouldShowInlineErrorBanner: Bool {
+        message.actor == .bot && message.activeGenerationError != nil
     }
 
     @ViewBuilder
@@ -261,20 +305,6 @@ struct ChatBubbleView: View {
         case .nextGeneration:
             navigateGeneration(forward: true)
         }
-    }
-
-    private var generationSwipeGesture: some Gesture {
-        DragGesture(minimumDistance: 40)
-            .onEnded { value in
-                let horizontalDistance = value.translation.width
-                let verticalDistance = value.translation.height
-
-                guard abs(horizontalDistance) > abs(verticalDistance) * 1.5 else {
-                    return
-                }
-
-                navigateGeneration(forward: horizontalDistance < 0)
-            }
     }
 
     private func navigateGeneration(forward: Bool) {
@@ -393,5 +423,46 @@ extension ChatBubbleView: Equatable {
             && lhs.cardName == rhs.cardName
             && lhs.personaName == rhs.personaName
             && lhs.isOnlyMessage == rhs.isOnlyMessage
+    }
+}
+
+private struct StreamingChatMarkdownView: View {
+    let source: ChatMarkdownStreamSource
+    let config: MarkdownRenderConfig
+    let messageID: UUID
+    let actor: MessageActor
+    let maxWidth: CGFloat
+    let isEditing: Bool
+    let onScrollViewUpdate: () -> Void
+
+    var body: some View {
+        #if DEBUG
+        let _ = ChatPerformanceInstrumentation.markdownRender(
+            messageID: messageID,
+            actor: actor,
+            source: .streamingSource,
+            textLength: 0,
+            textHash: ObjectIdentifier(source).hashValue
+        )
+        #endif
+
+        StreamedMarkdownView(
+            source: source,
+            config: config.withShouldAnimateText(value: true)
+        )
+        .padding()
+        .cornerRadius(15)
+        .frame(
+            maxWidth: maxWidth,
+            alignment: .leading
+        )
+        .onGeometryChange(for: CGFloat.self) { geo in
+            geo.size.height
+        } action: { newHeight in
+            guard newHeight > 0 && isEditing == false else { return }
+            onScrollViewUpdate()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Streaming message")
     }
 }

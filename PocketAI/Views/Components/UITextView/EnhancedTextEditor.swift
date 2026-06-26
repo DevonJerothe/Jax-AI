@@ -47,15 +47,16 @@ struct RepresentableTextView: UIViewRepresentable {
             .defaultLow, for: .horizontal)  // Allow horizontal compression
         textView.inlinePredictionType = .no
 
-
         // --- Swipe Down Gesture (Dismiss Keyboard) ---
-        let swipeDownGesture = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleSwipeDown(_:)))
+        let swipeDownGesture = UISwipeGestureRecognizer(
+            target: context.coordinator, action: #selector(Coordinator.handleSwipeDown(_:)))
         swipeDownGesture.direction = .down
-        swipeDownGesture.delegate = context.coordinator // Use delegate to control when it should begin
+        swipeDownGesture.delegate = context.coordinator  // Use delegate to control when it should begin
         textView.addGestureRecognizer(swipeDownGesture)
 
         // --- Swipe Up Gesture (Present Keyboard) ---
-        let swipeUpGesture = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleSwipeUp(_:)))
+        let swipeUpGesture = UISwipeGestureRecognizer(
+            target: context.coordinator, action: #selector(Coordinator.handleSwipeUp(_:)))
         swipeUpGesture.direction = .up
         // No special delegate logic needed for swipe up generally,
         // unless conflicts arise with other custom gestures.
@@ -66,12 +67,12 @@ struct RepresentableTextView: UIViewRepresentable {
 
     func updateUIView(_ uiView: UITextView, context: Context) {
         if uiView.text != self.text {
-            let cursorLocation = uiView.selectedRange // Store cursor position
+            let cursorLocation = uiView.selectedRange  // Store cursor position
             uiView.text = self.text
             // Restore cursor position after text update
-             // Ensure location is within new text bounds
+            // Ensure location is within new text bounds
             let newLocation = max(0, min(cursorLocation.location, uiView.text.count))
-            uiView.selectedRange = NSRange(location: newLocation, length: 0) // Length 0 for caret
+            uiView.selectedRange = NSRange(location: newLocation, length: 0)  // Length 0 for caret
         }
 
         if uiView.font != self.font {
@@ -112,15 +113,19 @@ struct RepresentableTextView: UIViewRepresentable {
                 height: CGFloat.greatestFiniteMagnitude
             )
         )
-        let height = min(maxHeight, measuredSize.height)
+        // Fill the proposed height so taps register across the entire frame,
+        // not just the lines containing text. When no height is proposed, fall
+        // back to the measured content height. Overflow beyond maxHeight is
+        // handled by enabling scrolling in the coordinator.
+        let proposedHeight = proposal.height ?? measuredSize.height
+        let height = min(maxHeight, max(proposedHeight, measuredSize.height))
 
         return CGSize(width: width, height: height)
     }
 
     // MARK: - Coordinator Class
 
-    class Coordinator: NSObject, UITextViewDelegate, UIGestureRecognizerDelegate
-    {
+    class Coordinator: NSObject, UITextViewDelegate, UIGestureRecognizerDelegate {
         var parent: RepresentableTextView
         // Keep track of the specific gesture recognizers if needed for delegate methods
         weak var swipeDownGestureRecognizer: UISwipeGestureRecognizer?
@@ -137,23 +142,24 @@ struct RepresentableTextView: UIViewRepresentable {
             if parent.text != textView.text {
                 parent.text = textView.text
             }
-            
+
             // Recalculate and update height
             recalculateHeight(textView: textView)
         }
 
         // MARK: - Height Calculation
-        
+
         func recalculateHeight(textView: UITextView) {
             // Ensure layout is up-to-date before calculating size
             textView.layoutIfNeeded()
 
             let width = max(textView.bounds.width, textView.frame.width, 1)
-            let newSize = textView.sizeThatFits(CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
+            let newSize = textView.sizeThatFits(
+                CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
             let targetHeight = min(newSize.height, parent.maxHeight)
 
             // Update height binding only if changed
-            if abs(parent.calculatedHeight - targetHeight) > 1 { // Use a small tolerance
+            if abs(parent.calculatedHeight - targetHeight) > 1 {  // Use a small tolerance
                 parent.calculatedHeight = targetHeight
             }
 
@@ -163,7 +169,7 @@ struct RepresentableTextView: UIViewRepresentable {
                 // If scrolling is enabled, ensure content offset is adjusted if needed,
                 // especially if text shrinks back below max height.
                 if !shouldEnableScrolling {
-                    textView.contentOffset = .zero // Reset scroll position when disabling
+                    textView.contentOffset = .zero  // Reset scroll position when disabling
                 }
             }
         }
@@ -174,10 +180,10 @@ struct RepresentableTextView: UIViewRepresentable {
             // enforced by gestureRecognizerShouldBegin.
             guard let textView = gesture.view as? UITextView else { return }
             if !textView.isScrollEnabled {
-                textView.resignFirstResponder() // Dismiss keyboard
+                textView.resignFirstResponder()  // Dismiss keyboard
             }
         }
-        
+
         @objc func handleSwipeUp(_ gesture: UISwipeGestureRecognizer) {
             guard let textView = gesture.view as? UITextView else { return }
             // Present keyboard only if it's not already the first responder
@@ -190,7 +196,9 @@ struct RepresentableTextView: UIViewRepresentable {
 
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
             // Check if this is *our* swipe down gesture recognizer
-            if let swipeGesture = gestureRecognizer as? UISwipeGestureRecognizer, swipeGesture.direction == .down {
+            if let swipeGesture = gestureRecognizer as? UISwipeGestureRecognizer,
+                swipeGesture.direction == .down
+            {
                 guard let textView = swipeGesture.view as? UITextView else { return false }
                 // Only allow the swipe down (to dismiss keyboard) gesture to begin
                 // if the text view is NOT scrollable. Otherwise, let the default
@@ -201,11 +209,14 @@ struct RepresentableTextView: UIViewRepresentable {
             // Allow other gestures (like swipe up or the internal pan gesture) to begin
             return true
         }
-        
+
         // You might still need this if you have complex interactions,
         // but often gestureRecognizerShouldBegin is sufficient for priority.
         // Test if removing this causes issues. If scrolling works fine without it, remove it.
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
             // Generally, we don't want our discrete swipes to interfere with the continuous pan gesture for scrolling.
             // Let's be more specific: only allow simultaneous recognition if *neither* is our swipe down.
             // Or simply return false if gestureRecognizerShouldBegin handles the priority correctly.
@@ -218,7 +229,7 @@ struct RepresentableTextView: UIViewRepresentable {
                 return false
             }
             // Allow simultaneous recognition for other potential gesture combinations if needed.
-            return true // Reverted: Let's allow simultaneous and let UIKit figure it out based on shouldBegin.
+            return true  // Reverted: Let's allow simultaneous and let UIKit figure it out based on shouldBegin.
         }
     }
 }
@@ -270,15 +281,18 @@ struct EnhancedTextEditor: View {
             calculatedHeight: $calculatedHeight
         )
         .frame(height: editorHeight, alignment: .topLeading)
-        .overlay(alignment: .topLeading, content: {
-            if text.isEmpty && placeholder.isEmpty == false {
-                Text(placeholder)
-                    .foregroundStyle(Color(placeholderColor))
-                    .padding(.leading, 14)
-                    .padding(.top, 14)
-                    .allowsHitTesting(false)
+        .overlay(
+            alignment: .topLeading,
+            content: {
+                if text.isEmpty && placeholder.isEmpty == false {
+                    Text(placeholder)
+                        .foregroundStyle(Color(placeholderColor))
+                        .padding(.leading, 14)
+                        .padding(.top, 14)
+                        .allowsHitTesting(false)
+                }
             }
-        })
+        )
         .cornerRadius(8)
         .clipped()
     }

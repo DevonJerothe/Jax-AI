@@ -18,7 +18,7 @@ class NavigationManager {
     enum Destination: Hashable {
         case chatView(UUID)
         case characterView(UUID)
-        case characterCardsView
+        case characterCardsView(Bool)
         case loreBookListView(UUID?)
         case loreBookView(UUID?)
         case chatSettings(UUID)
@@ -180,10 +180,10 @@ class NavigationManager {
         }
     }
 
-    func navigateToCharacterCards(keepCurrentPath: Bool = false) {
+    func navigateToCharacterCards(keepCurrentPath: Bool = false, startChat: Bool = false) {
         presentedSheet = nil
         if keepCurrentPath {
-            appendToCurrentPath(Destination.characterCardsView)
+            appendToCurrentPath(Destination.characterCardsView(startChat))
         } else {
             currentTab = .characterList
             clearPath(for: .characterList)
