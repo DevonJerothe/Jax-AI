@@ -90,7 +90,9 @@ extension ContextManager {
         let personaName = persona?.name
 
         // System Promp / Templates
-        let templates = settings.userTemplates.values
+        // Only attach templates if our chat is not that of a quick chat 
+        let isQuickChat = chat.isQuickChat
+        let templates = isQuickChat ? "" : settings.userTemplates.values
             .filter(\.isEnabled)
             .map(\.content)
             .joined(separator: "\n")

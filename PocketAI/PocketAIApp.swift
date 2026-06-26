@@ -96,8 +96,8 @@ struct PocketAIApp: App {
                 .toolbar(.hidden, for: .tabBar)
         case .characterView(let characterID):
             CharacterCardSettingsView(characterID: characterID)
-        case .characterCardsView:
-            CharacterCardsView()
+        case .characterCardsView(let startChat):
+            CharacterCardsView(startChat: startChat)
         case .loreBookListView(let chatID):
             LoreBookListView(chatID: chatID)
         case .loreBookView(let loreBookID):

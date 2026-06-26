@@ -39,7 +39,9 @@ final class ConnectionStatusManager {
         }
         let normalizedSettings = ConnectionStatusManager.normalize(savedSettings)
         self.connectionSettings = normalizedSettings
-        self.maxContextLength = normalizedSettings.activeMaxContextLength ?? ConnectionSettingsModel.defaults.activeMaxContextLength ?? 25600
+        self.maxContextLength =
+            normalizedSettings.activeMaxContextLength ?? ConnectionSettingsModel.defaults
+            .activeMaxContextLength ?? 25600
         UserDefaultsManager.shared.saveSettings(normalizedSettings, forKey: .ConnectionSettings)
     }
 
@@ -50,7 +52,8 @@ final class ConnectionStatusManager {
 
     func updateSettings(_ newSettings: ConnectionSettingsModel) {
         let normalizedSettings = ConnectionStatusManager.normalize(newSettings)
-        let shouldDisconnect = normalizedSettings.criticalConnectionSettingsChanged(from: connectionSettings)
+        let shouldDisconnect = normalizedSettings.criticalConnectionSettingsChanged(
+            from: connectionSettings)
 
         if shouldDisconnect {
             disconnect(reason: "Connection settings changed. Press Connect to reconnect.")
@@ -141,10 +144,13 @@ final class ConnectionStatusManager {
 
         if success {
             connectionStatus = .connected
-            footerNote = languageModelService.selectedModel ?? connectionSettings.activeSelectedModel ?? "Connected"
+            footerNote =
+                languageModelService.selectedModel ?? connectionSettings.activeSelectedModel
+                ?? "Connected"
             synchronizeRuntimeSettings(
                 selectedModel: languageModelService.selectedModel,
-                maxContextLength: connectionSettings.connectionType == .KoboldAPI ? languageModelService.maxContextLength : nil
+                maxContextLength: connectionSettings.connectionType == .KoboldAPI
+                    ? languageModelService.maxContextLength : nil
             )
         } else {
             connectionStatus = .failed
@@ -153,7 +159,10 @@ final class ConnectionStatusManager {
     }
 
     func refreshAvailableModels() async {
-        guard connectionSettings.connectionType == .OpenRouter || connectionSettings.connectionType == .OpenAI else {
+        guard
+            connectionSettings.connectionType == .OpenRouter
+                || connectionSettings.connectionType == .OpenAI
+        else {
             return
         }
 
@@ -171,7 +180,9 @@ final class ConnectionStatusManager {
     private func persistSettings(_ settings: ConnectionSettingsModel) {
         UserDefaultsManager.shared.saveSettings(settings, forKey: .ConnectionSettings)
         connectionSettings = settings
-        maxContextLength = settings.activeMaxContextLength ?? ConnectionSettingsModel.defaults.activeMaxContextLength ?? 25600
+        maxContextLength =
+            settings.activeMaxContextLength ?? ConnectionSettingsModel.defaults
+            .activeMaxContextLength ?? 25600
         languageModelService?.updateConnectionSettings(settings)
     }
 
@@ -187,10 +198,11 @@ final class ConnectionStatusManager {
 
         if let maxContextLength {
             updatedSettings.updateActiveMaxContextLength(maxContextLength)
-            updatedSettings.updateActiveContextLength(min(
-                updatedSettings.activeContextLength ?? maxContextLength,
-                maxContextLength
-            ))
+            updatedSettings.updateActiveContextLength(
+                min(
+                    updatedSettings.activeContextLength ?? maxContextLength,
+                    maxContextLength
+                ))
         }
 
         persistSettings(ConnectionStatusManager.normalize(updatedSettings))
@@ -204,56 +216,86 @@ final class ConnectionStatusManager {
         let defaultOpenRouter = defaultSettings.openRouterSettings ?? .init()
         let defaultOpenAI = defaultSettings.openAISettings ?? .init()
 
-        var koboldSettings = normalized.koboldCPPSettings ?? .init(
-            host: defaultKobold.host,
-            port: defaultKobold.port,
-            maxContextLength: defaultKobold.maxContextLength,
-            contextLength: defaultKobold.contextLength,
-            responseLength: defaultKobold.responseLength,
-            selectedModel: defaultKobold.selectedModel
-        )
-        var openRouterSettings = normalized.openRouterSettings ?? .init(
-            maxContextLength: defaultOpenRouter.maxContextLength,
-            contextLength: defaultOpenRouter.contextLength,
-            responseLength: defaultOpenRouter.responseLength,
-            apiKey: defaultOpenRouter.apiKey,
-            selectedModel: defaultOpenRouter.selectedModel
-        )
+        var koboldSettings =
+            normalized.koboldCPPSettings
+            ?? .init(
+                host: defaultKobold.host,
+                port: defaultKobold.port,
+                maxContextLength: defaultKobold.maxContextLength,
+                contextLength: defaultKobold.contextLength,
+                responseLength: defaultKobold.responseLength,
+                selectedModel: defaultKobold.selectedModel
+            )
+        var openRouterSettings =
+            normalized.openRouterSettings
+            ?? .init(
+                maxContextLength: defaultOpenRouter.maxContextLength,
+                contextLength: defaultOpenRouter.contextLength,
+                responseLength: defaultOpenRouter.responseLength,
+                apiKey: defaultOpenRouter.apiKey,
+                selectedModel: defaultOpenRouter.selectedModel
+            )
         var openAISettings = normalized.openAISettings ?? defaultOpenAI
 
-        let koboldMaxContextLength = max(koboldSettings.maxContextLength ?? defaultKobold.maxContextLength ?? 25600, 1024)
-        let openRouterMaxContextLength = max(openRouterSettings.maxContextLength ?? defaultOpenRouter.maxContextLength ?? 256000, 1024)
-        let openAIMaxContextLength = max(openAISettings.maxContextLength ?? defaultOpenAI.maxContextLength ?? 256000, 1024)
+        let koboldMaxContextLength = max(
+            koboldSettings.maxContextLength ?? defaultKobold.maxContextLength ?? 25600, 1024)
+        let openRouterMaxContextLength = max(
+            openRouterSettings.maxContextLength ?? defaultOpenRouter.maxContextLength ?? 256000,
+            1024)
+        let openAIMaxContextLength = max(
+            openAISettings.maxContextLength ?? defaultOpenAI.maxContextLength ?? 256000, 1024)
 
         koboldSettings.maxContextLength = koboldMaxContextLength
-        koboldSettings.contextLength = min(max(koboldSettings.contextLength ?? defaultKobold.contextLength ?? 6144, 1024), koboldMaxContextLength)
-        koboldSettings.responseLength = min(max(koboldSettings.responseLength ?? defaultKobold.responseLength ?? 300, 120), 3000)
+        koboldSettings.contextLength = min(
+            max(koboldSettings.contextLength ?? defaultKobold.contextLength ?? 6144, 1024),
+            koboldMaxContextLength)
+        koboldSettings.responseLength = min(
+            max(koboldSettings.responseLength ?? defaultKobold.responseLength ?? 300, 120), 3000)
 
         openRouterSettings.maxContextLength = openRouterMaxContextLength
-        openRouterSettings.contextLength = min(max(openRouterSettings.contextLength ?? defaultOpenRouter.contextLength ?? 6144, 1024), openRouterMaxContextLength)
-        openRouterSettings.responseLength = min(max(openRouterSettings.responseLength ?? defaultOpenRouter.responseLength ?? 300, 120), 3000)
+        openRouterSettings.contextLength = min(
+            max(openRouterSettings.contextLength ?? defaultOpenRouter.contextLength ?? 6144, 1024),
+            openRouterMaxContextLength)
+        openRouterSettings.responseLength = min(
+            max(openRouterSettings.responseLength ?? defaultOpenRouter.responseLength ?? 300, 120),
+            3000)
 
         openAISettings.maxContextLength = openAIMaxContextLength
-        openAISettings.contextLength = min(max(openAISettings.contextLength ?? defaultOpenAI.contextLength ?? 6144, 1024), openAIMaxContextLength)
-        openAISettings.responseLength = min(max(openAISettings.responseLength ?? defaultOpenAI.responseLength ?? 300, 120), 3000)
+        openAISettings.contextLength = min(
+            max(openAISettings.contextLength ?? defaultOpenAI.contextLength ?? 6144, 1024),
+            openAIMaxContextLength)
+        openAISettings.responseLength = min(
+            max(openAISettings.responseLength ?? defaultOpenAI.responseLength ?? 300, 120), 3000)
 
         normalized.ensureNonEmptySequences()
 
         let trimmedHost = koboldSettings.host?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        koboldSettings.host = trimmedHost.isEmpty ? defaultKobold.host : trimmedHost
-        koboldSettings.port = max(koboldSettings.port ?? defaultKobold.port ?? 5001, 1)
+        // Allow an empty host while editing so the field can be cleared and retyped.
+        // The default host is only seeded on first launch via ConnectionSettingsModel.defaults;
+        // a nil/empty host here simply leaves koboldManager unset until the user provides one.
+        koboldSettings.host = trimmedHost.isEmpty ? nil : trimmedHost
+        koboldSettings.port = koboldSettings.port.map { max($0, 1) }
 
-        let trimmedOpenRouterAPIKey = openRouterSettings.apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedOpenRouterSelectedModel = openRouterSettings.selectedModel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        openRouterSettings.apiKey = trimmedOpenRouterAPIKey?.isEmpty == true ? nil : trimmedOpenRouterAPIKey
-        openRouterSettings.selectedModel = trimmedOpenRouterSelectedModel.isEmpty ? defaultOpenRouter.selectedModel : trimmedOpenRouterSelectedModel
+        let trimmedOpenRouterAPIKey = openRouterSettings.apiKey?.trimmingCharacters(
+            in: .whitespacesAndNewlines)
+        let trimmedOpenRouterSelectedModel =
+            openRouterSettings.selectedModel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        openRouterSettings.apiKey =
+            trimmedOpenRouterAPIKey?.isEmpty == true ? nil : trimmedOpenRouterAPIKey
+        openRouterSettings.selectedModel =
+            trimmedOpenRouterSelectedModel.isEmpty
+            ? defaultOpenRouter.selectedModel : trimmedOpenRouterSelectedModel
 
-        let trimmedOpenAIBaseURL = openAISettings.baseURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let trimmedOpenAIAPIKey = openAISettings.apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedOpenAISelectedModel = openAISettings.selectedModel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let trimmedOpenAIBaseURL =
+            openAISettings.baseURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let trimmedOpenAIAPIKey = openAISettings.apiKey?.trimmingCharacters(
+            in: .whitespacesAndNewlines)
+        let trimmedOpenAISelectedModel =
+            openAISettings.selectedModel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         openAISettings.baseURL = trimmedOpenAIBaseURL.isEmpty ? nil : trimmedOpenAIBaseURL
         openAISettings.apiKey = trimmedOpenAIAPIKey?.isEmpty == true ? nil : trimmedOpenAIAPIKey
-        openAISettings.selectedModel = trimmedOpenAISelectedModel.isEmpty ? nil : trimmedOpenAISelectedModel
+        openAISettings.selectedModel =
+            trimmedOpenAISelectedModel.isEmpty ? nil : trimmedOpenAISelectedModel
 
         normalized.koboldCPPSettings = koboldSettings
         normalized.openRouterSettings = openRouterSettings
@@ -267,23 +309,24 @@ final class ConnectionStatusManager {
     }
 }
 
-private extension ConnectionSettingsModel {
-    func criticalConnectionSettingsChanged(from oldSettings: ConnectionSettingsModel) -> Bool {
+extension ConnectionSettingsModel {
+    fileprivate func criticalConnectionSettingsChanged(from oldSettings: ConnectionSettingsModel)
+        -> Bool
+    {
         if connectionType != oldSettings.connectionType {
             return true
         }
 
         switch connectionType {
         case .KoboldAPI:
-            return activeHost != oldSettings.activeHost ||
-                activePort != oldSettings.activePort
+            return activeHost != oldSettings.activeHost || activePort != oldSettings.activePort
         case .OpenRouter:
-            return activeAPIKey != oldSettings.activeAPIKey ||
-                activeSelectedModel != oldSettings.activeSelectedModel
+            return activeAPIKey != oldSettings.activeAPIKey
+                || activeSelectedModel != oldSettings.activeSelectedModel
         case .OpenAI:
-            return openAISettings?.baseURL != oldSettings.openAISettings?.baseURL ||
-                activeAPIKey != oldSettings.activeAPIKey ||
-                activeSelectedModel != oldSettings.activeSelectedModel
+            return openAISettings?.baseURL != oldSettings.openAISettings?.baseURL
+                || activeAPIKey != oldSettings.activeAPIKey
+                || activeSelectedModel != oldSettings.activeSelectedModel
         }
     }
 }
