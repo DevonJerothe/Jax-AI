@@ -70,6 +70,7 @@ public struct NewChatView: View {
                         }
                     }
                 }
+                .foregroundColor(appTheme.primaryText.color)
                 .fontWeight(.bold)
                 .disabled(viewModel.isCreateDisabled(type: selectedTab))
             }

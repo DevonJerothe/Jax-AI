@@ -57,6 +57,7 @@ struct CharacterCardsView: View {
                     navManager.navigateToLoreBooks(keepCurrentPath: true)
                 } label: {
                     Image(systemName: "book.closed")
+                        .foregroundColor(appTheme.primaryText.color)
                 }
             }
 
@@ -79,6 +80,7 @@ struct CharacterCardsView: View {
                     }
                 } label: {
                     Image(systemName: "plus")
+                        .foregroundColor(appTheme.primaryText.color)
                 }
             }
         }
