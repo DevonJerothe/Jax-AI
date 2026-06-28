@@ -16,6 +16,7 @@
 		E97327162DA9B620009CEAE0 /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97327152DA9B620009CEAE0 /* SwiftLLMSDK */; };
 		E97F95802D80C2D1007C292A /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E97F957F2D80C2D1007C292A /* SwiftLLMSDK */; };
 		E9AF56012FED909F009B501F /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E9AF56002FED909F009B501F /* SwiftLLMSDK */; };
+		E9AF5A932FF1A94C009B501F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E9AF5A922FF1A94C009B501F /* PrivacyInfo.xcprivacy */; };
 		E9F10FB52FEC3086007F7F1C /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E9F10FB42FEC3086007F7F1C /* SwiftLLMSDK */; };
 		E9F111892FECBA06007F7F1C /* SwiftLLMSDK in Frameworks */ = {isa = PBXBuildFile; productRef = E9F111882FECBA06007F7F1C /* SwiftLLMSDK */; };
 /* End PBXBuildFile section */
@@ -38,6 +39,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		E9AF5A922FF1A94C009B501F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		E9E949BA2D808E9C0008861E /* PocketAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PocketAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9E949CA2D808E9E0008861E /* PocketAITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PocketAITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9E949D42D808E9E0008861E /* PocketAIUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PocketAIUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -120,6 +122,7 @@
 		E9E949B12D808E9C0008861E = {
 			isa = PBXGroup;
 			children = (
+				E9AF5A922FF1A94C009B501F /* PrivacyInfo.xcprivacy */,
 				E9E949BC2D808E9C0008861E /* PocketAI */,
 				E9E949CD2D808E9E0008861E /* PocketAITests */,
 				E9E949D72D808E9E0008861E /* PocketAIUITests */,
@@ -276,6 +279,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E9AF5A932FF1A94C009B501F /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -461,7 +465,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = S5X4E78NMS;
 				ENABLE_PREVIEWS = YES;
@@ -501,7 +505,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = S5X4E78NMS;
 				ENABLE_PREVIEWS = YES;

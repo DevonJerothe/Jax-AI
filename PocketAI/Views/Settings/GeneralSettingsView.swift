@@ -8,6 +8,7 @@ struct GeneralSettingsView: View {
     @State private var passcodeError: String?
     @State private var showSetPasscodeAlert = false
     @State private var showUnlockAlert = false
+    @State private var showPrivacyPolicySheet = false
 
     #if !APPSTORE
         @State private var booruViewModel: BotBooruViewModel = .init()
@@ -143,6 +144,19 @@ struct GeneralSettingsView: View {
                         )
                     }
                 }
+
+                SettingsCard("About") {
+                    Button {
+                        showPrivacyPolicySheet = true
+                    } label: {
+                        SettingsNavigationRow(
+                            title: "Privacy Policy",
+                            subtitle: "View the app's privacy policy",
+                            systemImage: "hand.raised.fill"
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(16)
         }
@@ -151,6 +165,15 @@ struct GeneralSettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
+        .sheet(isPresented: $showPrivacyPolicySheet) {
+            WebView(
+                url: URL(
+                    string: "https://docs.google.com/document/d/1vfXNtcBsBPqSRHQMGcJz-vZzbSLgqH7o_86L6J-Rj9k/edit?usp=sharing"
+                )!
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
         .alert("Set App Lock Passcode", isPresented: $showSetPasscodeAlert) {
             SecureField("New Passcode", text: $passcode)
                 .textContentType(.newPassword)
