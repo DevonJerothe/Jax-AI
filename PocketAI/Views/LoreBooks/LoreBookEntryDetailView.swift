@@ -32,6 +32,7 @@ struct LoreBookEntryDetailView: View {
                         commitKeys()
                         dismiss()
                     }
+                    .foregroundColor(appTheme.primaryText.color)
                 }
             }
             .onAppear {

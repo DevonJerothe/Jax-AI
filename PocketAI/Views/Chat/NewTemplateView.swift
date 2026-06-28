@@ -91,6 +91,7 @@ struct NewTemplateView: View {
                 navManager.presentedSheet = nil
             } label: {
                 Text("Cancel")
+                    .foregroundColor(appTheme.primaryText.color)
                     .fontWeight(.semibold)
                     .frame(minWidth: 84)
             }
@@ -100,6 +101,7 @@ struct NewTemplateView: View {
                 updateEditTemplate()
             } label: {
                 Text("Save")
+                    .foregroundColor(appTheme.primaryText.color)
                     .fontWeight(.semibold)
                     .frame(minWidth: 84)
             }

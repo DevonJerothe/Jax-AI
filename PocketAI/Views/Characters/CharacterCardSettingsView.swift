@@ -233,6 +233,7 @@ struct CharacterCardSettingsView: View {
                         }
                     }
                 }
+                .foregroundColor(appTheme.primaryText.color)
             }
         }
         .onAppear {

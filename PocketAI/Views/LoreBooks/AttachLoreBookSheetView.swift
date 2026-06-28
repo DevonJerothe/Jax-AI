@@ -67,6 +67,7 @@ struct AttachLoreBookSheetView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(appTheme.primaryText.color)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -79,6 +80,7 @@ struct AttachLoreBookSheetView: View {
                             ProgressView()
                         } else {
                             Text("Save")
+                                .foregroundColor(appTheme.primaryText.color)
                         }
                     }
                     .disabled(newSelectionIDs.isEmpty || isSaving)

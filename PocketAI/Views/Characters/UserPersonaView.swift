@@ -47,7 +47,7 @@ struct UserPersonaView: View {
                 settingsContent
             }
         }
-        .navigationTitle(editablePersona?.name ?? "User Persona")
+        .navigationTitle("User Persona")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .background(appTheme.backgroundColor.color)
@@ -62,7 +62,6 @@ struct UserPersonaView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
-                        Text("Back")
                     }
                 }
             }
@@ -72,6 +71,7 @@ struct UserPersonaView: View {
                     Button("Save") {
                         savePersona()
                     }
+                    .foregroundColor(appTheme.primaryText.color)
                 }
             }
         }

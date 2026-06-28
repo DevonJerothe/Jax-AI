@@ -78,8 +78,8 @@ struct LoreBookView: View {
                     LoreBookEntryDetailView(
                         entry: entryBinding,
                         onDelete: {
-                            viewModel.deleteEntry(entry.id)
                             viewModel.selectedEntryID = nil
+                            viewModel.deleteEntry(entry.id)
                         }
                     )
                     .presentationBackground(appTheme.backgroundColor.color)
@@ -97,6 +97,7 @@ struct LoreBookView: View {
                             }
                         }
                     }
+                    .foregroundColor(appTheme.primaryText.color)
                 }
             }
             .alert("Lorebook Error", isPresented: errorAlertBinding) {

@@ -95,6 +95,7 @@ struct LoreBookListView: View {
                     }
                 } label: {
                     Image(systemName: "plus")
+                        .foregroundColor(appTheme.primaryText.color)
                 }
             }
         }

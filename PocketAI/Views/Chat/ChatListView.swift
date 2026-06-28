@@ -73,6 +73,7 @@ struct ChatListView: View {
 
                 } label: {
                     Image(systemName: "plus")
+                        .foregroundColor(appTheme.primaryText.color)
                 }
             }
         }

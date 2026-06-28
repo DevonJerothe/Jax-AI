@@ -60,8 +60,8 @@ struct ChatNotesView: View {
                 Button {
                     navManager.showChatNoteView(chatID: viewModel.chatID)
                 } label: {
-                    Image(systemName: "plus.circle")
-                        .foregroundColor(appTheme.tintColor.color)
+                    Image(systemName: "plus")
+                        .foregroundColor(appTheme.primaryText.color)
                 }
             }
         }

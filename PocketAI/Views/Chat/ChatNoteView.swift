@@ -87,6 +87,7 @@ struct ChatNoteView: View {
                 navManager.presentedSheet = nil
             } label: {
                 Text("Cancel")
+                    .foregroundColor(appTheme.primaryText.color)
                     .fontWeight(.semibold)
                     .frame(minWidth: 84)
             }
@@ -96,6 +97,7 @@ struct ChatNoteView: View {
                 submitNote()
             } label: {
                 Text(isEditing ? "Update" : "Add")
+                    .foregroundColor(appTheme.primaryText.color)
                     .fontWeight(.semibold)
                     .frame(minWidth: 84)
             }

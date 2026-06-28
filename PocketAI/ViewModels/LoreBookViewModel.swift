@@ -228,13 +228,21 @@ final class LoreBookViewModel {
     }
 
     func entryBinding(for entryID: UUID) -> Binding<LoreBookEntryModel>? {
-        guard loreBook.entries.contains(where: { $0.id == entryID }) else {
+        guard let entry = loreBook.entries.first(where: { $0.id == entryID }) else {
             return nil
         }
 
+        // Fallback for getter if entry is removed while sheet is still dismissing
+        var captureEntry = entry
+
         return Binding {
-            self.loreBook.entries.first(where: { $0.id == entryID })!
+            if let current = self.loreBook.entries.first(where: { $0.id == entryID }) {
+                captureEntry = current
+                return current
+            }
+            return captureEntry
         } set: { value in
+            captureEntry = value
             guard let index = self.loreBook.entries.firstIndex(where: { $0.id == entryID }) else {
                 return
             }

@@ -284,6 +284,7 @@ struct SamplerSettingsView: View {
                     resetVisibleSettingsToDefaults()
                 } label: {
                     Label("Reset", systemImage: "arrow.counterclockwise")
+                        .foregroundColor(appTheme.primaryText.color)
                 }
             }
         }

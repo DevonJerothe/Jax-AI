@@ -308,6 +308,7 @@ struct ChatSettingsView: View {
                             dismiss()
                         }
                     }
+                    .foregroundColor(appTheme.primaryText.color)
                     .fontWeight(.bold)
                 }
             }
