@@ -186,10 +186,14 @@ extension MessageModel {
 
     /// Updates the error state of the current generation slot.
     ///
-    /// Errors are transient state attached to the current slot; they never cause
-    /// a new history entry to be appended. If there is no current slot yet, the
-    /// error lives only on `message.error` until a successful generation stores
-    /// the slot via `addNewGeneration`/`updateCurrentGeneration`.
+    /// The current generation's error metadata (title, message, recovery
+    /// suggestion) is always persisted in its history slot so it survives a save
+    /// and is available to `activeGenerationError` / `ChatBubbleView`. If no slot
+    /// exists yet for the current generation (e.g. a fresh bot reply, or a
+    /// regenerate after text was cleared), one is created here for the current
+    /// (unsaved) generation. This slot is replaced in place on retry
+    /// (`addNewGeneration`) and cleared on success (`updateCurrentGeneration`),
+    /// so errored generations never accumulate as duplicate history entries.
     mutating func updateCurrentGenerationError(
         _ newError: MessageError,
         title: String?,
@@ -204,7 +208,26 @@ extension MessageModel {
             textGenerationHistory[currentIndex].errorMessage = newError == .none ? nil : message
             textGenerationHistory[currentIndex].errorRecoverySuggestion =
                 newError == .none ? nil : recoverySuggestion
+            return
         }
+
+        // No matching slot for the current generation yet. Create one carrying
+        // the error metadata so it is persisted and available to the inline
+        // error banner. Clearing a non-existent error is a no-op.
+        guard newError != .none else {
+            return
+        }
+
+        textGenerationHistory.append(
+            TextGenerationHistory(
+                text: text,
+                tokenCount: tokenCount,
+                error: newError,
+                errorTitle: title,
+                errorMessage: message,
+                errorRecoverySuggestion: recoverySuggestion
+            )
+        )
     }
 
     mutating func nextGeneration() {
