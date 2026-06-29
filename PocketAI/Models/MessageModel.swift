@@ -143,21 +143,19 @@ extension MessageModel {
         }
     }
 
-    /// Stores the current generation as a history entry, or replaces the current
+    /// Stores the current generation as a history entry, or discards the current
     /// slot if it is an errored generation being retried.
     ///
     /// Errored generations are never persisted as permanent history. A retry
-    /// (regenerate/continue on an errored generation) replaces the errored slot
-    /// in place rather than creating a new generation entry.
+    /// (regenerate/continue on an errored generation) discards the errored slot
+    /// entirely — it existed only to carry error metadata for the inline banner.
+    /// This avoids leaving a blank (or partial-text) entry behind that the
+    /// generation navigator would later expose as a previous generation.
     mutating func addNewGeneration() {
-        // If the current generation has an error, we are retrying it: replace the
-        // errored slot in place instead of appending a new history entry.
+        // If the current generation has an error, we are retrying it: discard the
+        // errored slot instead of converting it into a permanent history entry.
         if error != .none, let erroredIndex = currentGenerationHistoryIndex {
-            textGenerationHistory[erroredIndex] = TextGenerationHistory(
-                text: text,
-                tokenCount: tokenCount,
-                error: .none
-            )
+            textGenerationHistory.remove(at: erroredIndex)
             return
         }
 
