@@ -11,11 +11,11 @@ import GRDB
 public enum MessageStatus: Int, Codable {
     case loading = 0
     case thinking = 1
-    case streaming = 2 // used for continuation as well
+    case streaming = 2  // used for continuation as well
     case done = 3
 }
 
-public enum MessageActor: Int, Codable{
+public enum MessageActor: Int, Codable {
     case user = 0
     case bot = 1
 }
@@ -74,17 +74,18 @@ struct MessageModel: Identifiable, Hashable {
     var error: MessageError = .none
     var tokenCount: Int = 0
 
-    // Text generations and their token counts 
+    // Text generations and their token counts
     var textGenerationHistory: [TextGenerationHistory] = []
-    
-    // model name for the last token count call. 
+
+    // model name for the last token count call.
     // changing models may change tokenizer, so we should invalidate old token counts.
-    var tokenCountModel: String? 
-    
+    var tokenCountModel: String?
+
     var status: MessageStatus = .done
 
     func getRolePlayText(cardName: String, personaName: String) -> String {
-        MessageDisplayFormatter.rolePlayText(for: self, characterName: cardName, userName: personaName)
+        MessageDisplayFormatter.rolePlayText(
+            for: self, characterName: cardName, userName: personaName)
     }
 }
 
@@ -119,14 +120,14 @@ extension MessageModel {
         if textGenerationHistory.isEmpty {
             return false
         }
-        
+
         if before {
             let currentIndex = currentGenerationHistoryIndex
             // If we dont get a match but we have history, we can assume this generation is the most current
             if currentIndex == nil {
                 return true
             }
-            
+
             // make sure we have a previous generation to move to
             guard let currentIndex = currentIndex, currentIndex > 0 else {
                 return false
@@ -136,13 +137,30 @@ extension MessageModel {
             guard let currentIndex = currentGenerationHistoryIndex else {
                 return false
             }
-            
+
             // make sure we have a next generation to move to
             return currentIndex + 1 < textGenerationHistory.count
         }
     }
 
+    /// Stores the current generation as a history entry, or replaces the current
+    /// slot if it is an errored generation being retried.
+    ///
+    /// Errored generations are never persisted as permanent history. A retry
+    /// (regenerate/continue on an errored generation) replaces the errored slot
+    /// in place rather than creating a new generation entry.
     mutating func addNewGeneration() {
+        // If the current generation has an error, we are retrying it: replace the
+        // errored slot in place instead of appending a new history entry.
+        if error != .none, let erroredIndex = currentGenerationHistoryIndex {
+            textGenerationHistory[erroredIndex] = TextGenerationHistory(
+                text: text,
+                tokenCount: tokenCount,
+                error: .none
+            )
+            return
+        }
+
         guard shouldStoreCurrentGeneration else {
             return
         }
@@ -166,6 +184,12 @@ extension MessageModel {
         error = .none
     }
 
+    /// Updates the error state of the current generation slot.
+    ///
+    /// Errors are transient state attached to the current slot; they never cause
+    /// a new history entry to be appended. If there is no current slot yet, the
+    /// error lives only on `message.error` until a successful generation stores
+    /// the slot via `addNewGeneration`/`updateCurrentGeneration`.
     mutating func updateCurrentGenerationError(
         _ newError: MessageError,
         title: String?,
@@ -174,31 +198,17 @@ extension MessageModel {
     ) {
         error = newError
 
-        if newError == .none {
-            if let currentIndex = currentGenerationHistoryIndex {
-                textGenerationHistory[currentIndex].error = .none
-                textGenerationHistory[currentIndex].errorTitle = nil
-                textGenerationHistory[currentIndex].errorMessage = nil
-                textGenerationHistory[currentIndex].errorRecoverySuggestion = nil
-            }
-            return
-        }
-
-        var generation = currentGenerationHistory
-        generation.error = newError
-        generation.errorTitle = title
-        generation.errorMessage = message
-        generation.errorRecoverySuggestion = recoverySuggestion
-
         if let currentIndex = currentGenerationHistoryIndex {
-            textGenerationHistory[currentIndex] = generation
-        } else {
-            textGenerationHistory.append(generation)
+            textGenerationHistory[currentIndex].error = newError
+            textGenerationHistory[currentIndex].errorTitle = newError == .none ? nil : title
+            textGenerationHistory[currentIndex].errorMessage = newError == .none ? nil : message
+            textGenerationHistory[currentIndex].errorRecoverySuggestion =
+                newError == .none ? nil : recoverySuggestion
         }
     }
-    
+
     mutating func nextGeneration() {
-        // get current index 
+        // get current index
         guard let currentIndex = currentGenerationHistoryIndex else {
             return
         }
@@ -215,6 +225,19 @@ extension MessageModel {
     }
 
     mutating func previousGeneration() {
+        // If the current generation is an unsaved errored generation, don't
+        // store it — navigate directly to the last history entry. Errored
+        // generations are transient and never become permanent history.
+        if error != .none, currentGenerationHistoryIndex == nil {
+            guard let lastIndex = textGenerationHistory.indices.last else {
+                return
+            }
+            text = textGenerationHistory[lastIndex].text
+            tokenCount = textGenerationHistory[lastIndex].tokenCount
+            error = textGenerationHistory[lastIndex].error
+            return
+        }
+
         // get current index if no index is found we are on the last generation, so append then move
         var currentIndex = currentGenerationHistoryIndex
         if currentIndex == nil {
@@ -234,19 +257,31 @@ extension MessageModel {
     }
 
     var activeGenerationError: TextGenerationHistory? {
+        guard error != .none else {
+            return nil
+        }
+
         if let currentIndex = currentGenerationHistoryIndex {
             let generation = textGenerationHistory[currentIndex]
             return generation.error == .none ? nil : generation
         }
 
-        return nil
+        // Transient error on a generation that has not yet been stored to history
+        // (e.g. a regeneration that errored before producing any text).
+        return TextGenerationHistory(
+            text: text,
+            tokenCount: tokenCount,
+            error: error
+        )
     }
 
+    /// Index of the history slot whose text + tokenCount match the current
+    /// message. Error is intentionally excluded so that an errored slot remains
+    /// locatable after its error is cleared/replaced (e.g. on retry).
     private var currentGenerationHistoryIndex: Int? {
         textGenerationHistory.lastIndex {
             $0.text == text
                 && $0.tokenCount == tokenCount
-                && $0.error == error
         }
     }
 
@@ -254,8 +289,11 @@ extension MessageModel {
         TextGenerationHistory(text: text, tokenCount: tokenCount, error: error)
     }
 
+    /// Whether the current generation should be stored as a permanent history
+    /// entry. Errored generations are never stored as history — they are
+    /// transient state on the current slot and are replaced on retry.
     private var shouldStoreCurrentGeneration: Bool {
-        text.isEmpty == false || error != .none
+        text.isEmpty == false && error == .none
     }
 }
 
@@ -271,8 +309,10 @@ extension MessageModel {
         self.tokenCount = record.tokenCount
         self.tokenCountModel = record.tokenCountModel
 
-        if let jsonData = record.textGenerationHistoryJSON?.data(using: .utf8), 
-            let decodedHistory = try? JSONDecoder().decode([TextGenerationHistory].self, from: jsonData) {
+        if let jsonData = record.textGenerationHistoryJSON?.data(using: .utf8),
+            let decodedHistory = try? JSONDecoder().decode(
+                [TextGenerationHistory].self, from: jsonData)
+        {
             textGenerationHistory = decodedHistory
         }
     }
@@ -280,7 +320,7 @@ extension MessageModel {
     var record: MessageRecord {
         let jsonData = try? JSONEncoder().encode(textGenerationHistory)
         let textGenerationHistoryJson = jsonData.flatMap { String(data: $0, encoding: .utf8) }
-        
+
         return MessageRecord(
             id: id.uuidString,
             chatId: chatId,
@@ -298,17 +338,17 @@ extension MessageModel {
 
 struct MessageRecord: Codable, FetchableRecord, MutablePersistableRecord, Sendable {
     static let databaseTableName = "messages"
-    
+
     static let chat = belongsTo(ChatRecord.self, using: ForeignKey([Column("chatId")]))
 
-    var id: String 
-    var chatId: String 
-    var actor: Int 
-    var text: String 
+    var id: String
+    var chatId: String
+    var actor: Int
+    var text: String
     var exclude: Bool
-    var error: Int 
-    var createdAt: Date 
-    var tokenCount: Int 
+    var error: Int
+    var createdAt: Date
+    var tokenCount: Int
     var tokenCountModel: String?
     var textGenerationHistoryJSON: String?
 
