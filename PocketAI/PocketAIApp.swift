@@ -111,11 +111,7 @@ struct PocketAIApp: App {
         case .connectionSettings:
             ConnectionSettingsView()
         case .newChatView(let createChar):
-            if createChar {
-                CharacterCardSettingsView(isNew: true)
-            } else {
-                NewChatView()
-            }
+            CharacterCardSettingsView(isNew: true)
         case .chatSettings(let chatID):
             ChatSettingsView(chatID: chatID)
         case .chatNotes(let chatID):
