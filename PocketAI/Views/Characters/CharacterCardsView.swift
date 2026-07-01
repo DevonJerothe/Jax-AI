@@ -19,7 +19,7 @@ struct CharacterCardsView: View {
         ZStack {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(viewModel.characterCards, id: \.self) { card in
+                    ForEach(viewModel.characterCards, id: \.id) { card in
                         CharacterCardPreview(card: card)
                             .onTapGesture {
                                 if startChat {

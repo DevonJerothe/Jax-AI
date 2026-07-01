@@ -345,7 +345,16 @@ final class LanguageModelService {
         case .KoboldAPI:
 
             guard let contextPrompt = contextResult?.textCompletion else {
-                fatalError("No Context")
+                return ModelResponse(
+                    role: "assistant",
+                    disconnect: true, 
+                    error: LLMError(
+                        message: "Failed to load context manager", 
+                        provider: .kobold, 
+                        source: .sdk, 
+                        category: .unknown
+                    )
+                )
             }
 
             let promptBuilder = KoboldRequestBuilder(
@@ -370,14 +379,28 @@ final class LanguageModelService {
             serviceResponse = await koboldManager?.sendMessage(builder: promptBuilder)
         case .OpenRouter:
             guard let contextMessages = contextResult?.chatCompletion else {
-                fatalError("No Context")
+                return ModelResponse(
+                    role: "assistant",
+                    disconnect: true, 
+                    error: LLMError(
+                        message: "Failed to load context manager", 
+                        provider: .openRouter, 
+                        source: .sdk, 
+                        category: .unknown
+                    )
+                )
             }
 
             guard let selectedModel = self.selectedModel else {
                 return ModelResponse(
                     role: "assistant",
-                    text: "Model not selected or available",
-                    disconnect: true
+                    disconnect: true, 
+                    error: LLMError(
+                        message: "No Model Selected", 
+                        provider: .openRouter, 
+                        source: .sdk, 
+                        category: .invalidRequest
+                    )
                 )
             }
 
@@ -399,14 +422,28 @@ final class LanguageModelService {
             serviceResponse = await openRouterManager?.sendMessage(builder: promptBuilder)
         case .OpenAI:
             guard let contextMessages = contextResult?.chatCompletion else {
-                fatalError("No Context")
+                return ModelResponse(
+                    role: "assistant",
+                    disconnect: true, 
+                    error: LLMError(
+                        message: "Failed to load context manager", 
+                        provider: .openAICompatible, 
+                        source: .sdk, 
+                        category: .unknown
+                    )
+                )
             }
 
             guard let selectedModel = runtimeConnectionSettings.activeSelectedModel else {
                 return ModelResponse(
                     role: "assistant",
-                    text: "Model not selected or available",
-                    disconnect: true
+                    disconnect: true, 
+                    error: LLMError(
+                        message: "No Model Selected", 
+                        provider: .openAICompatible, 
+                        source: .sdk, 
+                        category: .invalidRequest
+                    )
                 )
             }
 
@@ -440,12 +477,16 @@ final class LanguageModelService {
             )
             return errorResponse
         default:
-            let errorResponse = ModelResponse(
+            return ModelResponse(
                 role: "assistant",
-                text: "There was an error processing your request. Please try again later.",
-                disconnect: true
+                disconnect: true, 
+                error: LLMError(
+                    message: "There was an error processing your request. Please try again later.", 
+                    provider: .unknown, 
+                    source: .sdk, 
+                    category: .unknown
+                )
             )
-            return errorResponse
         }
     }
 
