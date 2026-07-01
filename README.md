@@ -8,7 +8,7 @@ This repository contains the iOS app source. A separate Swift Package, SwiftLLMS
 
 ### Highlights
 - **Local**: Connect to your own KoboldCPP API (LAN or self‑hosted remote).
-- **Cloud option**: Use OpenRouter for powerful cloud-hosted models when you choose.
+- **Cloud option**: Use OpenRouter or OpenAI compatible services for powerful cloud-hosted models when you choose.
 - **Deep character support**: Create/import character cards and Lore Books with rich personality and memory.
 - **Advanced customization**: Control temperature, sampler options, max tokens, system prompts, and more.
 - **Native iOS experience**: SwiftUI UI, with minor UIKit-hosted views when required.
@@ -45,6 +45,7 @@ git clone https://github.com/DevonJerothe/SwiftLLMSDK.git
 In‑app connection settings let you choose:
 - **KoboldAPI (local/remote)**: Provide `host` and `port` of your KoboldCPP server.
 - **OpenRouter (cloud)**: Provide an API key and select a model.
+- **OpenAI Compatible API**: Allows for any OpenAI standard endpoints to be used.
 
 Notes:
 - When using a local KoboldCPP server on your LAN, prompts do not leave your network.
@@ -53,8 +54,8 @@ Notes:
 ---
 
 ## Privacy
-- JaxAI collects no analytics or data and has no ads. The App Store version may have opt-in analytics tracking for performance and bug tracking.
-- With a local KoboldCPP server on your network, prompts stay on your devices/network.
+- JaxAI collects no analytics or data and has no ads.
+- With a local KoboldCPP or OpenAI compatible server on your network, prompts stay on your devices/network.
 - Using OpenRouter or any remote endpoint sends prompts to that provider under their terms and policies.
 
 ---
@@ -62,7 +63,7 @@ Notes:
 ## Planned App Store Release
 There is a plan to offer a free App Store version of JaxAI. Due to certain age restrictions and policies, some features may need to be omitted. Currently, this directly affects character browsers.
 The following changes are planned for the App Store version:
-- Removal of remote character browsers (manual import only)
+- Removal of remote browsers (manual import only)
 - Non-intrusive ads or donation option for continued development. I want to avoid ads if possible, but if necessary they may be added as opt-in for those looking to support non-monetarily.
 
 ## Roadmap
