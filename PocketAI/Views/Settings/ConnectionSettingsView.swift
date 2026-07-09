@@ -164,6 +164,13 @@ struct ConnectionSettingsView: View {
                     Text("Connecting...")
                         .foregroundColor(appTheme.primaryText.color.opacity(0.8))
                         .font(.subheadline)
+                } else if connectionManager.connectionStatus == .failed {
+                    Circle()
+                        .fill(appTheme.destructiveAction.color)
+                        .frame(width: 10, height: 10)
+                    Text("Connection Failed")
+                        .foregroundColor(appTheme.destructiveAction.color)
+                        .font(.subheadline)
                 } else {
                     Circle()
                         .fill(

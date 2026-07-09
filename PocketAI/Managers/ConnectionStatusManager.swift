@@ -127,6 +127,8 @@ final class ConnectionStatusManager {
 
     func connect() async {
         guard let languageModelService else {
+            connectionStatus = .failed
+            footerNote = "No connection service available"
             return
         }
 
@@ -139,6 +141,9 @@ final class ConnectionStatusManager {
 
         let success = await languageModelService.connect()
         guard connectionAttemptID == attemptID else {
+            // A newer connection attempt has superseded this one; the newer
+            // attempt is responsible for setting the final status. Leave the
+            // status untouched so we don't clobber the in-flight attempt.
             return
         }
 
