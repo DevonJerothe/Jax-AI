@@ -1,5 +1,15 @@
 ![Banner](Screenshots/Banner.png)
 
+<p align="center">
+  <a href="https://apps.apple.com/us/app/jaxai-private-local-chats/id6766075121">
+    <img
+      src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us"
+      alt="Download on the App Store"
+      style="width: 246px; height: 82px; vertical-align: middle; object-fit: contain;"
+    />
+  </a>
+</p>
+    
 ## JaxAI — Local‑First AI Chat for iOS
 
 JaxAI is a native iOS app that gives you private, flexible AI chat on your iPhone. Connect to your own local KoboldCPP server for fully local inference on your network, or optionally use OpenRouter to access cloud models. No accounts. No analytics.
@@ -60,11 +70,10 @@ Notes:
 
 ---
 
-## Planned App Store Release
-There is a plan to offer a free App Store version of JaxAI. Due to certain age restrictions and policies, some features may need to be omitted. Currently, this directly affects character browsers.
+## App Store Release
+JaxAI is free on the App Store. Due to certain age restrictions and policies, some features may be omitted. Currently, this directly affects character browsers.
 The following changes are planned for the App Store version:
 - Removal of remote browsers (manual import only)
-- Non-intrusive ads or donation option for continued development. I want to avoid ads if possible, but if necessary they may be added as opt-in for those looking to support non-monetarily.
 
 ## Roadmap
 - Model‑aware prompt templates and better reasoning instructions
