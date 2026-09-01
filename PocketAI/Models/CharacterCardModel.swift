@@ -186,6 +186,27 @@ extension CharacterCardModel {
             isSystemChar: true
         )
     }
+
+    /// Generation history for a new chat's initial message. The default first
+    /// message is seeded as the first entry so the chat opens on it at position 1
+    /// and forward navigation walks the alternate greetings in card order.
+    /// Empty when the card has no alternate greetings so single-greeting cards
+    /// do not show a generation navigator.
+    var initialGreetingHistory: [TextGenerationHistory] {
+        guard let altGreetings, altGreetings.isEmpty == false else {
+            return []
+        }
+
+        var history = altGreetings.map { greeting in
+            TextGenerationHistory(text: greeting, tokenCount: 0)
+        }
+
+        if let firstMessage {
+            history.insert(TextGenerationHistory(text: firstMessage, tokenCount: 0), at: 0)
+        }
+
+        return history
+    }
 }
 
 struct CharacterCardRecord: Codable, FetchableRecord, MutablePersistableRecord, Sendable {
