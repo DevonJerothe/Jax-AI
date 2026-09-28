@@ -113,6 +113,28 @@ struct InitialMessageGreetingTests {
         #expect(message.textGenerationHistory.filter { $0.text == "First mes" }.count == 1)
     }
 
+    @Test func duplicateAlternateGreetingIsNotDuplicatedInHistory() {
+        let card = CharacterCardModel(
+            name: "Test Card",
+            firstMessage: "First mes",
+            altGreetings: ["First mes", "Alt 1"]
+        )
+
+        let history = card.initialGreetingHistory
+
+        #expect(history.map(\.text) == ["First mes", "Alt 1"])
+
+        let message = MessageModel(
+            chatId: UUID().uuidString,
+            actor: .bot,
+            text: card.firstMessage ?? "",
+            textGenerationHistory: history
+        )
+
+        #expect(message.generationPosition == 1)
+        #expect(message.generationCount == 2)
+    }
+
     @Test func cardsWithoutAlternateGreetingsHaveNoGreetingHistory() {
         let card = CharacterCardModel(name: "Test Card", firstMessage: "First mes")
 
