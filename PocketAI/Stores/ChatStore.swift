@@ -93,20 +93,15 @@ final class ChatStore {
         var chat = chat
         chat.isPrivate = chat.characterCards.contains(where: \.isPrivate)
 
-        // create alt greetings text history
-        let altGreetings = chat.characterCards.first?.altGreetings?.compactMap { greeting in 
-            TextGenerationHistory(text: greeting, tokenCount: 0)
-        }
-
         try chatRepository.save(chat)
-    
+
         // cards may not have an initial message 
         if let firstMessage = chat.characterCards.first?.firstMessage {
             let initialMessage = MessageModel(
                 chatId: chat.id.uuidString,
                 actor: .bot,
                 text: firstMessage,
-                textGenerationHistory: altGreetings ?? []
+                textGenerationHistory: chat.characterCards.first?.initialGreetingHistory ?? []
             )
             try messageRepository.save(initialMessage)
         }
@@ -236,16 +231,11 @@ final class ChatStore {
         chats[index].messages.removeAll()
         try messageRepository.deleteAll(for: chat.id)
 
-        // create alt greetings text history
-        let altGreetings = chat.characterCards.first?.altGreetings?.compactMap { greeting in 
-            TextGenerationHistory(text: greeting, tokenCount: 0)
-        }
-        
         let initialMessage = MessageModel(
             chatId: chat.id.uuidString,
             actor: .bot,
             text: chat.characterCards.first?.firstMessage ?? "",
-            textGenerationHistory: altGreetings ?? []
+            textGenerationHistory: chat.characterCards.first?.initialGreetingHistory ?? []
         )
 
         try messageRepository.save(initialMessage)
